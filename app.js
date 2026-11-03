@@ -668,6 +668,8 @@ function renderOffers() {
       </article>
     `;
   }).join("");
+
+  initScrollRevealAnimations();
 }
 
 // ============================================================================
@@ -1697,6 +1699,48 @@ function closeMobileMenu() {
   document.getElementById("mobileMenuBtn").setAttribute("aria-expanded", "false");
 }
 
+let scrollRevealObserver = null;
+
+function initScrollRevealAnimations() {
+  if (!("IntersectionObserver" in window)) return;
+  if (!scrollRevealObserver) {
+    scrollRevealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          scrollRevealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: "0px 0px -30px 0px" });
+  }
+
+  document.querySelectorAll(".stat, .service, .swap-card, .step, .plan, .article").forEach((el, idx) => {
+    if (!el.classList.contains("reveal-on-scroll")) {
+      el.classList.add("reveal-on-scroll");
+      el.style.transitionDelay = `${(idx % 3) * 65}ms`;
+      scrollRevealObserver.observe(el);
+    }
+  });
+}
+
+function animateLiveMemberCount() {
+  const el = document.getElementById("liveUserCount");
+  if (!el) return;
+  const target = currentUser ? 1481 : 1480;
+  const start = 1390;
+  const duration = 1200;
+  const startTime = performance.now();
+
+  const step = (now) => {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const val = Math.round(start + (target - start) * eased);
+    el.textContent = val.toLocaleString("en-US");
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 function showToast(message) {
   const container = document.getElementById("toastContainer");
   if (!container) return;
@@ -1715,6 +1759,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initWorldMap();
   // Start with English ('en') as default and run European Geo-IP detection
   detectLanguageByGeoIP(false);
+  initScrollRevealAnimations();
+  animateLiveMemberCount();
 
   // Header scroll effect
   const header = document.getElementById("header");
