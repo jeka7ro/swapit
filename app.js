@@ -594,6 +594,7 @@ function toggleFavorite(offerId, ev) {
 }
 
 function filterByCategory(catCode) {
+  document.body.classList.add("mobile-started");
   currentCategoryFilter = catCode;
   document.querySelectorAll("#categoryFilterPills .cat-pill").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.cat === catCode);
@@ -880,17 +881,17 @@ function renderOffers() {
           <div class="swap-card-footer">
             ${item.dealType === "sale" ? `
               <button type="button" class="btn btn-mint" onclick="openOfferModal(${item.id}, 'buy')">
-                💶 ${t("buyOfferBtn")}
+                ${t("buyOfferBtn")}
               </button>
               <button type="button" class="btn btn-login" onclick="openOfferModal(${item.id}, 'details')">
                 ${t("detailsBtn")}
               </button>
             ` : `
-              <button type="button" class="btn btn-mint" style="padding:0 12px;font-size:12.5px;" onclick="openOfferModal(${item.id}, 'propose')">
-                ⇄ ${t("proposeSwapBtn")}
+              <button type="button" class="btn btn-mint" onclick="openOfferModal(${item.id}, 'propose')">
+                ${t("proposeSwapBtn")}
               </button>
-              <button type="button" class="btn btn-login" style="padding:0 12px;font-size:12.5px;" onclick="openOfferModal(${item.id}, 'buy')">
-                💶 ${t("buyOfferBtn")}
+              <button type="button" class="btn btn-login" onclick="openOfferModal(${item.id}, 'buy')">
+                ${t("buyOfferBtn")}
               </button>
             `}
           </div>
@@ -1665,7 +1666,7 @@ function onWizTitleHaveInput(val) {
     return `
       <button type="button" class="smart-dd-item" onclick="selectCrossCategoryWizTemplate('${m.catKey}', ${m.idx})">
         <div class="smart-dd-info">
-          <strong>⚡ ${m.title}</strong>
+          <strong>${m.title}</strong>
           <span>${m.specs}</span>
         </div>
         <span class="smart-dd-price">~${priceStr}</span>
@@ -1703,7 +1704,7 @@ async function handleWizGeoSearchInput(val) {
     dd.innerHTML = items.map(loc => `
       <button type="button" class="smart-dd-item" onclick="selectWizGeoPlace('${loc.country.replace(/'/g, "\\'")}', '${loc.city.replace(/'/g, "\\'")}', ${loc.lat}, ${loc.lng})">
         <div class="smart-dd-info">
-          <strong>📍 ${loc.city}${loc.region ? ` (${loc.region})` : ""}</strong>
+          <strong>${loc.city}${loc.region ? ` (${loc.region})` : ""}</strong>
           <span>${loc.country} · GPS: ${Number(loc.lat).toFixed(4)}, ${Number(loc.lng).toFixed(4)}</span>
         </div>
         <span class="smart-dd-price">Selectează</span>
@@ -1886,13 +1887,13 @@ function renderWizStep() {
 
       <div class="wiz-smart-box">
         <div class="wiz-smart-header">
-          <span>✨ ${catCfg.label || `Asistent Smart · ${getCategoryLabel(wizData.category)}`}</span>
+          <span>${catCfg.label || `Asistent Smart · ${getCategoryLabel(wizData.category)}`}</span>
           <span style="font-size:11px;font-weight:600;color:var(--muted);">1-Click Autocomplete</span>
         </div>
         <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px;">Modele & Șabloane Rapide (completează automat titlu + specificații + preț):</div>
         <div class="wiz-chip-row">
           ${(catCfg.templates || []).map((tpl, idx) => `
-            <button type="button" class="wiz-chip wiz-chip-tpl" onclick="applyWizSmartTemplate(${idx})">⚡ ${tpl.title}</button>
+            <button type="button" class="wiz-chip wiz-chip-tpl" onclick="applyWizSmartTemplate(${idx})">${tpl.title}</button>
           `).join("")}
         </div>
         ${(catCfg.groups || []).map(grp => `
@@ -1963,10 +1964,10 @@ function renderWizStep() {
         <label style="color:var(--ink);">${isSaleOnly ? `${t("dealSaleOnly")} (Payment / Handover notes)` : t("quickTitleWant")}</label>
         <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" placeholder="Ex: MacBook Pro M3, iPhone 16 Pro, SUV Automat sau Vânzare Cash" />
         <div class="wiz-chip-row" style="margin-top:8px;">
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='iPhone 16 Pro Max / iPad Pro M4 / MacBook Pro (+/- diferență)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">📱 iPhone / iPad / MacBook</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='SUV Automat 2020+ (BMW X5, Mercedes GLE, Audi Q7) +/- diferență'; wizData.titleWant=document.getElementById('wizTitleWant').value;">🚗 SUV / Auto 2020+</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='Apartament 2-3 camere / Casă / Teren (+/- diferență)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">🏠 Imobiliare / Apartament</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='Accept Schimb 1:1 sau Vânzare Directă Cash'; wizData.titleWant=document.getElementById('wizTitleWant').value;">💶 Schimb sau Vânzare Cash</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='iPhone 16 Pro Max / iPad Pro M4 / MacBook Pro (+/- diferență)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">iPhone / iPad / MacBook</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='SUV Automat 2020+ (BMW X5, Mercedes GLE, Audi Q7) +/- diferență'; wizData.titleWant=document.getElementById('wizTitleWant').value;">SUV / Auto 2020+</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='Apartament 2-3 camere / Casă / Teren (+/- diferență)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">Imobiliare / Apartament</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='Accept Schimb 1:1 sau Vânzare Directă Cash'; wizData.titleWant=document.getElementById('wizTitleWant').value;">Schimb sau Vânzare Cash</button>
         </div>
       </div>
     `;
@@ -1975,8 +1976,8 @@ function renderWizStep() {
       <h3 style="margin:0 0 10px;font-size:22px;">6. ${t("wizStep6")} · Asistent Hartă & GPS</h3>
       <div class="wiz-smart-box" style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-          <strong style="font-size:13px;color:var(--forest);">🌍 Caută Oraș, Cartier sau Adresă (Autocomplete Live)</strong>
-          <button type="button" id="wizGpsBtn" class="wiz-chip wiz-chip-tpl" onclick="detectWizLocationGPS()">📍 Detectează locația mea (GPS)</button>
+          <strong style="font-size:13px;color:var(--forest);">Caută Oraș, Cartier sau Adresă (Autocomplete Live)</strong>
+          <button type="button" id="wizGpsBtn" class="wiz-chip wiz-chip-tpl" onclick="detectWizLocationGPS()">Detectează locația mea (GPS)</button>
         </div>
         <div style="position:relative;">
           <input type="text" id="wizGeoSearchInput" class="input-light" placeholder="Tastează orașul sau adresa (ex: Cluj-Napoca, București, Timișoara, Wien, München)..." autocomplete="off" oninput="handleWizGeoSearchInput(this.value)" />
@@ -2122,7 +2123,7 @@ function submitDirectBuyOffer(e, offerId) {
     direction: "Buy Offer",
     offerId,
     targetTitle: loc.title,
-    offeredItem: `💶 Cash Offer: ${formattedOffer}`,
+    offeredItem: `Cash Offer: ${formattedOffer}`,
     partner: item ? `${item.owner} (${item.city}, ${item.country})` : "Owner",
     cashBalance: `${payMethod} · Listed at ~${item ? formatOfferPrice(item, curr) : formattedOffer}`,
     status: "Sent · Awaiting Seller Confirmation"
@@ -2186,10 +2187,10 @@ function openOfferModal(offerId, mode = "details") {
         <!-- ACTION MODE SWITCHER: SWAP vs BUY / CASH OFFER -->
         <div class="catalog-pills" style="margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <button type="button" id="offerTabSwapBtn" class="cat-pill ${!startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;" onclick="switchOfferActionTab('swap')">
-            ⇄ ${t("proposeSwapBtn")}
+            ${t("proposeSwapBtn")}
           </button>
           <button type="button" id="offerTabBuyBtn" class="cat-pill ${startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;" onclick="switchOfferActionTab('buy')">
-            💶 ${t("buyOfferBtn")}
+            ${t("buyOfferBtn")}
           </button>
         </div>
 
@@ -2243,7 +2244,7 @@ function openOfferModal(offerId, mode = "details") {
         <div id="offerActionBuyPanel" style="display:${startInBuyMode ? 'block' : 'none'};">
           <form onsubmit="submitDirectBuyOffer(event, ${item.id})" style="background:var(--mint-soft);padding:18px;border-radius:20px;border:1.5px solid var(--forest);">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <strong style="color:var(--forest);font-size:15px;">💶 ${t("buyOfferBtn")} · 0% Commission</strong>
+              <strong style="color:var(--forest);font-size:15px;">${t("buyOfferBtn")} · 0% Commission</strong>
               <span style="background:var(--forest);color:var(--mint);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;">~ ${valFormatted}</span>
             </div>
             <div class="field-group">
@@ -2275,7 +2276,7 @@ function openOfferModal(offerId, mode = "details") {
               </div>
             </div>
             <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
-              💶 Send Cash Purchase Offer to ${item.owner} →
+              Send Cash Purchase Offer to ${item.owner} →
             </button>
           </form>
         </div>
@@ -2478,15 +2479,19 @@ function handleChatSubmit(e) {
 // MOBILE MENU, SCROLL & TOAST HELPERS
 // ============================================================================
 function closeMobileMenu() {
+  document.body.classList.add("mobile-started");
   document.getElementById("mobilePanel").classList.remove("open");
   document.getElementById("mobileMenuBtn").setAttribute("aria-expanded", "false");
 }
 
 function scrollToMobileHub() {
-  const hub = document.getElementById("mobileQuickHub") || document.getElementById("offers");
-  if (hub) {
-    hub.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  document.body.classList.add("mobile-started");
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function exitMobileStartScreen() {
+  document.body.classList.remove("mobile-started");
+  window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 let scrollRevealObserver = null;

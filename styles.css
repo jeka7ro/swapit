@@ -631,8 +631,8 @@ em {
   margin: 0 auto;
   padding: 72px 0 36px;
   display: grid;
-  grid-template-columns: 1.35fr 0.65fr;
-  gap: 32px;
+  grid-template-columns: 1.55fr 0.45fr;
+  gap: 24px;
   align-items: end;
 }
 
@@ -742,10 +742,19 @@ em {
 .hero-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   margin-top: 26px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   animation: heroFadeUp 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+
+.hero-actions .btn,
+.hero-actions .linkish {
+  height: 48px;
+  padding: 0 18px;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .hero-actions .linkish {
@@ -753,9 +762,7 @@ em {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
   font-weight: 600;
-  padding: 10px 14px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.24);
@@ -1623,14 +1630,28 @@ h2 em {
 .swap-card-footer {
   margin-top: auto;
   padding-top: 8px;
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: center;
 }
 
 .swap-card-footer .btn {
-  flex: 1;
-  padding: 10px 14px;
-  font-size: 13.5px;
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 /* WORLD MAP SECTION */
@@ -3731,22 +3752,43 @@ select.input-light {
   border-color: var(--mint);
 }
 
-.mobile-instant-search {
-  position: relative;
+.mobile-screen-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
+.mobile-back-cover-btn {
+  background: #ffffff;
+  color: var(--forest);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mobile-instant-search {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.mobile-search-input-row,
 .mobile-smart-search-bar {
   display: flex;
   align-items: center;
   gap: 8px;
   background: #ffffff;
   border: 2px solid var(--forest);
-  border-radius: 16px;
-  padding: 10px 14px;
+  border-radius: 999px;
+  padding: 6px 8px 6px 14px;
   box-shadow: 0 8px 20px rgba(12, 44, 40, 0.08);
 }
 
+.mobile-search-input-row input,
 .mobile-smart-search-bar input {
   flex: 1;
   border: none;
@@ -3755,6 +3797,7 @@ select.input-light {
   font-weight: 600;
   color: var(--ink);
   outline: none;
+  min-width: 0;
 }
 
 .mobile-quick-tags .hero-qtag {
