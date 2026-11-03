@@ -97,11 +97,14 @@ let currentUser = (() => {
 
 // 7-Step Wizard State
 let wizStep = 1;
+let currentOpenOfferId = null;
 let wizData = {
   image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
   category: "cars",
   titleHave: "",
   valueEur: "",
+  originalAmount: "",
+  originalCurrency: "",
   specs: "",
   desc: "",
   titleWant: "",
@@ -168,11 +171,19 @@ const PREMIUM_ICONS = {
 };
 
 // ============================================================================
-// MULTI-CURRENCY SYSTEM (Auto by Language/Country + Free Client Choice)
+// MULTI-CURRENCY SYSTEM (Exact Client-Price Parity + Live FX Sync)
 // ============================================================================
 function getCurrencyObj(code = currentCurrency) {
-  const list = window.CURRENCIES || [{ code: "EUR", symbol: "€", short: "EUR", label: "Euro (EUR €)", rateFromEur: 1.0 }];
+  const list = window.CURRENCIES || [{ code: "EUR", symbol: "€", short: "EUR", label: "Euro (EUR)", rateFromEur: 1.0 }];
   return list.find(c => c.code === code) || list[0];
+}
+
+// Exact unrounded conversion to EUR base (prevents any round-trip drift)
+function convertToEur(valInCurr, code = currentCurrency) {
+  const c = getCurrencyObj(code);
+  const num = Number(valInCurr) || 0;
+  if (!c.rateFromEur) return num;
+  return num / c.rateFromEur;
 }
 
 function convertFromEur(valEur, code = currentCurrency) {
@@ -181,11 +192,30 @@ function convertFromEur(valEur, code = currentCurrency) {
   return Math.round(num * c.rateFromEur);
 }
 
-function convertToEur(valInCurr, code = currentCurrency) {
-  const c = getCurrencyObj(code);
-  const num = Number(valInCurr) || 0;
-  if (!c.rateFromEur) return num;
-  return Math.round(num / c.rateFromEur);
+// Direct cross-currency conversion respecting exact parity with client-set price
+function convertBetweenCurrencies(amount, fromCode, toCode = currentCurrency) {
+  const num = Number(amount) || 0;
+  if (!num) return 0;
+  const src = String(fromCode || "EUR").toUpperCase();
+  const dst = String(toCode || currentCurrency).toUpperCase();
+  if (src === dst) return Math.round(num);
+  const fromObj = getCurrencyObj(src);
+  const toObj = getCurrencyObj(dst);
+  const exactInEur = num / (fromObj.rateFromEur || 1);
+  return Math.round(exactInEur * (toObj.rateFromEur || 1));
+}
+
+// Returns the exact value of an offer in targetCode, preserving 100% of the client's original price
+function getOfferValueInCurrency(item, targetCode = currentCurrency) {
+  if (!item) return 0;
+  const origCurr = String(item.originalCurrency || "EUR").toUpperCase();
+  const origAmt = item.originalAmount !== undefined && item.originalAmount !== ""
+    ? Number(item.originalAmount)
+    : Number(item.valueEur || 0);
+  if (origCurr === String(targetCode).toUpperCase()) {
+    return Math.round(origAmt);
+  }
+  return convertBetweenCurrencies(origAmt, origCurr, targetCode);
 }
 
 function formatAmountInCurrentCurrency(rawAmount, code = currentCurrency) {
@@ -200,9 +230,44 @@ function formatAmountInCurrentCurrency(rawAmount, code = currentCurrency) {
   return `€${rounded.toLocaleString("en-US")}`;
 }
 
+function formatOfferPrice(item, code = currentCurrency) {
+  const val = getOfferValueInCurrency(item, code);
+  return formatAmountInCurrentCurrency(val, code);
+}
+
 function formatCurrency(valEur, code = currentCurrency) {
   const converted = convertFromEur(valEur, code);
   return formatAmountInCurrentCurrency(converted, code);
+}
+
+function buildParityPreviewHtml(amount, baseCurrCode) {
+  const num = Number(amount) || 0;
+  if (num <= 0) return "";
+  const others = (window.CURRENCIES || []).filter(c => c.code !== baseCurrCode);
+  const pills = others.map(c => {
+    const eq = convertBetweenCurrencies(num, baseCurrCode, c.code);
+    return `<span style="display:inline-block;background:rgba(12,44,40,0.08);border:1px solid rgba(12,44,40,0.15);border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;color:var(--forest);">~ ${formatAmountInCurrentCurrency(eq, c.code)}</span>`;
+  }).join(" ");
+  return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:6px;"><span style="font-size:11.5px;color:var(--muted);font-weight:700;">⇄ Paritate:</span>${pills}</div>`;
+}
+
+async function syncLiveExchangeRates() {
+  try {
+    const res = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD,RON,GBP,CHF");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.rates && Array.isArray(window.CURRENCIES)) {
+      window.CURRENCIES.forEach(c => {
+        if (data.rates[c.code]) {
+          c.rateFromEur = Number(data.rates[c.code]);
+        }
+      });
+      renderOffers();
+      renderMapPinsAndPanel();
+    }
+  } catch (e) {
+    // Keep default reference rates if offline
+  }
 }
 
 function getDefaultCurrencyForLanguage(langCode, isoCountryCode = "") {
@@ -296,7 +361,11 @@ function setCurrency(currCode, isManualUserAction = false) {
   renderMapPinsAndPanel();
 
   if (document.getElementById("wizardModal")?.classList.contains("open")) {
+    saveCurrentWizStepInputs();
     renderWizStep();
+  }
+  if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId != null) {
+    openOfferModal(currentOpenOfferId);
   }
   if (document.getElementById("dashboardModal")?.classList.contains("open")) {
     renderDashboardContent();
@@ -583,7 +652,7 @@ function renderOffers() {
     if (dealFilter !== "all" && item.dealType !== dealFilter) {
       return false;
     }
-    const itemValInCurrentCurr = convertFromEur(item.valueEur || 0, currentCurrency);
+    const itemValInCurrentCurr = getOfferValueInCurrency(item, currentCurrency);
     if (minVal > 0 && itemValInCurrentCurr < minVal) return false;
     if (maxVal > 0 && itemValInCurrentCurr > maxVal) return false;
 
@@ -621,7 +690,7 @@ function renderOffers() {
 
   grid.innerHTML = filtered.map(item => {
     const loc = getOfferLocalized(item);
-    const valFormatted = formatCurrency(item.valueEur || 0);
+    const valFormatted = formatOfferPrice(item, currentCurrency);
     const isFav = favoriteIds.includes(item.id);
     const score = item.matchScore || 95;
 
@@ -757,7 +826,7 @@ function renderMapPinsAndPanel() {
       return `
         <button type="button" class="offer-list-item" onclick="openOfferModal(${item.id}, 'details')">
           <strong>${loc.title}</strong>
-          <span>${getCategoryLabel(item.category)} · ${item.city} · ~${formatCurrency(item.valueEur)}</span>
+          <span>${getCategoryLabel(item.category)} · ${item.city} · ~${formatOfferPrice(item, currentCurrency)}</span>
           <em>⇄ ${t("wantBadge")}: ${loc.want}</em>
         </button>
       `;
@@ -912,7 +981,7 @@ function handleInlineQuickPost(e) {
   };
 
   const enteredVal = Number(fd.get("valueEur")) || 15000;
-  const enteredCurr = String(fd.get("valueCurrency") || currentCurrency);
+  const enteredCurr = String(fd.get("valueCurrency") || currentCurrency).toUpperCase();
   const normalizedValueEur = convertToEur(enteredVal, enteredCurr);
 
   const newOffer = {
@@ -923,6 +992,8 @@ function handleInlineQuickPost(e) {
     lat: coords.lat,
     lng: coords.lng,
     valueEur: normalizedValueEur,
+    originalAmount: enteredVal,
+    originalCurrency: enteredCurr,
     dealType: fd.get("dealType") || "1to1",
     owner: currentUser ? currentUser.name : "Verified Member",
     verified: true,
@@ -1196,9 +1267,14 @@ function saveCurrentWizStepInputs() {
 
   if (val("wizTitleHave") !== undefined) wizData.titleHave = val("wizTitleHave");
   if (val("wizValueEur") !== undefined) {
-    const rawVal = Number(val("wizValueEur")) || 15000;
-    const wizCurr = val("wizCurrencySelect") || currentCurrency;
-    wizData.valueEur = convertToEur(rawVal, wizCurr);
+    const rawStr = val("wizValueEur");
+    const rawVal = Number(rawStr) || 0;
+    const wizCurr = val("wizCurrencySelect") || wizData.originalCurrency || currentCurrency;
+    wizData.originalCurrency = wizCurr;
+    if (rawVal > 0) {
+      wizData.originalAmount = rawVal;
+      wizData.valueEur = convertToEur(rawVal, wizCurr);
+    }
   }
   if (val("wizSpecs") !== undefined) wizData.specs = val("wizSpecs");
   if (val("wizDesc") !== undefined) wizData.desc = val("wizDesc");
@@ -1209,6 +1285,31 @@ function saveCurrentWizStepInputs() {
   if (val("wizOwner") !== undefined) wizData.owner = val("wizOwner");
   if (val("wizEmail") !== undefined) wizData.email = val("wizEmail");
   if (val("wizPhone") !== undefined) wizData.phone = val("wizPhone");
+}
+
+function onWizPriceInputChange() {
+  const valEl = document.getElementById("wizValueEur");
+  const currEl = document.getElementById("wizCurrencySelect");
+  const previewEl = document.getElementById("wizParityPreview");
+  const rawVal = Number(valEl?.value) || 0;
+  const chosenCurr = currEl?.value || currentCurrency;
+  wizData.originalCurrency = chosenCurr;
+  wizData.originalAmount = rawVal > 0 ? rawVal : "";
+  wizData.valueEur = rawVal > 0 ? convertToEur(rawVal, chosenCurr) : "";
+  if (previewEl) {
+    previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
+  }
+}
+
+function onQuickPostPriceChange() {
+  const valEl = document.getElementById("quickPostValueInput");
+  const currEl = document.getElementById("quickPostCurrencySelect");
+  const previewEl = document.getElementById("quickParityPreview");
+  const rawVal = Number(valEl?.value) || 0;
+  const chosenCurr = currEl?.value || currentCurrency;
+  if (previewEl) {
+    previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
+  }
 }
 
 function selectWizPresetPhoto(url) {
@@ -1280,9 +1381,12 @@ function renderWizStep() {
       </div>
     `;
   } else if (wizStep === 3) {
-    const cObj = getCurrencyObj(currentCurrency);
+    const activeWizCurr = wizData.originalCurrency || currentCurrency;
+    const cObj = getCurrencyObj(activeWizCurr);
     const valLabel = t("quickValueEur").replace(/\(EUR\)|\(€\)/gi, `(${cObj.short || cObj.code})`);
-    const displayVal = wizData.valueEur ? convertFromEur(wizData.valueEur, currentCurrency) : "";
+    const displayVal = wizData.originalAmount !== "" && wizData.originalAmount !== undefined
+      ? wizData.originalAmount
+      : (wizData.valueEur ? convertFromEur(wizData.valueEur, activeWizCurr) : "");
     c.innerHTML = `
       <h3 style="margin:0 0 14px;font-size:24px;">3. ${t("wizStep3")} (${t("haveBadge")})</h3>
       <div class="field-group">
@@ -1291,12 +1395,13 @@ function renderWizStep() {
       </div>
       <div class="field-group">
         <label style="color:var(--ink);">${valLabel}</label>
-        <div style="display:grid;grid-template-columns:1fr 135px;gap:10px;">
-          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" />
-          <select id="wizCurrencySelect" class="input-light" onchange="setCurrency(this.value, true)">
-            ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
+        <div style="display:grid;grid-template-columns:1fr 145px;gap:10px;">
+          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" oninput="onWizPriceInputChange()" />
+          <select id="wizCurrencySelect" class="input-light" onchange="onWizPriceInputChange()">
+            ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === activeWizCurr ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
           </select>
         </div>
+        <div id="wizParityPreview">${buildParityPreviewHtml(displayVal, activeWizCurr)}</div>
       </div>
     `;
   } else if (wizStep === 4) {
@@ -1366,6 +1471,9 @@ function renderWizStep() {
 
 function publishWizardOffer() {
   const coords = COUNTRY_COORDS[wizData.country] || { lat: 48.13, lng: 11.58 };
+  const chosenCurr = wizData.originalCurrency || currentCurrency;
+  const chosenAmt = Number(wizData.originalAmount) || convertFromEur(20000, chosenCurr);
+  const exactEur = convertToEur(chosenAmt, chosenCurr);
   const newOffer = {
     id: Date.now(),
     category: wizData.category,
@@ -1373,7 +1481,9 @@ function publishWizardOffer() {
     city: wizData.city || "Center",
     lat: coords.lat,
     lng: coords.lng,
-    valueEur: wizData.valueEur || 20000,
+    valueEur: exactEur,
+    originalAmount: chosenAmt,
+    originalCurrency: chosenCurr,
     dealType: wizData.dealType || "1to1",
     owner: wizData.owner || (currentUser ? currentUser.name : "Verified Owner"),
     verified: true,
@@ -1398,30 +1508,42 @@ function publishWizardOffer() {
 // ============================================================================
 // OFFER DETAIL, 1:1 VALUE CALCULATOR & "PROPOSE A SWAP" MODAL
 // ============================================================================
-function updateSwapValueCalculator(theirValueInCurrentCurrency) {
+function updateSwapValueCalculator(offerId) {
+  const item = offers.find(o => o.id === offerId);
+  if (!item) return;
   const myVal = Number(document.getElementById("calcMyValueInput")?.value) || 0;
+  const myCurr = document.getElementById("calcMyCurrencySelect")?.value || currentCurrency;
   const resEl = document.getElementById("calcResultBanner");
   if (!resEl) return;
 
+  const theirValueInCurrentCurrency = getOfferValueInCurrency(item, currentCurrency);
+  const myValueInCurrentCurrency = convertBetweenCurrencies(myVal, myCurr, currentCurrency);
+
   const cObj = getCurrencyObj(currentCurrency);
   const threshold = Math.round(250 * cObj.rateFromEur);
-  const diff = theirValueInCurrentCurrency - myVal;
+  const diff = theirValueInCurrentCurrency - myValueInCurrentCurrency;
   if (Math.abs(diff) < threshold) {
-    resEl.innerHTML = `<span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0)}</span>`;
+    resEl.innerHTML = `<span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>`;
   } else if (diff > 0) {
-    resEl.innerHTML = `<span>${t("calcYouAdd")}</span><span>+ ${formatAmountInCurrentCurrency(diff)}</span>`;
+    resEl.innerHTML = `<span>${t("calcYouAdd")}</span><span>+ ${formatAmountInCurrentCurrency(diff, currentCurrency)}</span>`;
   } else {
-    resEl.innerHTML = `<span>${t("calcTheyAdd")}</span><span>+ ${formatAmountInCurrentCurrency(Math.abs(diff))}</span>`;
+    resEl.innerHTML = `<span>${t("calcTheyAdd")}</span><span>+ ${formatAmountInCurrentCurrency(Math.abs(diff), currentCurrency)}</span>`;
   }
 }
 
 function openOfferModal(offerId, mode = "details") {
   const item = offers.find(o => o.id === offerId);
   if (!item) return;
+  currentOpenOfferId = offerId;
   const loc = getOfferLocalized(item);
-  const valFormatted = formatCurrency(item.valueEur || 0);
+  const valFormatted = formatOfferPrice(item, currentCurrency);
   const cObj = getCurrencyObj(currentCurrency);
-  const theirValConverted = convertFromEur(item.valueEur || 0, currentCurrency);
+  const theirValConverted = getOfferValueInCurrency(item, currentCurrency);
+  const origCurr = String(item.originalCurrency || "EUR").toUpperCase();
+  const origAmt = item.originalAmount !== undefined && item.originalAmount !== "" ? Number(item.originalAmount) : Number(item.valueEur || 0);
+  const clientBaseNote = origCurr !== currentCurrency
+    ? ` <span style="opacity:0.85;font-weight:600;font-size:11.5px;">(${formatAmountInCurrentCurrency(origAmt, origCurr)})</span>`
+    : "";
   const yourValLabel = t("calcYourValue").replace(/\(EUR\)|\(€\)/gi, `(${cObj.short || cObj.code})`);
   const theirValLabel = t("calcTheirValue").replace(/\(EUR\)|\(€\)/gi, `(${cObj.short || cObj.code})`);
 
@@ -1439,7 +1561,7 @@ function openOfferModal(offerId, mode = "details") {
       <div>
         <div style="height:220px;border-radius:20px;background:url('${item.image}') 50%/cover no-repeat;margin-bottom:14px;position:relative;">
           <span style="position:absolute;bottom:14px;left:14px;background:var(--forest);color:var(--mint);padding:6px 14px;border-radius:999px;font-weight:700;font-size:13px;">
-            ${getCategoryLabel(item.category)} · ~ ${valFormatted}
+            ${getCategoryLabel(item.category)} · ~ ${valFormatted}${clientBaseNote}
           </span>
         </div>
         <h2 style="font-size:23px;margin:0 0 8px;line-height:1.2;">${loc.title}</h2>
@@ -1464,7 +1586,12 @@ function openOfferModal(offerId, mode = "details") {
           <div class="form-grid-2">
             <div>
               <label style="font-size:12px;color:var(--muted);font-weight:700;">${yourValLabel}</label>
-              <input type="number" id="calcMyValueInput" class="input-light" value="${theirValConverted}" oninput="updateSwapValueCalculator(${theirValConverted})" />
+              <div style="display:grid;grid-template-columns:1fr 90px;gap:6px;">
+                <input type="number" id="calcMyValueInput" class="input-light" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
+                <select id="calcMyCurrencySelect" class="input-light" style="padding:0 26px 0 10px;font-size:13px;font-weight:700;" onchange="updateSwapValueCalculator(${item.id})">
+                  ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code}</option>`).join("")}
+                </select>
+              </div>
             </div>
             <div>
               <label style="font-size:12px;color:var(--muted);font-weight:700;">${theirValLabel}</label>
@@ -1472,7 +1599,7 @@ function openOfferModal(offerId, mode = "details") {
             </div>
           </div>
           <div class="calc-result-banner" id="calcResultBanner">
-            <span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0)}</span>
+            <span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>
           </div>
         </div>
 
@@ -1587,7 +1714,7 @@ function renderDashboardContent() {
               <img src="${item.image}" style="width:64px;height:48px;object-fit:cover;border-radius:10px;" alt="" />
               <div>
                 <strong>${loc.title}</strong>
-                <span style="display:flex;align-items:center;font-size:12.5px;color:var(--muted);">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ~${formatCurrency(item.valueEur)}</span>
+                <span style="display:flex;align-items:center;font-size:12.5px;color:var(--muted);">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ~${formatOfferPrice(item, currentCurrency)}</span>
               </div>
             </div>
             <button type="button" class="btn btn-login" style="padding:7px 14px;font-size:12.5px;" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'details')">View</button>
@@ -1759,6 +1886,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initWorldMap();
   // Start with English ('en') as default and run European Geo-IP detection
   detectLanguageByGeoIP(false);
+  syncLiveExchangeRates();
   initScrollRevealAnimations();
   animateLiveMemberCount();
 
