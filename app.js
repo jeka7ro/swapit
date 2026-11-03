@@ -74,7 +74,7 @@ let swapProposals = (() => {
 // Load offers from localStorage or initial dataset
 let offers = (() => {
   try {
-    const saved = localStorage.getItem("ci4m_offers_v3");
+    const saved = localStorage.getItem("ci4m_offers_v4");
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length >= window.INITIAL_OFFERS.length) {
@@ -84,6 +84,8 @@ let offers = (() => {
   } catch (e) {}
   return [...window.INITIAL_OFFERS];
 })();
+
+let currentDealModeFilter = "all";
 
 // Current logged-in user state
 let currentUser = (() => {
@@ -150,6 +152,7 @@ function getCategoryLabel(catCode) {
 function getDealTypeLabel(dealType) {
   if (dealType === "1to1") return t("deal1to1");
   if (dealType === "cash") return t("dealCashAdd");
+  if (dealType === "sale") return t("dealSaleOnly");
   return t("dealSwapOrSale");
 }
 
@@ -602,6 +605,21 @@ function filterByCategory(catCode) {
   }
 }
 
+function filterByDealMode(mode) {
+  currentDealModeFilter = mode;
+  document.querySelectorAll("#dealModePills .cat-pill").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mode === mode);
+  });
+  const dealSel = document.getElementById("catalogDealSelect");
+  if (dealSel) {
+    if (mode === "all") dealSel.value = "all";
+    else if (mode === "either") dealSel.value = "either";
+    else if (mode === "buy") dealSel.value = "all";
+    else if (mode === "swap") dealSel.value = "all";
+  }
+  renderOffers();
+}
+
 function invertMatcherCategories() {
   const haveSel = document.getElementById("matcherHave");
   const wantSel = document.getElementById("matcherWant");
@@ -650,6 +668,15 @@ function renderOffers() {
       return false;
     }
     if (dealFilter !== "all" && item.dealType !== dealFilter) {
+      return false;
+    }
+    if (currentDealModeFilter === "swap" && item.dealType === "sale") {
+      return false;
+    }
+    if (currentDealModeFilter === "buy" && item.dealType !== "sale" && item.dealType !== "either") {
+      return false;
+    }
+    if (currentDealModeFilter === "either" && item.dealType !== "either") {
       return false;
     }
     const itemValInCurrentCurr = getOfferValueInCurrency(item, currentCurrency);
@@ -721,17 +748,26 @@ function renderOffers() {
               <span>${item.specs}</span>
             </div>
             <div class="swap-row">
-              <span class="swap-tag want">${t("wantBadge")}</span>
-              <span style="font-weight:600;color:var(--ink);">${loc.want}</span>
+              <span class="swap-tag want" style="${item.dealType === 'sale' ? 'background:#0c2c28;color:#a9ffca;' : ''}">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
+              <span style="font-weight:600;color:var(--ink);">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ~${valFormatted}` : loc.want}</span>
             </div>
           </div>
           <div class="swap-card-footer">
-            <button type="button" class="btn btn-mint" onclick="openOfferModal(${item.id}, 'propose')">
-              ⇄ ${t("proposeSwapBtn")}
-            </button>
-            <button type="button" class="btn btn-login" onclick="openOfferModal(${item.id}, 'details')">
-              ${t("detailsBtn")}
-            </button>
+            ${item.dealType === "sale" ? `
+              <button type="button" class="btn btn-mint" onclick="openOfferModal(${item.id}, 'buy')">
+                💶 ${t("buyOfferBtn")}
+              </button>
+              <button type="button" class="btn btn-login" onclick="openOfferModal(${item.id}, 'details')">
+                ${t("detailsBtn")}
+              </button>
+            ` : `
+              <button type="button" class="btn btn-mint" style="padding:0 12px;font-size:12.5px;" onclick="openOfferModal(${item.id}, 'propose')">
+                ⇄ ${t("proposeSwapBtn")}
+              </button>
+              <button type="button" class="btn btn-login" style="padding:0 12px;font-size:12.5px;" onclick="openOfferModal(${item.id}, 'buy')">
+                💶 ${t("buyOfferBtn")}
+              </button>
+            `}
           </div>
         </div>
       </article>
@@ -962,6 +998,22 @@ function switchEnrollTab(tab) {
   if (quickPanel) quickPanel.style.display = isQuickPost ? "block" : "none";
 }
 
+function onQuickDealTypeChange() {
+  const dealSel = document.getElementById("quickDealTypeSelect");
+  const wantInput = document.getElementById("quickWantInput");
+  const wantLabel = document.getElementById("quickWantLabel");
+  if (!dealSel || !wantInput) return;
+  if (dealSel.value === "sale") {
+    wantInput.required = false;
+    if (!wantInput.value) wantInput.value = t("dealSaleOnly");
+    if (wantLabel) wantLabel.textContent = `${t("dealSaleOnly")} (Optional notes)`;
+  } else {
+    wantInput.required = true;
+    if (wantInput.value === t("dealSaleOnly")) wantInput.value = "";
+    if (wantLabel) wantLabel.textContent = t("quickTitleWant");
+  }
+}
+
 function handleInlineQuickPost(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
@@ -983,6 +1035,7 @@ function handleInlineQuickPost(e) {
   const enteredVal = Number(fd.get("valueEur")) || 15000;
   const enteredCurr = String(fd.get("valueCurrency") || currentCurrency).toUpperCase();
   const normalizedValueEur = convertToEur(enteredVal, enteredCurr);
+  const dealType = fd.get("dealType") || "1to1";
 
   const newOffer = {
     id: Date.now(),
@@ -994,25 +1047,25 @@ function handleInlineQuickPost(e) {
     valueEur: normalizedValueEur,
     originalAmount: enteredVal,
     originalCurrency: enteredCurr,
-    dealType: fd.get("dealType") || "1to1",
+    dealType,
     owner: currentUser ? currentUser.name : "Verified Member",
     verified: true,
     matchScore: 99,
     image: defaultImages[cat] || defaultImages.cars,
-    specs: fd.get("desc") || "Direct Swap Listing",
+    specs: fd.get("desc") || "Direct Listing",
     title: fd.get("titleHave"),
-    want: fd.get("titleWant"),
+    want: fd.get("titleWant") || (dealType === "sale" ? t("dealSaleOnly") : "Direct 1:1 Swap"),
     desc: fd.get("desc")
   };
 
   offers.unshift(newOffer);
-  localStorage.setItem("ci4m_offers_v3", JSON.stringify(offers));
+  localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
   currentCategoryFilter = "all";
   renderOffers();
   renderMapPinsAndPanel();
   e.target.reset();
   document.getElementById("offers").scrollIntoView({ behavior: "smooth" });
-  showToast("✓ Swap Offer Published Live!");
+  showToast("✓ Offer Published Live!");
 }
 
 // ============================================================================
@@ -1417,19 +1470,21 @@ function renderWizStep() {
       </div>
     `;
   } else if (wizStep === 5) {
+    const isSaleOnly = wizData.dealType === "sale";
     c.innerHTML = `
-      <h3 style="margin:0 0 14px;font-size:24px;">5. ${t("wizStep5")} (${t("wantBadge")})</h3>
-      <div class="field-group">
-        <label style="color:var(--ink);">${t("quickTitleWant")}</label>
-        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant}" />
-      </div>
+      <h3 style="margin:0 0 14px;font-size:24px;">5. ${t("wizStep5")} (${isSaleOnly ? t("saleBadge") : t("wantBadge")})</h3>
       <div class="field-group">
         <label style="color:var(--ink);">${t("quickDealType")}</label>
-        <select id="wizDealType" class="input-light">
+        <select id="wizDealType" class="input-light" onchange="wizData.dealType=this.value; if(this.value==='sale' && !wizData.titleWant){wizData.titleWant=t('dealSaleOnly');} renderWizStep();">
           <option value="1to1" ${wizData.dealType === '1to1' ? 'selected' : ''}>${t("deal1to1")}</option>
           <option value="cash" ${wizData.dealType === 'cash' ? 'selected' : ''}>${t("dealCashAdd")}</option>
           <option value="either" ${wizData.dealType === 'either' ? 'selected' : ''}>${t("dealSwapOrSale")}</option>
+          <option value="sale" ${wizData.dealType === 'sale' ? 'selected' : ''}>${t("dealSaleOnly")}</option>
         </select>
+      </div>
+      <div class="field-group">
+        <label style="color:var(--ink);">${isSaleOnly ? `${t("dealSaleOnly")} (Payment / Handover notes)` : t("quickTitleWant")}</label>
+        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" />
       </div>
     `;
   } else if (wizStep === 6) {
@@ -1496,7 +1551,7 @@ function publishWizardOffer() {
   };
 
   offers.unshift(newOffer);
-  localStorage.setItem("ci4m_offers_v3", JSON.stringify(offers));
+  localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
   closeWizardModal();
   currentCategoryFilter = "all";
   renderOffers();
@@ -1531,6 +1586,55 @@ function updateSwapValueCalculator(offerId) {
   }
 }
 
+function switchOfferActionTab(tab) {
+  const isBuy = tab === "buy";
+  const swapBtn = document.getElementById("offerTabSwapBtn");
+  const buyBtn = document.getElementById("offerTabBuyBtn");
+  const swapPanel = document.getElementById("offerActionSwapPanel");
+  const buyPanel = document.getElementById("offerActionBuyPanel");
+  if (swapBtn) swapBtn.classList.toggle("active", !isBuy);
+  if (buyBtn) buyBtn.classList.toggle("active", isBuy);
+  if (swapPanel) swapPanel.style.display = isBuy ? "none" : "block";
+  if (buyPanel) buyPanel.style.display = isBuy ? "block" : "none";
+}
+
+function onBuyOfferPriceChange(offerId) {
+  const valEl = document.getElementById("buyOfferAmountInput");
+  const currEl = document.getElementById("buyOfferCurrencySelect");
+  const previewEl = document.getElementById("buyOfferParityPreview");
+  const rawVal = Number(valEl?.value) || 0;
+  const chosenCurr = currEl?.value || currentCurrency;
+  if (previewEl) {
+    previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
+  }
+}
+
+function submitDirectBuyOffer(e, offerId) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const item = offers.find(o => o.id === offerId);
+  const loc = item ? getOfferLocalized(item) : { title: "Listing" };
+  const amount = Number(fd.get("buyAmount")) || 0;
+  const curr = String(fd.get("buyCurrency") || currentCurrency).toUpperCase();
+  const formattedOffer = formatAmountInCurrentCurrency(amount, curr);
+  const payMethod = String(fd.get("paymentMethod") || "Direct Purchase");
+
+  swapProposals.unshift({
+    id: Date.now(),
+    direction: "Buy Offer",
+    offerId,
+    targetTitle: loc.title,
+    offeredItem: `💶 Cash Offer: ${formattedOffer}`,
+    partner: item ? `${item.owner} (${item.city}, ${item.country})` : "Owner",
+    cashBalance: `${payMethod} · Listed at ~${item ? formatOfferPrice(item, curr) : formattedOffer}`,
+    status: "Sent · Awaiting Seller Confirmation"
+  });
+  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  updateFavCountUI();
+  closeOfferModal();
+  showToast(`✓ Cash Purchase Offer (${formattedOffer}) sent to ${item ? item.owner : "Seller"}!`);
+}
+
 function openOfferModal(offerId, mode = "details") {
   const item = offers.find(o => o.id === offerId);
   if (!item) return;
@@ -1546,6 +1650,7 @@ function openOfferModal(offerId, mode = "details") {
     : "";
   const yourValLabel = t("calcYourValue").replace(/\(EUR\)|\(€\)/gi, `(${cObj.short || cObj.code})`);
   const theirValLabel = t("calcTheirValue").replace(/\(EUR\)|\(€\)/gi, `(${cObj.short || cObj.code})`);
+  const startInBuyMode = mode === "buy" || item.dealType === "sale";
 
   const modal = document.getElementById("offerModal");
   const content = document.getElementById("offerModalContent");
@@ -1553,7 +1658,7 @@ function openOfferModal(offerId, mode = "details") {
 
   content.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line);">
-      <span style="margin:0;font-size:13.5px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · Owner: ${item.owner} (Verified ✓)</span>
+      <span style="margin:0;font-size:13.5px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · Owner: ${item.owner} (Verified ✓) · ${getDealTypeLabel(item.dealType)}</span>
       <button type="button" class="modal-close" style="position:static;color:var(--ink);background:var(--bg);flex-shrink:0;" onclick="closeOfferModal()" aria-label="Close">✕</button>
     </div>
 
@@ -1573,56 +1678,109 @@ function openOfferModal(offerId, mode = "details") {
             <span><strong>${loc.title}</strong> (${item.specs})</span>
           </div>
           <div class="swap-row">
-            <span class="swap-tag want">${t("wantBadge")}</span>
-            <span style="font-weight:700;color:var(--forest);">${loc.want}</span>
+            <span class="swap-tag want" style="${item.dealType === 'sale' ? 'background:#0c2c28;color:#a9ffca;' : ''}">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
+            <span style="font-weight:700;color:var(--forest);">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ~${valFormatted}` : loc.want}</span>
           </div>
         </div>
       </div>
 
       <div>
-        <!-- 1:1 VALUE BALANCE CALCULATOR -->
-        <div class="calc-box" style="margin:0 0 14px;">
-          <strong style="display:flex;align-items:center;font-size:14px;margin-bottom:10px;">${PREMIUM_ICONS.scale}${t("calcTitle")} (${cObj.code})</strong>
-          <div class="form-grid-2">
-            <div>
-              <label style="font-size:12px;color:var(--muted);font-weight:700;">${yourValLabel}</label>
-              <div style="display:grid;grid-template-columns:1fr 90px;gap:6px;">
-                <input type="number" id="calcMyValueInput" class="input-light" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
-                <select id="calcMyCurrencySelect" class="input-light" style="padding:0 26px 0 10px;font-size:13px;font-weight:700;" onchange="updateSwapValueCalculator(${item.id})">
-                  ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code}</option>`).join("")}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--muted);font-weight:700;">${theirValLabel}</label>
-              <input type="number" class="input-light" value="${theirValConverted}" disabled />
-            </div>
-          </div>
-          <div class="calc-result-banner" id="calcResultBanner">
-            <span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>
-          </div>
+        <!-- ACTION MODE SWITCHER: SWAP vs BUY / CASH OFFER -->
+        <div class="catalog-pills" style="margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button type="button" id="offerTabSwapBtn" class="cat-pill ${!startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;" onclick="switchOfferActionTab('swap')">
+            ⇄ ${t("proposeSwapBtn")}
+          </button>
+          <button type="button" id="offerTabBuyBtn" class="cat-pill ${startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;" onclick="switchOfferActionTab('buy')">
+            💶 ${t("buyOfferBtn")}
+          </button>
         </div>
 
-        <form onsubmit="submitDirectSwapProposal(event, ${item.id})" style="background:var(--mint-soft);padding:18px;border-radius:20px;border:1.5px solid var(--forest);">
-          <strong style="display:block;margin-bottom:10px;color:var(--forest);font-size:15px;">⇄ ${t("proposeSwapBtn")} (0% Fee Direct Message)</strong>
-          <div class="field-group">
-            <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("quickTitleHave")}</label>
-            <input type="text" name="offeredItem" class="input-light" required />
-          </div>
-          <div class="form-grid-2">
-            <div class="field-group" style="margin-bottom:0;">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formFullName")}</label>
-              <input type="text" name="senderName" class="input-light" required value="${currentUser ? currentUser.name : ''}" />
+        <!-- PANEL 1: 1:1 SWAP + VALUE BALANCE CALCULATOR -->
+        <div id="offerActionSwapPanel" style="display:${startInBuyMode ? 'none' : 'block'};">
+          <div class="calc-box" style="margin:0 0 14px;">
+            <strong style="display:flex;align-items:center;font-size:14px;margin-bottom:10px;">${PREMIUM_ICONS.scale}${t("calcTitle")} (${cObj.code})</strong>
+            <div class="form-grid-2">
+              <div>
+                <label style="font-size:12px;color:var(--muted);font-weight:700;">${yourValLabel}</label>
+                <div style="display:grid;grid-template-columns:1fr 90px;gap:6px;">
+                  <input type="number" id="calcMyValueInput" class="input-light" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
+                  <select id="calcMyCurrencySelect" class="input-light" style="padding:0 26px 0 10px;font-size:13px;font-weight:700;" onchange="updateSwapValueCalculator(${item.id})">
+                    ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code}</option>`).join("")}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style="font-size:12px;color:var(--muted);font-weight:700;">${theirValLabel}</label>
+                <input type="number" class="input-light" value="${theirValConverted}" disabled />
+              </div>
             </div>
-            <div class="field-group" style="margin-bottom:0;">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formPhone")} / Email</label>
-              <input type="text" name="senderContact" class="input-light" required value="${currentUser ? (currentUser.phone || currentUser.email) : ''}" />
+            <div class="calc-result-banner" id="calcResultBanner">
+              <span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>
             </div>
           </div>
-          <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
-            Send 1:1 Swap Proposal to ${item.owner} →
-          </button>
-        </form>
+
+          <form onsubmit="submitDirectSwapProposal(event, ${item.id})" style="background:var(--mint-soft);padding:18px;border-radius:20px;border:1.5px solid var(--forest);">
+            <strong style="display:block;margin-bottom:10px;color:var(--forest);font-size:15px;">⇄ ${t("proposeSwapBtn")} (0% Fee Direct Message)</strong>
+            <div class="field-group">
+              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("quickTitleHave")}</label>
+              <input type="text" name="offeredItem" class="input-light" required />
+            </div>
+            <div class="form-grid-2">
+              <div class="field-group" style="margin-bottom:0;">
+                <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formFullName")}</label>
+                <input type="text" name="senderName" class="input-light" required value="${currentUser ? currentUser.name : ''}" />
+              </div>
+              <div class="field-group" style="margin-bottom:0;">
+                <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formPhone")} / Email</label>
+                <input type="text" name="senderContact" class="input-light" required value="${currentUser ? (currentUser.phone || currentUser.email) : ''}" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
+              Send 1:1 Swap Proposal to ${item.owner} →
+            </button>
+          </form>
+        </div>
+
+        <!-- PANEL 2: DIRECT BUY / CASH OFFER -->
+        <div id="offerActionBuyPanel" style="display:${startInBuyMode ? 'block' : 'none'};">
+          <form onsubmit="submitDirectBuyOffer(event, ${item.id})" style="background:var(--mint-soft);padding:18px;border-radius:20px;border:1.5px solid var(--forest);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <strong style="color:var(--forest);font-size:15px;">💶 ${t("buyOfferBtn")} · 0% Commission</strong>
+              <span style="background:var(--forest);color:var(--mint);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;">~ ${valFormatted}</span>
+            </div>
+            <div class="field-group">
+              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">Your Cash Offer / Purchase Price</label>
+              <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;">
+                <input type="number" id="buyOfferAmountInput" name="buyAmount" class="input-light" value="${theirValConverted}" required min="1" oninput="onBuyOfferPriceChange(${item.id})" />
+                <select id="buyOfferCurrencySelect" name="buyCurrency" class="input-light" style="font-weight:700;" onchange="onBuyOfferPriceChange(${item.id})">
+                  ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
+                </select>
+              </div>
+              <div id="buyOfferParityPreview">${buildParityPreviewHtml(theirValConverted, currentCurrency)}</div>
+            </div>
+            <div class="field-group">
+              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">Payment & Handover Preference</label>
+              <select name="paymentMethod" class="input-light">
+                <option value="Bank Transfer / Cash on Handover">Bank Transfer / Cash on Safe Handover</option>
+                <option value="Buy Now at Asking Price">Buy Immediately at Full Asking Price (~${valFormatted})</option>
+                <option value="Notary / Verified Escrow Contract">Notary / Verified Sale Contract</option>
+              </select>
+            </div>
+            <div class="form-grid-2">
+              <div class="field-group" style="margin-bottom:0;">
+                <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formFullName")}</label>
+                <input type="text" name="senderName" class="input-light" required value="${currentUser ? currentUser.name : ''}" />
+              </div>
+              <div class="field-group" style="margin-bottom:0;">
+                <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formPhone")} / Email</label>
+                <input type="text" name="senderContact" class="input-light" required value="${currentUser ? (currentUser.phone || currentUser.email) : ''}" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
+              💶 Send Cash Purchase Offer to ${item.owner} →
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   `;
