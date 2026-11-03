@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!styles\\.css|app\\.js|i18n\\.js|data\\.js|favicon\\.ico).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+

@@ -97,10 +97,8 @@ let currentUser = (() => {
   }
 })();
 
-// 7-Step Wizard State
-let wizStep = 1;
-let currentOpenOfferId = null;
-let wizData = {
+// 7-Step Wizard State (Persisted in localStorage so refresh never loses data)
+const DEFAULT_WIZ_DATA = {
   image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
   category: "cars",
   titleHave: "",
@@ -117,6 +115,163 @@ let wizData = {
   email: "",
   phone: ""
 };
+
+let wizStep = 1;
+let currentOpenOfferId = null;
+let currentAuthMode = "register";
+let isRestoringRouteState = false;
+
+let wizData = (() => {
+  try {
+    const saved = localStorage.getItem("ci4m_wiz_draft_v1");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.wizData) {
+        if (parsed.wizStep >= 1 && parsed.wizStep <= 7) {
+          wizStep = Number(parsed.wizStep);
+        }
+        return { ...DEFAULT_WIZ_DATA, ...parsed.wizData };
+      }
+    }
+  } catch (e) {}
+  return { ...DEFAULT_WIZ_DATA };
+})();
+
+function persistWizardDraft() {
+  try {
+    localStorage.setItem("ci4m_wiz_draft_v1", JSON.stringify({ wizStep, wizData }));
+  } catch (e) {}
+}
+
+function isLocalhostServer() {
+  const h = window.location.hostname;
+  return h === "localhost" || h === "127.0.0.1" || window.location.protocol === "file:";
+}
+
+function syncUrlWithRoute(routePath, replace = false) {
+  if (isRestoringRouteState) return;
+  const cleanRoute = routePath && routePath.startsWith("/") ? routePath : `/${routePath || ""}`;
+  try {
+    localStorage.setItem("ci4m_nav_state_v1", JSON.stringify({
+      route: cleanRoute,
+      mobileStarted: document.body.classList.contains("mobile-started"),
+      wizStep,
+      currentOpenOfferId,
+      currentAuthMode,
+      currentDashTab,
+      currentCategoryFilter
+    }));
+  } catch (e) {}
+
+  try {
+    let targetUrl = cleanRoute;
+    if (isLocalhostServer()) {
+      targetUrl = cleanRoute === "/" ? "/" : `/?page=${encodeURIComponent(cleanRoute.replace(/^\//, ""))}`;
+    }
+    const currentFull = window.location.pathname + window.location.search;
+    if (currentFull !== targetUrl) {
+      if (replace) {
+        window.history.replaceState({ route: cleanRoute }, "", targetUrl);
+      } else {
+        window.history.pushState({ route: cleanRoute }, "", targetUrl);
+      }
+    }
+  } catch (e) {}
+}
+
+function getRouteFromUrlOrStorage() {
+  const params = new URLSearchParams(window.location.search);
+  const pageParam = params.get("page");
+  if (pageParam) {
+    return "/" + pageParam.replace(/^\//, "");
+  }
+  const path = window.location.pathname || "/";
+  if (path !== "/" && path !== "/index.html") {
+    return path;
+  }
+  const hash = (window.location.hash || "").replace(/^#\/?/, "");
+  if (hash && hash !== "top") {
+    return "/" + hash;
+  }
+  try {
+    const saved = localStorage.getItem("ci4m_nav_state_v1");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.route && parsed.route !== "/") {
+        return parsed.route;
+      }
+      if (parsed && parsed.mobileStarted) {
+        return "/start";
+      }
+    }
+  } catch (e) {}
+  return "/";
+}
+
+function closeAllModalsSilently() {
+  ["wizardModal", "offerModal", "authModal", "dashboardModal", "guideModal"].forEach(id => {
+    document.getElementById(id)?.classList.remove("open");
+  });
+  document.body.classList.remove("modal-open");
+}
+
+function navigateToPageRoute(routePath, replace = false) {
+  const clean = routePath && routePath.startsWith("/") ? routePath : `/${routePath || ""}`;
+  isRestoringRouteState = true;
+  try {
+    closeAllModalsSilently();
+    if (clean === "/" || clean === "/home") {
+      document.body.classList.remove("mobile-started");
+      window.scrollTo({ top: 0, behavior: "instant" });
+    } else if (clean === "/start") {
+      document.body.classList.add("mobile-started");
+      window.scrollTo({ top: 0, behavior: "instant" });
+    } else if (clean.startsWith("/wizard")) {
+      document.body.classList.add("mobile-started");
+      const m = clean.match(/step-(\d+)/);
+      if (m && Number(m[1]) >= 1 && Number(m[1]) <= 7) {
+        wizStep = Number(m[1]);
+      }
+      if (currentUser) {
+        if (!wizData.owner) wizData.owner = currentUser.name;
+        if (!wizData.email) wizData.email = currentUser.email;
+        if (!wizData.phone) wizData.phone = currentUser.phone;
+      }
+      document.getElementById("wizardModal")?.classList.add("open");
+      document.body.classList.add("modal-open");
+      renderWizStep();
+    } else if (clean.startsWith("/offer/")) {
+      document.body.classList.add("mobile-started");
+      const offerId = Number(clean.split("/")[2]);
+      if (offerId) {
+        openOfferModal(offerId);
+      }
+    } else if (clean === "/login") {
+      document.body.classList.add("mobile-started");
+      openAuthModal("login");
+    } else if (clean === "/register") {
+      document.body.classList.add("mobile-started");
+      openAuthModal("register");
+    } else if (clean === "/dashboard") {
+      document.body.classList.add("mobile-started");
+      if (currentUser) {
+        openDashboardModal(currentDashTab || "proposals");
+      } else {
+        openAuthModal("login");
+      }
+    } else {
+      const secId = clean.replace(/^\//, "");
+      document.body.classList.add("mobile-started");
+      const secEl = document.getElementById(secId);
+      if (secEl) {
+        setTimeout(() => secEl.scrollIntoView({ behavior: "smooth" }), 50);
+      }
+    }
+  } finally {
+    isRestoringRouteState = false;
+  }
+  syncUrlWithRoute(clean, replace);
+}
 
 function t(key) {
   const dict = window.TRANSLATIONS[currentLang] || window.TRANSLATIONS.en;
@@ -251,7 +406,8 @@ function buildParityPreviewHtml(amount, baseCurrCode) {
     const eq = convertBetweenCurrencies(num, baseCurrCode, c.code);
     return `<span style="display:inline-block;background:rgba(12,44,40,0.08);border:1px solid rgba(12,44,40,0.15);border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;color:var(--forest);">~ ${formatAmountInCurrentCurrency(eq, c.code)}</span>`;
   }).join(" ");
-  return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:6px;"><span style="font-size:11.5px;color:var(--muted);font-weight:700;">⇄ Paritate:</span>${pills}</div>`;
+  const parityText = (typeof getSmartUiLabels === "function" && getSmartUiLabels().parityLabel) || "Parity";
+  return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:6px;"><span style="font-size:11.5px;color:var(--muted);font-weight:700;">⇄ ${parityText}:</span>${pills}</div>`;
 }
 
 async function syncLiveExchangeRates() {
@@ -600,6 +756,7 @@ function filterByCategory(catCode) {
     btn.classList.toggle("active", btn.dataset.cat === catCode);
   });
   renderOffers();
+  syncUrlWithRoute("/offers");
   const offersSec = document.getElementById("offers");
   if (offersSec) {
     offersSec.scrollIntoView({ behavior: "smooth" });
@@ -651,63 +808,125 @@ function handleHeroMatcher(e) {
 }
 
 const SEARCH_SYNONYMS = {
-  "casa": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "дом", "вилла", "real-estate"],
-  "casă": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "дом", "вилла", "real-estate"],
-  "vila": ["villa", "house", "chalet", "vilă", "дом", "вилла", "real-estate"],
-  "дом": ["villa", "house", "chalet", "casă", "vilă", "дом", "вилла", "real-estate"],
-  "вилла": ["villa", "house", "chalet", "casă", "vilă", "дом", "вилла", "real-estate"],
-  "haus": ["villa", "house", "chalet", "haus", "real-estate"],
-  "maison": ["villa", "house", "chalet", "maison", "real-estate"],
-  "apartament": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "квартира", "апартаменты", "real-estate"],
-  "квартира": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "квартира", "апартаменты", "real-estate"],
-  "wohnung": ["apartment", "penthouse", "studio", "wohnung", "real-estate"],
-  "appartement": ["apartment", "penthouse", "studio", "appartement", "real-estate"],
-  "appartamento": ["apartment", "penthouse", "studio", "appartamento", "real-estate"],
-  "piso": ["apartment", "penthouse", "studio", "piso", "real-estate"],
+  "casa": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "дом", "вилла"],
+  "casă": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "дом", "вилла"],
+  "vila": ["villa", "house", "chalet", "vilă", "дом", "вилла"],
+  "vilă": ["villa", "house", "chalet", "vilă", "дом", "вилла"],
+  "house": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison"],
+  "villa": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison"],
+  "дом": ["villa", "house", "chalet", "casă", "vilă", "дом", "вилла"],
+  "вилла": ["villa", "house", "chalet", "casă", "vilă", "дом", "вилла"],
+  "haus": ["villa", "house", "chalet", "haus", "casă", "vilă"],
+  "maison": ["villa", "house", "chalet", "maison", "casă", "vilă"],
+  "apartament": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "квартира", "апартаменты", "trilocale", "attico", "ático"],
+  "apartment": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "apartament"],
+  "квартира": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "квартира", "апартаменты"],
+  "wohnung": ["apartment", "penthouse", "studio", "wohnung", "apartament"],
+  "appartement": ["apartment", "penthouse", "studio", "appartement", "apartament"],
+  "appartamento": ["apartment", "penthouse", "studio", "appartamento", "trilocale", "attico"],
+  "piso": ["apartment", "penthouse", "studio", "piso", "ático"],
   "imobiliare": ["real-estate", "apartment", "villa", "penthouse", "house", "teren", "недвижимость"],
   "недвижимость": ["real-estate", "apartment", "villa", "penthouse", "house"],
   "masina": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto", "авто", "машина"],
   "mașină": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto", "авто", "машина"],
   "авто": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto"],
   "машина": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto"],
-  "auto": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "auto-parts"],
+  "auto": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla"],
   "coche": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla"],
   "voiture": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla"],
-  "telefon": ["iphone", "smartphone", "samsung", "electronics", "айфон", "телефон"],
-  "айфон": ["iphone", "apple", "electronics"],
-  "айпад": ["ipad", "apple", "electronics"],
-  "макбук": ["macbook", "apple", "electronics"],
-  "laptop": ["macbook", "laptop", "notebook", "electronics", "ноутбук"],
-  "tableta": ["ipad", "tablet", "oled", "electronics", "планшет"],
-  "ceas": ["rolex", "watch", "chronograph", "clothing", "часы"]
+  "telefon": ["iphone", "smartphone", "samsung", "айфон", "телефон"],
+  "айфон": ["iphone", "smartphone"],
+  "айпад": ["ipad", "tablet"],
+  "макбук": ["macbook", "laptop"],
+  "laptop": ["macbook", "laptop", "notebook", "portátil", "ноутбук"],
+  "tableta": ["ipad", "tablet", "планшет"],
+  "tabletă": ["ipad", "tablet", "планшет"],
+  "ceas": ["rolex", "watch", "chronograph", "часы"]
 };
+
+const STOP_PREFIX_TOKENS = new Set([
+  "sport", "sports", "sportback", "sportpaket", "sportivo", "deportivo",
+  "commercial", "commerciale", "comercial", "comercială",
+  "contemporary", "contemporain", "contemporaneo", "contemporáneo",
+  "transport", "import", "export", "support", "opportunity", "portion", "portal",
+  "portatil", "portátil", "portbagaj", "portable", "portiere", "port", "por"
+]);
+
+function extractSearchTokens(str) {
+  return String(str || "")
+    .toLowerCase()
+    .split(/[^a-z0-9ăâîșțäöüßéèêëàùûüçñа-яё]+/i)
+    .filter(Boolean);
+}
+
+function tokensMatchQueryWords(tokens, queryWords, allowSynonyms = true) {
+  return queryWords.every(w => {
+    if (tokens.some(tok => tok.startsWith(w) && !(w.length <= 4 && STOP_PREFIX_TOKENS.has(tok) && tok !== w))) {
+      return true;
+    }
+    if (!allowSynonyms) return false;
+    const directSyns = SEARCH_SYNONYMS[w];
+    if (directSyns && directSyns.some(s => tokens.some(tok => tok.startsWith(s)))) return true;
+    if (w.length >= 3) {
+      for (const [k, synList] of Object.entries(SEARCH_SYNONYMS)) {
+        if (k.startsWith(w) && synList.some(s => tokens.some(tok => tok.startsWith(s)))) return true;
+      }
+    }
+    return false;
+  });
+}
+
+function getOfferPrimaryTokens(item) {
+  const activeTr = (item.i18n && item.i18n[currentLang]) || {};
+  const enTr = (item.i18n && item.i18n.en) || {};
+  const primaryText = `${item.category || ""} ${item.country || ""} ${item.city || ""} ${item.specs || ""} ${item.title || ""} ${activeTr.title || ""} ${enTr.title || ""}`;
+  return extractSearchTokens(primaryText);
+}
+
+function getOfferWantTokens(item) {
+  const activeTr = (item.i18n && item.i18n[currentLang]) || {};
+  const enTr = (item.i18n && item.i18n.en) || {};
+  const wantText = `${item.want || ""} ${activeTr.want || ""} ${enTr.want || ""}`;
+  return extractSearchTokens(wantText);
+}
 
 function matchesSmartSearchQuery(item, rawQuery) {
   if (!rawQuery) return true;
   const q = rawQuery.trim().toLowerCase();
   if (!q) return true;
+  const words = extractSearchTokens(q);
+  if (words.length === 0) return true;
 
-  let allText = `${item.category} ${item.country} ${item.city} ${item.specs || ""} ${item.title || ""} ${item.want || ""} ${item.desc || ""}`;
-  if (item.i18n) {
-    Object.values(item.i18n).forEach(tr => {
-      allText += ` ${tr.title || ""} ${tr.want || ""} ${tr.desc || ""}`;
-    });
+  const primaryTokens = getOfferPrimaryTokens(item);
+  return tokensMatchQueryWords(primaryTokens, words, true);
+}
+
+function matchesWantSearchQuery(item, rawQuery) {
+  if (!rawQuery) return false;
+  const q = rawQuery.trim().toLowerCase();
+  if (!q) return false;
+  const words = extractSearchTokens(q);
+  if (words.length === 0) return false;
+
+  const wantTokens = getOfferWantTokens(item);
+  return tokensMatchQueryWords(wantTokens, words, false);
+}
+
+function inferSearchCategory(rawQuery, exactMatches) {
+  if (exactMatches && exactMatches.length > 0) {
+    return exactMatches[0].category;
   }
-  const haystack = allText.toLowerCase();
-  if (haystack.includes(q)) return true;
-
-  const words = q.split(/\s+/);
-  return words.every(w => {
-    if (haystack.includes(w)) return true;
-    const directSyns = SEARCH_SYNONYMS[w];
-    if (directSyns && directSyns.some(s => haystack.includes(s))) return true;
-    if (w.length >= 2) {
-      for (const [k, synList] of Object.entries(SEARCH_SYNONYMS)) {
-        if (k.startsWith(w) && synList.some(s => haystack.includes(s))) return true;
-      }
-    }
-    return false;
-  });
+  const q = String(rawQuery || "").trim().toLowerCase();
+  const words = extractSearchTokens(q);
+  const carPrefixes = ["merc", "bmw", "por", "aud", "tes", "volk", "vw", "toy", "rang", "ferr", "lamb", "masin", "mașin", "auto", "car", "suv", "авто", "машин"];
+  const realEstatePrefixes = ["vil", "cas", "apart", "penth", "imob", "teren", "haus", "wohn", "piso", "maison", "недвиж", "дом", "кварт"];
+  const elecPrefixes = ["iph", "ipad", "mac", "appl", "sams", "lap", "tel", "watch", "son", "cam", "ps5", "playst", "dji", "electr", "айф", "мак"];
+  for (const w of words) {
+    if (carPrefixes.some(p => w.startsWith(p) || p.startsWith(w))) return "cars";
+    if (realEstatePrefixes.some(p => w.startsWith(p) || p.startsWith(w))) return "real-estate";
+    if (elecPrefixes.some(p => w.startsWith(p) || p.startsWith(w))) return "electronics";
+  }
+  return null;
 }
 
 function getSmartUiLabels() {
@@ -726,7 +945,23 @@ function getSmartUiLabels() {
       geoPlaceholder: "Type city or address (e.g. Vienna, Munich, Bucharest, Zurich, Paris)...",
       countryLabel: "Country",
       cityLabel: "City / Area",
-      selectBtn: "Select"
+      selectBtn: "Select",
+      parityLabel: "Parity",
+      stepWord: "Step",
+      nextStepBtn: "Next Step →",
+      publishBtn: "✓ Publish Swap Offer",
+      uploadPhotoDesc: "Upload a photo of your item/property or choose a quick preview photo below:",
+      uploadPhotoTitle: "+ Upload JPG / PNG from device",
+      uploadPhotoSub: "Up to 10 high-resolution photos",
+      samplePhotoLabel: "Or select a sample category photo:",
+      noFilterMatchTitle: "No exact swap offers matched your filter",
+      noFilterMatchDesc: "Reset filters or post your own swap offer so other members can match with you.",
+      resetFiltersBtn: "Reset Filters",
+      altSectionTitle: "Similar Alternatives & Owners looking for",
+      altSectionSub: "Offers in the same category or members who explicitly want this item in exchange",
+      wantMatchBadge: "Wants in swap",
+      altBadge: "Alternative",
+      ddAltHeader: "Similar Alternatives & Swap Matches"
     },
     de: {
       noMatch: "Kein exaktes Inserat für",
@@ -742,7 +977,23 @@ function getSmartUiLabels() {
       geoPlaceholder: "Stadt oder Adresse eingeben (z.B. Wien, München, Zürich, Berlin)...",
       countryLabel: "Land",
       cityLabel: "Stadt / Bezirk",
-      selectBtn: "Wählen"
+      selectBtn: "Wählen",
+      parityLabel: "Parität",
+      stepWord: "Schritt",
+      nextStepBtn: "Nächster Schritt →",
+      publishBtn: "✓ Tauschangebot veröffentlichen",
+      uploadPhotoDesc: "Laden Sie ein Foto hoch oder wählen Sie unten ein Vorschaubild:",
+      uploadPhotoTitle: "+ JPG / PNG vom Gerät hochladen",
+      uploadPhotoSub: "Bis zu 10 hochauflösende Fotos",
+      samplePhotoLabel: "Oder Beispielbild der Kategorie wählen:",
+      noFilterMatchTitle: "Keine exakten Angebote für Ihren Filter gefunden",
+      noFilterMatchDesc: "Filter zurücksetzen oder eigenes Angebot erstellen.",
+      resetFiltersBtn: "Filter zurücksetzen",
+      altSectionTitle: "Ähnliche Alternativen & Eigentümer, die suchen nach",
+      altSectionSub: "Angebote derselben Kategorie oder Mitglieder, die dieses Objekt im Tausch suchen",
+      wantMatchBadge: "Sucht im Tausch",
+      altBadge: "Alternative",
+      ddAltHeader: "Ähnliche Alternativen & Tausch-Matches"
     },
     fr: {
       noMatch: "Aucune annonce exacte pour",
@@ -758,7 +1009,23 @@ function getSmartUiLabels() {
       geoPlaceholder: "Tapez la ville ou l'adresse (ex : Paris, Nice, Genève, Lyon)...",
       countryLabel: "Pays",
       cityLabel: "Ville / Quartier",
-      selectBtn: "Choisir"
+      selectBtn: "Choisir",
+      parityLabel: "Parité",
+      stepWord: "Étape",
+      nextStepBtn: "Étape suivante →",
+      publishBtn: "✓ Publier l'annonce",
+      uploadPhotoDesc: "Téléchargez une photo de votre bien ou choisissez un aperçu ci-dessous :",
+      uploadPhotoTitle: "+ Télécharger JPG / PNG",
+      uploadPhotoSub: "Jusqu'à 10 photos haute résolution",
+      samplePhotoLabel: "Ou choisir une photo d'exemple :",
+      noFilterMatchTitle: "Aucune offre exacte ne correspond à votre filtre",
+      noFilterMatchDesc: "Réinitialisez les filtres ou publiez votre propre offre d'échange.",
+      resetFiltersBtn: "Réinitialiser les filtres",
+      altSectionTitle: "Alternatives similaires & Propriétaires cherchant",
+      altSectionSub: "Offres de la même catégorie ou membres souhaitant cet article en échange",
+      wantMatchBadge: "Cherche en échange",
+      altBadge: "Alternative",
+      ddAltHeader: "Alternatives similaires & Échanges compatibles"
     },
     it: {
       noMatch: "Nessun annuncio esatto per",
@@ -774,7 +1041,23 @@ function getSmartUiLabels() {
       geoPlaceholder: "Scrivi città o indirizzo (es: Milano, Roma, Zurigo, Torino)...",
       countryLabel: "Paese",
       cityLabel: "Città / Zona",
-      selectBtn: "Scegli"
+      selectBtn: "Scegli",
+      parityLabel: "Parità",
+      stepWord: "Passo",
+      nextStepBtn: "Passo successivo →",
+      publishBtn: "✓ Pubblica annuncio",
+      uploadPhotoDesc: "Carica una foto del tuo bene o scegli un'anteprima qui sotto:",
+      uploadPhotoTitle: "+ Carica JPG / PNG dal dispositivo",
+      uploadPhotoSub: "Fino a 10 foto ad alta risoluzione",
+      samplePhotoLabel: "Oppure scegli una foto di esempio:",
+      noFilterMatchTitle: "Nessuna offerta esatta corrisponde al filtro",
+      noFilterMatchDesc: "Reimposta i filtri o pubblica la tua offerta di scambio.",
+      resetFiltersBtn: "Reimposta filtri",
+      altSectionTitle: "Alternative simili & Proprietari che cercano",
+      altSectionSub: "Offerte della stessa categoria o membri che cercano questo bene in permuta",
+      wantMatchBadge: "Cerca in scambio",
+      altBadge: "Alternativa",
+      ddAltHeader: "Alternative simili & Scambi compatibili"
     },
     es: {
       noMatch: "Ningún anuncio exacto para",
@@ -790,7 +1073,23 @@ function getSmartUiLabels() {
       geoPlaceholder: "Escribe ciudad o dirección (ej: Madrid, Barcelona, Marbella)...",
       countryLabel: "País",
       cityLabel: "Ciudad / Zona",
-      selectBtn: "Elegir"
+      selectBtn: "Elegir",
+      parityLabel: "Paridad",
+      stepWord: "Paso",
+      nextStepBtn: "Siguiente paso →",
+      publishBtn: "✓ Publicar anuncio",
+      uploadPhotoDesc: "Sube una foto de tu artículo/propiedad o elige una vista previa abajo:",
+      uploadPhotoTitle: "+ Subir JPG / PNG desde dispositivo",
+      uploadPhotoSub: "Hasta 10 fotos en alta resolución",
+      samplePhotoLabel: "O selecciona una foto de ejemplo:",
+      noFilterMatchTitle: "Ninguna oferta exacta coincide con tu filtro",
+      noFilterMatchDesc: "Restablece los filtros o publica tu propia oferta de intercambio.",
+      resetFiltersBtn: "Restablecer filtros",
+      altSectionTitle: "Alternativas similares & Propietarios que buscan",
+      altSectionSub: "Ofertas de la misma categoría o miembros que buscan este artículo a cambio",
+      wantMatchBadge: "Busca a cambio",
+      altBadge: "Alternativa",
+      ddAltHeader: "Alternativas similares e Intercambios"
     },
     ro: {
       noMatch: "Niciun anunț exact pentru",
@@ -806,7 +1105,23 @@ function getSmartUiLabels() {
       geoPlaceholder: "Tastează orașul sau adresa (ex: Cluj-Napoca, București, Timișoara, Wien)...",
       countryLabel: "Țară",
       cityLabel: "Oraș / Zonă",
-      selectBtn: "Selectează"
+      selectBtn: "Selectează",
+      parityLabel: "Paritate",
+      stepWord: "Pasul",
+      nextStepBtn: "Pasul următor →",
+      publishBtn: "✓ Publică Anunțul",
+      uploadPhotoDesc: "Încarcă o fotografie a bunului tău sau alege o imagine rapidă mai jos:",
+      uploadPhotoTitle: "+ Încarcă JPG / PNG din dispozitiv",
+      uploadPhotoSub: "Până la 10 fotografii de înaltă rezoluție",
+      samplePhotoLabel: "Sau alege o fotografie-șablon din categorie:",
+      noFilterMatchTitle: "Nicio ofertă exactă nu corespunde filtrului selectat",
+      noFilterMatchDesc: "Resetează filtrele sau adaugă propria ta ofertă pentru a primi propuneri.",
+      resetFiltersBtn: "Resetează filtrele",
+      altSectionTitle: "Alternative similare & Proprietari care caută",
+      altSectionSub: "Oferte din aceeași categorie sau membri care caută explicit acest bun la schimb",
+      wantMatchBadge: "Caută la schimb",
+      altBadge: "Alternativă",
+      ddAltHeader: "Alternative similare & Schimburi compatibile"
     },
     ru: {
       noMatch: "Точных объявлений не найдено для",
@@ -822,18 +1137,243 @@ function getSmartUiLabels() {
       geoPlaceholder: "Введите город или адрес (например: Вена, Мюнхен, Бухарест, Кишинёв)...",
       countryLabel: "Страна",
       cityLabel: "Город / Район",
-      selectBtn: "Выбрать"
+      selectBtn: "Выбрать",
+      parityLabel: "Паритет",
+      stepWord: "Шаг",
+      nextStepBtn: "Далее →",
+      publishBtn: "✓ Опубликовать обмен",
+      uploadPhotoDesc: "Загрузите фото вашего объекта или выберите быстрое превью ниже:",
+      uploadPhotoTitle: "+ Загрузить JPG / PNG с устройства",
+      uploadPhotoSub: "До 10 фото в высоком разрешении",
+      samplePhotoLabel: "Или выберите шаблонное фото категории:",
+      noFilterMatchTitle: "Точных предложений по вашему фильтру не найдено",
+      noFilterMatchDesc: "Сбросьте фильтры или разместите своё предложение обмена.",
+      resetFiltersBtn: "Сбросить фильтры",
+      altSectionTitle: "Похожие альтернативы и владельцы, ищущие",
+      altSectionSub: "Предложения из той же категории или участники, ищущие этот товар на обмен",
+      wantMatchBadge: "Ищет на обмен",
+      altBadge: "Альтернатива",
+      ddAltHeader: "Похожие альтернативы и обмен"
     }
   };
   return map[currentLang] || map.en;
+}
+
+function buildAiSmartRecommendations(rawQuery, exactMatches, candidatePool) {
+  const q = String(rawQuery || "").trim().toLowerCase();
+  const words = extractSearchTokens(q);
+  const ui = getSmartUiLabels();
+  const exactIds = new Set((exactMatches || []).map(it => it.id));
+  const pool = (candidatePool || offers).filter(it => !exactIds.has(it.id));
+
+  const hasPrefix = (prefList) => words.some(w => prefList.some(p => w.startsWith(p) || p.startsWith(w)));
+  const isIphone = hasPrefix(["iph", "telefon", "smartph", "айф", "телеф"]);
+  const isIpad = hasPrefix(["ipad", "tablet", "айпад", "планш"]);
+  const isMac = hasPrefix(["mac", "laptop", "noteb", "макб", "ноут"]);
+  const isHouse = hasPrefix(["cas", "vil", "hous", "haus", "mais", "chal", "дом", "вилл"]);
+  const isApt = hasPrefix(["apart", "penth", "wohn", "piso", "triloc", "attic", "кварт"]);
+  const isCar = hasPrefix(["merc", "bmw", "por", "aud", "tes", "auto", "masin", "mașin", "car", "suv", "coche", "voitur", "авто", "машин"]);
+
+  const lang = currentLang || "en";
+  const aiCopyMap = {
+    ro: {
+      aiTag: "AI Smart Match",
+      tryAlso: "Sugestii AI conexe:",
+      ecoApple: "AI Smart · Ecosistem Apple (iPad / MacBook)",
+      ecoHouseApt: "AI Smart · Alternativă Apartament / Penthouse",
+      ecoAptHouse: "AI Smart · Alternativă Casă / Vilă",
+      ecoCar: "AI Smart · Alternativă Auto din aceeași clasă",
+      wantBadge: "AI Smart · Caută la schimb",
+      subIphone: "Pentru căutarea ta, AI-ul îți propune și tablete iPad Pro M4, laptopuri MacBook Pro și echipamente tech compatibile la schimb.",
+      subHouse: "Pentru «Casă / Vilă», AI-ul îți propune și Penthouse-uri panoramice și Apartamente 3 camere (inclusiv proprietari care caută o casă la schimb).",
+      subApt: "Pentru «Apartament», AI-ul îți propune și Case & Vile ale căror proprietari caută un apartament sau penthouse la schimb.",
+      subCar: "AI-ul a selectat proprietari care caută acest model la schimb și alternative auto din aceeași clasă (Porsche, Mercedes-AMG, BMW M, Audi, Tesla)."
+    },
+    en: {
+      aiTag: "AI Smart Match",
+      tryAlso: "AI related suggestions:",
+      ecoApple: "AI Smart · Apple Ecosystem (iPad / MacBook)",
+      ecoHouseApt: "AI Smart · Apartment / Penthouse Alternative",
+      ecoAptHouse: "AI Smart · House / Villa Alternative",
+      ecoCar: "AI Smart · Same-Class Car Alternative",
+      wantBadge: "AI Smart · Wants in swap",
+      subIphone: "Based on your search, AI also recommends iPad Pro M4 tablets, MacBook Pro laptops, and compatible premium tech swaps.",
+      subHouse: "For «House / Villa», AI also suggests Panoramic Penthouses and 3-Room Apartments (including owners looking to swap for a house).",
+      subApt: "For «Apartment», AI also suggests Houses & Villas whose owners are looking for an apartment or penthouse in exchange.",
+      subCar: "AI selected owners looking for this model in exchange plus same-class automotive alternatives (Porsche, Mercedes-AMG, BMW M, Audi, Tesla)."
+    },
+    de: {
+      aiTag: "AI Smart Match",
+      tryAlso: "KI-Vorschläge:",
+      ecoApple: "KI Smart · Apple-Ökosystem (iPad / MacBook)",
+      ecoHouseApt: "KI Smart · Wohnung / Penthouse Alternative",
+      ecoAptHouse: "KI Smart · Haus / Villa Alternative",
+      ecoCar: "KI Smart · Fahrzeug-Alternative",
+      wantBadge: "KI Smart · Sucht im Tausch",
+      subIphone: "Passend zu Ihrer Suche schlägt die KI auch iPad Pro M4, MacBook Pro und kompatible Tech-Tauschangebote vor.",
+      subHouse: "Für «Haus / Villa» schlägt die KI auch Panorama-Penthouses und 3-Zimmer-Wohnungen vor.",
+      subApt: "Für «Wohnung» schlägt die KI auch Häuser & Villen vor, deren Eigentümer eine Wohnung im Tausch suchen.",
+      subCar: "Die KI zeigt Eigentümer, die dieses Modell im Tausch suchen, sowie passende Alternativen derselben Fahrzeugklasse."
+    },
+    fr: {
+      aiTag: "AI Smart Match",
+      tryAlso: "Suggestions IA :",
+      ecoApple: "IA Smart · Écosystème Apple (iPad / MacBook)",
+      ecoHouseApt: "IA Smart · Alternative Appartement / Penthouse",
+      ecoAptHouse: "IA Smart · Alternative Maison / Villa",
+      ecoCar: "IA Smart · Alternative Auto similaire",
+      wantBadge: "IA Smart · Cherche en échange",
+      subIphone: "Pour votre recherche, l'IA suggère aussi l'iPad Pro M4, le MacBook Pro et des échanges tech compatibles.",
+      subHouse: "Pour « Maison / Villa », l'IA propose aussi des Penthouses et Appartements 3 pièces compatibles.",
+      subApt: "Pour « Appartement », l'IA propose aussi des Villas et Maisons dont les propriétaires cherchent un appartement.",
+      subCar: "L'IA a sélectionné des propriétaires cherchant ce modèle en échange ainsi que des alternatives de même catégorie."
+    },
+    it: {
+      aiTag: "AI Smart Match",
+      tryAlso: "Suggerimenti IA:",
+      ecoApple: "IA Smart · Ecosistema Apple (iPad / MacBook)",
+      ecoHouseApt: "IA Smart · Alternativa Appartamento / Attico",
+      ecoAptHouse: "IA Smart · Alternativa Casa / Villa",
+      ecoCar: "IA Smart · Alternativa Auto simile",
+      wantBadge: "IA Smart · Cerca in scambio",
+      subIphone: "In base alla ricerca, l'IA consiglia anche iPad Pro M4, MacBook Pro e scambi tech compatibili.",
+      subHouse: "Per «Casa / Villa», l'IA propone anche Attici panoramici e Appartamenti trilocali.",
+      subApt: "Per «Appartamento», l'IA propone anche Ville e Case i cui proprietari cercano un appartamento in permuta.",
+      subCar: "L'IA ha selezionato proprietari che cercano questo modello in scambio e auto alternative della stessa classe."
+    },
+    es: {
+      aiTag: "AI Smart Match",
+      tryAlso: "Sugerencias IA:",
+      ecoApple: "IA Smart · Ecosistema Apple (iPad / MacBook)",
+      ecoHouseApt: "IA Smart · Alternativa Piso / Ático",
+      ecoAptHouse: "IA Smart · Alternativa Casa / Villa",
+      ecoCar: "IA Smart · Alternativa Auto similar",
+      wantBadge: "IA Smart · Busca a cambio",
+      subIphone: "Según tu búsqueda, la IA también sugiere iPad Pro M4, MacBook Pro e intercambios tech compatibles.",
+      subHouse: "Para «Casa / Villa», la IA también sugiere Áticos panorámicos y Pisos de 3 habitaciones.",
+      subApt: "Para «Piso / Apartamento», la IA también sugiere Villas y Casas cuyos propietarios buscan un piso a cambio.",
+      subCar: "La IA seleccionó propietarios que buscan este modelo a cambio y alternativas de la misma categoría."
+    },
+    ru: {
+      aiTag: "AI Smart Match",
+      tryAlso: "ИИ-рекомендации:",
+      ecoApple: "ИИ Smart · Экосистема Apple (iPad / MacBook)",
+      ecoHouseApt: "ИИ Smart · Альтернатива: Квартира / Пентхаус",
+      ecoAptHouse: "ИИ Smart · Альтернатива: Дом / Вилла",
+      ecoCar: "ИИ Smart · Авто-альтернатива того же класса",
+      wantBadge: "ИИ Smart · Ищет на обмен",
+      subIphone: "По вашему запросу ИИ также рекомендует планшеты iPad Pro M4, ноутбуки MacBook Pro и совместимую технику.",
+      subHouse: "Для «Дом / Вилла» ИИ также предлагает панорамные пентхаусы и 3-комнатные квартиры.",
+      subApt: "Для «Квартира» ИИ также предлагает виллы и дома, владельцы которых ищут квартиру на обмен.",
+      subCar: "ИИ подобрал владельцев, ищущих эту модель на обмен, и альтернативы того же класса."
+    }
+  };
+  const copy = aiCopyMap[lang] || aiCopyMap.en;
+
+  let relatedChips = [];
+  let aiSubtext = ui.altSectionSub;
+
+  if (isIphone) {
+    relatedChips = ["iPad", "MacBook", "Sony Alpha"];
+    aiSubtext = copy.subIphone;
+  } else if (isIpad) {
+    relatedChips = ["iPhone", "MacBook", "Sony Alpha"];
+    aiSubtext = copy.subIphone;
+  } else if (isMac) {
+    relatedChips = ["iPad", "iPhone", "Sony Alpha"];
+    aiSubtext = copy.subIphone;
+  } else if (isHouse) {
+    relatedChips = [t("qtagApartment"), "Penthouse", "Cluj-Napoca", "Chișinău"];
+    aiSubtext = copy.subHouse;
+  } else if (isApt) {
+    relatedChips = [t("qtagHouse"), "Marbella", "Salzburg", "Alicante"];
+    aiSubtext = copy.subApt;
+  } else if (isCar) {
+    relatedChips = ["Porsche", "Mercedes", "BMW", "Audi", "Tesla"];
+    aiSubtext = copy.subCar;
+  }
+
+  const inferredCat = inferSearchCategory(q, exactMatches);
+  const wantMatches = pool.filter(it => matchesWantSearchQuery(it, q));
+  const wantIds = new Set(wantMatches.map(it => it.id));
+  const catPeers = inferredCat
+    ? pool.filter(it => !wantIds.has(it.id) && it.category === inferredCat)
+    : [];
+
+  // Score and order peers so the most relevant AI cross-suggestions come first (e.g. iPad Pro first for iPhone)
+  catPeers.sort((a, b) => {
+    const aText = `${a.specs || ""} ${a.i18n?.en?.title || ""}`.toLowerCase();
+    const bText = `${b.specs || ""} ${b.i18n?.en?.title || ""}`.toLowerCase();
+    if (isIphone) {
+      const aScore = aText.includes("ipad") ? 3 : aText.includes("macbook") ? 2 : 1;
+      const bScore = bText.includes("ipad") ? 3 : bText.includes("macbook") ? 2 : 1;
+      return bScore - aScore;
+    }
+    if (isIpad) {
+      const aScore = aText.includes("iphone") ? 3 : aText.includes("macbook") ? 2 : 1;
+      const bScore = bText.includes("iphone") ? 3 : bText.includes("macbook") ? 2 : 1;
+      return bScore - aScore;
+    }
+    return (b.matchScore || 90) - (a.matchScore || 90);
+  });
+
+  const getCustomAltBadge = (item, isWant) => {
+    const enTitle = (item.i18n?.en?.title || "").toLowerCase();
+    if (isIphone || isIpad || isMac) {
+      if (enTitle.includes("ipad") || enTitle.includes("iphone") || enTitle.includes("macbook")) {
+        return isWant ? `${copy.wantBadge} · Apple` : copy.ecoApple;
+      }
+    }
+    if (isHouse && item.category === "real-estate") {
+      return isWant ? copy.wantBadge : copy.ecoHouseApt;
+    }
+    if (isApt && item.category === "real-estate") {
+      return isWant ? copy.wantBadge : copy.ecoAptHouse;
+    }
+    if (isWant) return copy.wantBadge;
+    if (item.category === "cars") return copy.ecoCar;
+    return `${copy.aiTag} · ${ui.altBadge}`;
+  };
+
+  // For iPhone/iPad/Mac or House/Apt, put same-category ecosystem matches first, then cross-category want matches
+  const sameCatWant = wantMatches.filter(it => !inferredCat || it.category === inferredCat);
+  const crossCatWant = wantMatches.filter(it => inferredCat && it.category !== inferredCat);
+
+  const items = [
+    ...sameCatWant.map(item => ({ item, altType: "want", badgeLabel: getCustomAltBadge(item, true) })),
+    ...catPeers.map(item => ({ item, altType: "alt", badgeLabel: getCustomAltBadge(item, false) })),
+    ...crossCatWant.map(item => ({ item, altType: "want", badgeLabel: getCustomAltBadge(item, true) }))
+  ];
+
+  return {
+    items,
+    relatedChips,
+    aiTag: copy.aiTag,
+    tryAlso: copy.tryAlso,
+    aiSubtext
+  };
 }
 
 function buildLiveSearchDropdownHtml(val) {
   const q = String(val || "").trim();
   if (q.length < 1) return "";
   const ui = getSmartUiLabels();
-  const matches = offers.filter(it => matchesSmartSearchQuery(it, q)).slice(0, 5);
-  if (matches.length === 0) {
+  const qTokens = extractSearchTokens(q);
+  const exactMatches = offers
+    .filter(it => matchesSmartSearchQuery(it, q))
+    .sort((a, b) => {
+      const aTitleTokens = extractSearchTokens(`${a.title} ${getOfferLocalized(a).title}`);
+      const bTitleTokens = extractSearchTokens(`${b.title} ${getOfferLocalized(b).title}`);
+      const aInTitle = tokensMatchQueryWords(aTitleTokens, qTokens, true) ? 1 : 0;
+      const bInTitle = tokensMatchQueryWords(bTitleTokens, qTokens, true) ? 1 : 0;
+      return bInTitle - aInTitle;
+    })
+    .slice(0, 4);
+
+  const aiRecs = buildAiSmartRecommendations(q, exactMatches, offers);
+  const alternatives = aiRecs.items.slice(0, 3);
+
+  if (exactMatches.length === 0 && alternatives.length === 0) {
     return `
       <div class="smart-dd-empty" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <span style="font-size:13px;color:var(--muted);font-weight:600;">${ui.noMatch} «${q}»</span>
@@ -841,23 +1381,43 @@ function buildLiveSearchDropdownHtml(val) {
       </div>
     `;
   }
+
+  const renderRow = (item, badgeText = "", isWant = false) => {
+    const loc = getOfferLocalized(item);
+    const price = formatOfferPrice(item, currentCurrency);
+    const badgeHtml = badgeText
+      ? `<span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;background:${isWant ? '#dcfce7' : '#e0f2fe'};color:${isWant ? '#065f46' : '#0c4a6e'};border:1px solid ${isWant ? '#86efac' : '#bae6fd'};vertical-align:middle;">${badgeText}</span>`
+      : "";
+    return `
+      <button type="button" class="smart-dd-item" onclick="document.getElementById('heroSmartDropdown').style.display='none'; document.getElementById('mobileSmartDropdown').style.display='none'; openOfferModal(${item.id}, 'details');">
+        <img src="${item.image}" alt="" />
+        <div class="smart-dd-info">
+          <strong>${loc.title}${badgeHtml}</strong>
+          <span>${getCategoryLabel(item.category)} · ${item.city}, ${item.country} · ${isWant ? `${t("wantBadge")}: ${loc.want}` : getDealTypeLabel(item.dealType)}</span>
+        </div>
+        <span class="smart-dd-price">~${price}</span>
+      </button>
+    `;
+  };
+
+  const chipsHtml = aiRecs.relatedChips.length > 0
+    ? `<div style="padding:7px 14px;background:#f0fdf4;border-top:1px solid rgba(12,44,40,0.08);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:800;color:var(--forest);">${aiRecs.tryAlso}</span>
+        ${aiRecs.relatedChips.map(chip => `<button type="button" style="background:#ffffff;color:var(--forest);border:1px solid rgba(12,44,40,0.22);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;" onclick="event.stopPropagation(); executeQuickKeywordSearch('${chip.replace(/'/g, "\\'")}')">${chip}</button>`).join("")}
+      </div>`
+    : "";
+
   return `
-    ${matches.map(item => {
-      const loc = getOfferLocalized(item);
-      const price = formatOfferPrice(item, currentCurrency);
-      return `
-        <button type="button" class="smart-dd-item" onclick="document.getElementById('heroSmartDropdown').style.display='none'; document.getElementById('mobileSmartDropdown').style.display='none'; openOfferModal(${item.id}, 'details');">
-          <img src="${item.image}" alt="" />
-          <div class="smart-dd-info">
-            <strong>${loc.title}</strong>
-            <span>${getCategoryLabel(item.category)} · ${item.city}, ${item.country} · ${getDealTypeLabel(item.dealType)}</span>
-          </div>
-          <span class="smart-dd-price">~${price}</span>
-        </button>
-      `;
-    }).join("")}
+    ${exactMatches.map(item => renderRow(item)).join("")}
+    ${chipsHtml}
+    ${alternatives.length > 0 ? `
+      <div style="padding:6px 14px;background:#f8faf9;border-top:1px solid rgba(12,44,40,0.08);border-bottom:1px solid rgba(12,44,40,0.08);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--forest);">
+        ${aiRecs.aiTag} · ${ui.ddAltHeader}
+      </div>
+      ${alternatives.map(a => renderRow(a.item, a.badgeLabel, a.altType === "want")).join("")}
+    ` : ""}
     <button type="button" class="smart-dd-all" onclick="executeQuickKeywordSearch('${q.replace(/'/g, "\\'")}')">
-      ${ui.seeAll} (${matches.length})
+      ${ui.seeAll} (${exactMatches.length + alternatives.length})
     </button>
   `;
 }
@@ -930,7 +1490,7 @@ function renderOffers() {
   const minVal = Number(document.getElementById("catalogMinEur")?.value) || 0;
   const maxVal = Number(document.getElementById("catalogMaxEur")?.value) || 0;
 
-  let filtered = offers.filter(item => {
+  const passesBaseFilters = (item) => {
     if (currentCategoryFilter === "favs") {
       if (!favoriteIds.includes(item.id)) return false;
     } else if (currentCategoryFilter !== "all" && item.category !== currentCategoryFilter) {
@@ -951,28 +1511,50 @@ function renderOffers() {
     const itemValInCurrentCurr = getOfferValueInCurrency(item, currentCurrency);
     if (minVal > 0 && itemValInCurrentCurr < minVal) return false;
     if (maxVal > 0 && itemValInCurrentCurr > maxVal) return false;
-
-    if (query && !matchesSmartSearchQuery(item, query)) {
-      return false;
-    }
     return true;
-  });
+  };
 
-  if (sortMode === "valDesc") {
-    filtered.sort((a, b) => (b.valueEur || 0) - (a.valueEur || 0));
-  } else if (sortMode === "valAsc") {
-    filtered.sort((a, b) => (a.valueEur || 0) - (b.valueEur || 0));
-  } else {
-    filtered.sort((a, b) => (b.matchScore || 90) - (a.matchScore || 90));
+  const baseCandidates = offers.filter(passesBaseFilters);
+  let filtered = query
+    ? baseCandidates.filter(item => matchesSmartSearchQuery(item, query))
+    : [...baseCandidates];
+
+  const sortList = (list) => {
+    if (sortMode === "valDesc") {
+      list.sort((a, b) => (b.valueEur || 0) - (a.valueEur || 0));
+    } else if (sortMode === "valAsc") {
+      list.sort((a, b) => (a.valueEur || 0) - (b.valueEur || 0));
+    } else if (query) {
+      const qTokens = extractSearchTokens(query);
+      list.sort((a, b) => {
+        const aTitle = tokensMatchQueryWords(extractSearchTokens(`${a.title} ${getOfferLocalized(a).title}`), qTokens, true) ? 1 : 0;
+        const bTitle = tokensMatchQueryWords(extractSearchTokens(`${b.title} ${getOfferLocalized(b).title}`), qTokens, true) ? 1 : 0;
+        if (bTitle !== aTitle) return bTitle - aTitle;
+        return (b.matchScore || 90) - (a.matchScore || 90);
+      });
+    } else {
+      list.sort((a, b) => (b.matchScore || 90) - (a.matchScore || 90));
+    }
+  };
+  sortList(filtered);
+
+  const ui = getSmartUiLabels();
+
+  // Compute AI Smart Recommendations & Swap Matches when a search query is active
+  let alternativesList = [];
+  let aiRecs = null;
+  if (query) {
+    aiRecs = buildAiSmartRecommendations(query, filtered, baseCandidates);
+    alternativesList = aiRecs.items;
   }
 
-  if (filtered.length === 0) {
+  if (filtered.length === 0 && alternativesList.length === 0) {
     grid.innerHTML = `
       <div style="grid-column: 1 / -1; background: #fff; border-radius: 24px; padding: 42px; text-align: center; border: 1px solid var(--line);">
-        <h3 style="margin:0 0 8px;">No exact swap offers matched your filter</h3>
-        <p style="color:var(--muted);margin:0 0 18px;">Reset filters or post your own swap offer so other members can match with you.</p>
+        <h3 style="margin:0 0 8px;">${ui.noFilterMatchTitle}</h3>
+        <p style="color:var(--muted);margin:0 0 18px;">${ui.noFilterMatchDesc}</p>
         <button type="button" class="btn btn-mint" onclick="filterByCategory('all'); document.getElementById('catalogSearchInput').value=''; document.getElementById('catalogMinEur').value=''; document.getElementById('catalogMaxEur').value=''; renderOffers();">
-          Reset Filters
+          ${ui.resetFiltersBtn}
         </button>
         <button type="button" class="btn btn-dark" style="margin-left:8px;" onclick="openWizardModal()">
           ${t("navPostSwap")}
@@ -982,17 +1564,23 @@ function renderOffers() {
     return;
   }
 
-  grid.innerHTML = filtered.map(item => {
+  const renderCardHtml = (item, extraBadge = null, isWantHighlight = false) => {
     const loc = getOfferLocalized(item);
     const valFormatted = formatOfferPrice(item, currentCurrency);
     const isFav = favoriteIds.includes(item.id);
     const score = item.matchScore || 95;
+    const altPillHtml = extraBadge
+      ? `<span style="background:${isWantHighlight ? '#a9ffca' : 'rgba(255,255,255,0.94)'};color:var(--forest);font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">${extraBadge}</span>`
+      : "";
 
     return `
       <article class="swap-card">
         <div class="swap-card-media" style="background-image:url('${item.image}')">
           <div class="swap-card-badges">
-            <span class="swap-pill-cat">${getCategoryLabel(item.category)}</span>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <span class="swap-pill-cat">${getCategoryLabel(item.category)}</span>
+              ${altPillHtml}
+            </div>
             <div style="display:flex;gap:6px;align-items:center;">
               <span class="swap-pill-deal">${getDealTypeLabel(item.dealType)}</span>
               <button type="button" class="swap-fav-btn ${isFav ? 'is-fav' : ''}" style="width:36px;height:36px;border-radius:999px;border:1px solid rgba(255,255,255,0.45);background:${isFav ? 'var(--mint)' : 'rgba(12,44,40,0.78)'};color:${isFav ? 'var(--forest)' : '#ffffff'};backdrop-filter:blur(8px);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 4px 14px rgba(0,0,0,0.2);" onclick="toggleFavorite(${item.id}, event)" aria-label="Save favorite">
@@ -1014,7 +1602,7 @@ function renderOffers() {
               <span class="swap-tag have">${t("haveBadge")}</span>
               <span>${item.specs}</span>
             </div>
-            <div class="swap-row">
+            <div class="swap-row" style="${isWantHighlight ? 'background:rgba(16,185,129,0.12);border-radius:8px;padding:4px 6px;margin:-2px -6px;' : ''}">
               <span class="swap-tag want" style="${item.dealType === 'sale' ? 'background:#0c2c28;color:#a9ffca;' : ''}">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
               <span style="font-weight:600;color:var(--ink);">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ~${valFormatted}` : loc.want}</span>
             </div>
@@ -1039,7 +1627,35 @@ function renderOffers() {
         </div>
       </article>
     `;
-  }).join("");
+  };
+
+  let htmlOut = filtered.map(item => renderCardHtml(item)).join("");
+
+  if (query && alternativesList.length > 0 && aiRecs) {
+    const chipsBannerHtml = aiRecs.relatedChips.length > 0
+      ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;">
+          <span style="font-size:12px;font-weight:800;color:var(--forest);">${aiRecs.tryAlso}</span>
+          ${aiRecs.relatedChips.map(chip => `<button type="button" style="background:#ffffff;color:var(--forest);border:1px solid rgba(12,44,40,0.25);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.05);" onclick="executeQuickKeywordSearch('${chip.replace(/'/g, "\\'")}')">${chip}</button>`).join("")}
+        </div>`
+      : "";
+
+    htmlOut += `
+      <div style="grid-column: 1 / -1; margin-top: ${filtered.length > 0 ? '14px' : '0'}; padding: 18px 22px; background: linear-gradient(90deg, rgba(12,44,40,0.06) 0%, rgba(169,255,202,0.22) 100%); border: 1px solid rgba(12,44,40,0.16); border-radius: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div style="max-width:820px;">
+          <div style="display:inline-flex;align-items:center;gap:6px;background:var(--forest);color:var(--mint);font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">
+            ${PREMIUM_ICONS.bolt}${aiRecs.aiTag}
+          </div>
+          <strong style="font-size: 15.5px; color: var(--forest); display: block;">${ui.altSectionTitle} «${query}»</strong>
+          <span style="font-size: 13px; color: var(--muted); font-weight: 500; display:block; margin-top:2px;">${aiRecs.aiSubtext}</span>
+          ${chipsBannerHtml}
+        </div>
+        <span style="background: var(--forest); color: var(--mint); font-size: 12px; font-weight: 800; padding: 6px 14px; border-radius: 999px;">+${alternativesList.length} ${ui.altBadge}</span>
+      </div>
+      ${alternativesList.map(entry => renderCardHtml(entry.item, entry.badgeLabel, entry.altType === "want")).join("")}
+    `;
+  }
+
+  grid.innerHTML = htmlOut;
 
   initScrollRevealAnimations();
 }
@@ -1344,9 +1960,11 @@ let verifySecondsRemaining = 60;
 let generatedVerifyCode = "482910";
 
 function openAuthModal(mode = "register") {
+  currentAuthMode = mode;
   document.getElementById("authModal").classList.add("open");
   document.body.classList.add("modal-open");
   switchAuthTab(mode);
+  syncUrlWithRoute(mode === "login" ? "/login" : "/register");
 }
 
 function closeAuthModal() {
@@ -1356,12 +1974,17 @@ function closeAuthModal() {
     clearInterval(verifyTimerInterval);
     verifyTimerInterval = null;
   }
+  syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
 
 function switchAuthTab(mode) {
+  currentAuthMode = mode;
   const isReg = mode === "register";
   const isLogin = mode === "login";
   const isVerify = mode === "verify";
+  if (document.getElementById("authModal")?.classList.contains("open") && (isReg || isLogin)) {
+    syncUrlWithRoute(isLogin ? "/login" : "/register", true);
+  }
 
   document.getElementById("authTabRegisterBtn")?.classList.toggle("active", isReg);
   document.getElementById("authTabLoginBtn")?.classList.toggle("active", isLogin);
@@ -1539,21 +2162,29 @@ function handleAppleAuth() {
 // ============================================================================
 // 7-STEP SWAP LISTING WIZARD
 // ============================================================================
-function openWizardModal() {
-  wizStep = 1;
-  if (currentUser) {
-    wizData.owner = currentUser.name;
-    wizData.email = currentUser.email;
-    wizData.phone = currentUser.phone;
+function openWizardModal(stepOverride) {
+  if (typeof stepOverride === "number" && stepOverride >= 1 && stepOverride <= 7) {
+    wizStep = stepOverride;
+  } else if (!wizStep || wizStep < 1 || wizStep > 7) {
+    wizStep = 1;
   }
+  if (currentUser) {
+    if (!wizData.owner) wizData.owner = currentUser.name;
+    if (!wizData.email) wizData.email = currentUser.email;
+    if (!wizData.phone) wizData.phone = currentUser.phone;
+  }
+  document.body.classList.add("mobile-started");
   document.getElementById("wizardModal").classList.add("open");
   document.body.classList.add("modal-open");
   renderWizStep();
+  syncUrlWithRoute(`/wizard/step-${wizStep}`);
 }
 
 function closeWizardModal() {
+  saveCurrentWizStepInputs();
   document.getElementById("wizardModal").classList.remove("open");
   document.body.classList.remove("modal-open");
+  syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
 
 function goToWizStep(stepNum) {
@@ -1606,6 +2237,7 @@ function saveCurrentWizStepInputs() {
   if (val("wizOwner") !== undefined) wizData.owner = val("wizOwner");
   if (val("wizEmail") !== undefined) wizData.email = val("wizEmail");
   if (val("wizPhone") !== undefined) wizData.phone = val("wizPhone");
+  persistWizardDraft();
 }
 
 function onWizPriceInputChange() {
@@ -1618,6 +2250,7 @@ function onWizPriceInputChange() {
   wizData.originalCurrency = chosenCurr;
   wizData.originalAmount = rawVal > 0 ? rawVal : "";
   wizData.valueEur = rawVal > 0 ? convertToEur(rawVal, chosenCurr) : "";
+  persistWizardDraft();
   if (labelEl) {
     const cObj = getCurrencyObj(chosenCurr);
     labelEl.textContent = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${cObj.short || cObj.code})`);
@@ -1777,26 +2410,46 @@ function onWizTitleHaveInput(val) {
   const suggEl = document.getElementById("wizTitleSuggestions");
   if (!suggEl) return;
   const q = String(val || "").trim().toLowerCase();
-  if (q.length < 2) {
+  if (q.length < 1) {
     suggEl.style.display = "none";
     return;
   }
   const activeCurr = document.getElementById("wizCurrencySelect")?.value || wizData.originalCurrency || currentCurrency;
+  const catKeyActive = wizData.category || "electronics";
+  const catCfg = SMART_WIZ_CATALOG[catKeyActive] || SMART_WIZ_CATALOG.electronics;
+
   const allTemplates = [];
+  // Prioritize templates from the selected category first
+  (catCfg.templates || []).forEach((tObj, i) => {
+    allTemplates.push({ ...tObj, catKey: catKeyActive, idx: i, priority: 1 });
+  });
   Object.entries(SMART_WIZ_CATALOG).forEach(([catKey, groupObj]) => {
+    if (catKey === catKeyActive) return;
     groupObj.templates.forEach((tObj, i) => {
-      allTemplates.push({ ...tObj, catKey, idx: i });
+      allTemplates.push({ ...tObj, catKey, idx: i, priority: 2 });
     });
   });
-  const matches = allTemplates.filter(item =>
+
+  let matches = allTemplates.filter(item =>
     `${item.title} ${item.specs} ${item.catKey}`.toLowerCase().includes(q)
-  ).slice(0, 5);
+  ).slice(0, 4);
 
   if (matches.length === 0) {
-    suggEl.style.display = "none";
-    return;
+    matches = (catCfg.templates || []).slice(0, 3).map((tObj, i) => ({
+      ...tObj,
+      catKey: catKeyActive,
+      idx: i
+    }));
   }
-  suggEl.innerHTML = matches.map(m => {
+
+  const allChips = [];
+  (catCfg.groups || []).forEach(grp => {
+    (grp.chips || []).forEach(ch => allChips.push(ch));
+  });
+  const matchingChips = allChips.filter(ch => ch.toLowerCase().includes(q));
+  const chipsToShow = (matchingChips.length > 0 ? matchingChips : allChips).slice(0, 8);
+
+  const templatesHtml = matches.map(m => {
     const priceStr = formatAmountInCurrentCurrency(convertFromEur(m.eur, activeCurr), activeCurr);
     return `
       <button type="button" class="smart-dd-item" onclick="selectCrossCategoryWizTemplate('${m.catKey}', ${m.idx})">
@@ -1808,6 +2461,16 @@ function onWizTitleHaveInput(val) {
       </button>
     `;
   }).join("");
+
+  const chipsHtml = chipsToShow.length > 0 ? `
+    <div style="padding:8px 10px;background:var(--mint-soft);border-top:1px solid rgba(13,43,34,0.08);display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+      ${chipsToShow.map(ch => `
+        <button type="button" class="wiz-chip" onclick="appendWizSmartChip('${ch.replace(/'/g, "\\'")}')">+ ${ch}</button>
+      `).join("")}
+    </div>
+  ` : "";
+
+  suggEl.innerHTML = templatesHtml + chipsHtml;
   suggEl.style.display = "block";
 }
 
@@ -1973,14 +2636,17 @@ function selectWizCategoryCard(cat) {
   if (WIZ_CATEGORY_PHOTOS[cat]) {
     wizData.image = WIZ_CATEGORY_PHOTOS[cat];
   }
+  wizStep = 2;
   renderWizStep();
 }
 
 function renderWizStep() {
+  const uiTop = getSmartUiLabels();
   document.getElementById("wizMeterBar").style.width = `${(wizStep / 7) * 100}%`;
-  document.getElementById("wizStepCounter").textContent = `Step ${wizStep} / 7`;
+  document.getElementById("wizStepCounter").textContent = `${uiTop.stepWord} ${wizStep} / 7`;
   document.getElementById("wizPrevBtn").style.visibility = wizStep === 1 ? "hidden" : "visible";
-  document.getElementById("wizNextBtn").textContent = wizStep === 7 ? "✓ Publish Swap Offer" : "Next Step →";
+  document.getElementById("wizPrevBtn").textContent = t("mobileBackBtn");
+  document.getElementById("wizNextBtn").textContent = wizStep === 7 ? uiTop.publishBtn : uiTop.nextStepBtn;
 
   const stepBtns = document.querySelectorAll("#wizStepsBar .wiz-step-btn");
   stepBtns.forEach((btn, idx) => {
@@ -2010,33 +2676,11 @@ function renderWizStep() {
     const displayVal = wizData.originalAmount !== "" && wizData.originalAmount !== undefined
       ? wizData.originalAmount
       : (wizData.valueEur ? convertFromEur(wizData.valueEur, activeWizCurr) : "");
-    const catCfg = SMART_WIZ_CATALOG[wizData.category] || SMART_WIZ_CATALOG.electronics;
     const ui = getSmartUiLabels();
     c.innerHTML = `
-      <h3 style="margin:0 0 10px;font-size:22px;">2. ${t("wizStep3")} (${t("haveBadge")})</h3>
+      <h3 style="margin:0 0 12px;font-size:22px;">2. ${t("wizStep3")} (${t("haveBadge")})</h3>
 
-      <div class="wiz-smart-box">
-        <div class="wiz-smart-header">
-          <span>${ui.smartHeader} · ${getCategoryLabel(wizData.category)}</span>
-          <span style="font-size:11px;font-weight:600;color:var(--muted);">1-Click Autocomplete</span>
-        </div>
-        <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px;">${ui.templatesHint}</div>
-        <div class="wiz-chip-row">
-          ${(catCfg.templates || []).map((tpl, idx) => `
-            <button type="button" class="wiz-chip wiz-chip-tpl" onclick="applyWizSmartTemplate(${idx})">${tpl.title}</button>
-          `).join("")}
-        </div>
-        ${(catCfg.groups || []).map(grp => `
-          <div style="margin-top:8px;display:flex;align-items:center;flex-wrap:wrap;gap:5px;">
-            <span style="font-size:11px;font-weight:800;color:var(--forest);margin-right:4px;">${grp.name}:</span>
-            ${(grp.chips || []).map(ch => `
-              <button type="button" class="wiz-chip" onclick="appendWizSmartChip('${ch.replace(/'/g, "\\'")}')">+ ${ch}</button>
-            `).join("")}
-          </div>
-        `).join("")}
-      </div>
-
-      <div class="field-group" style="position:relative;margin-top:12px;">
+      <div class="field-group" style="position:relative;">
         <label style="color:var(--ink);">${t("quickTitleHave")}</label>
         <input type="text" id="wizTitleHave" class="input-light" placeholder="${ui.titlePlaceholder}" value="${wizData.titleHave}" autocomplete="off" oninput="onWizTitleHaveInput(this.value)" />
         <div id="wizTitleSuggestions" class="wiz-autocomplete-list" style="display:none;"></div>
@@ -2044,13 +2688,13 @@ function renderWizStep() {
 
       <div class="field-group">
         <label style="color:var(--ink);">${ui.specsLabel}</label>
-        <input type="text" id="wizSpecsPreview" class="input-light" placeholder="${ui.specsPlaceholder}" value="${wizData.specs || ''}" oninput="wizData.specs = this.value" />
+        <input type="text" id="wizSpecsPreview" class="input-light" placeholder="${ui.specsPlaceholder}" value="${wizData.specs || ''}" onfocus="const s=document.getElementById('wizTitleSuggestions');if(s)s.style.display='none';" oninput="wizData.specs = this.value" />
       </div>
 
       <div class="field-group">
         <label id="wizValueCurrencyLabel" style="color:var(--ink);">${valLabel}</label>
         <div style="display:grid;grid-template-columns:1fr 145px;gap:10px;">
-          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" placeholder="1150" oninput="onWizPriceInputChange()" />
+          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" placeholder="1150" onfocus="const s=document.getElementById('wizTitleSuggestions');if(s)s.style.display='none';" oninput="onWizPriceInputChange()" />
           <select id="wizCurrencySelect" class="input-light" onchange="onWizPriceInputChange()">
             ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === activeWizCurr ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
           </select>
@@ -2059,6 +2703,7 @@ function renderWizStep() {
       </div>
     `;
   } else if (wizStep === 3) {
+    const ui = getSmartUiLabels();
     const presets = [
       WIZ_CATEGORY_PHOTOS["cars"],
       WIZ_CATEGORY_PHOTOS["real-estate"],
@@ -2067,16 +2712,16 @@ function renderWizStep() {
     ];
     c.innerHTML = `
       <h3 style="margin:0 0 8px;font-size:24px;">3. ${t("wizStep1")}</h3>
-      <p style="color:var(--muted);margin:0 0 18px;">Upload a photo of your item/property or choose a quick preview photo below:</p>
+      <p style="color:var(--muted);margin:0 0 18px;">${ui.uploadPhotoDesc}</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;">
         <label style="border:2px dashed var(--forest);background:var(--mint-soft);border-radius:20px;padding:30px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:10px;align-items:center;">
-          <strong style="color:var(--forest);">+ Upload JPG / PNG from device</strong>
-          <span style="font-size:13px;color:var(--muted);">Up to 10 high-resolution photos</span>
+          <strong style="color:var(--forest);">${ui.uploadPhotoTitle}</strong>
+          <span style="font-size:13px;color:var(--muted);">${ui.uploadPhotoSub}</span>
           <input type="file" accept="image/*" style="display:none;" onchange="handleWizFileUpload(event)" />
         </label>
         <div style="height:170px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:2px solid var(--forest);"></div>
       </div>
-      <p style="font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--muted);">Or select a sample category photo:</p>
+      <p style="font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--muted);">${ui.samplePhotoLabel}</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         ${presets.map(u => `
           <img src="${u}" onclick="selectWizPresetPhoto('${u}')" style="width:90px;height:64px;object-fit:cover;border-radius:12px;cursor:pointer;border:3px solid ${wizData.image === u ? 'var(--forest)' : 'transparent'};" alt="Preset" />
@@ -2160,7 +2805,7 @@ function renderWizStep() {
     `;
   } else if (wizStep === 7) {
     c.innerHTML = `
-      <h3 style="margin:0 0 14px;font-size:24px;">7. ${t("wizStep7")} & Publish</h3>
+      <h3 style="margin:0 0 14px;font-size:24px;">7. ${t("wizStep7")}</h3>
       <div class="field-group">
         <label style="color:var(--ink);">${t("formFullName")}</label>
         <input type="text" id="wizOwner" class="input-light" value="${wizData.owner}" />
@@ -2177,9 +2822,21 @@ function renderWizStep() {
       </div>
     `;
   }
+
+  c.oninput = () => {
+    saveCurrentWizStepInputs();
+  };
+  c.onchange = () => {
+    saveCurrentWizStepInputs();
+  };
+  persistWizardDraft();
+  if (document.getElementById("wizardModal")?.classList.contains("open")) {
+    syncUrlWithRoute(`/wizard/step-${wizStep}`);
+  }
 }
 
 function publishWizardOffer() {
+  saveCurrentWizStepInputs();
   const fallbackCoords = COUNTRY_COORDS[wizData.country] || { lat: 48.13, lng: 11.58 };
   const finalLat = wizData.lat || fallbackCoords.lat;
   const finalLng = wizData.lng || fallbackCoords.lng;
@@ -2209,10 +2866,14 @@ function publishWizardOffer() {
 
   offers.unshift(newOffer);
   localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
+  wizStep = 1;
+  wizData = { ...DEFAULT_WIZ_DATA };
+  persistWizardDraft();
   closeWizardModal();
   currentCategoryFilter = "all";
   renderOffers();
   renderMapPinsAndPanel();
+  syncUrlWithRoute("/offers");
   document.getElementById("offers").scrollIntoView({ behavior: "smooth" });
   showToast("✓ Your 7-Step Swap Offer is now LIVE!");
 }
@@ -2444,11 +3105,14 @@ function openOfferModal(offerId, mode = "details") {
 
   modal.classList.add("open");
   document.body.classList.add("modal-open");
+  document.body.classList.add("mobile-started");
+  syncUrlWithRoute(`/offer/${offerId}`);
 }
 
 function closeOfferModal() {
   document.getElementById("offerModal").classList.remove("open");
   document.body.classList.remove("modal-open");
+  syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
 
 function submitDirectSwapProposal(e, offerId) {
@@ -2483,14 +3147,17 @@ function openDashboardModal(tab = "proposals") {
     return;
   }
   currentDashTab = tab;
+  document.body.classList.add("mobile-started");
   document.getElementById("dashboardModal").classList.add("open");
   document.body.classList.add("modal-open");
   switchDashboardTab(tab);
+  syncUrlWithRoute("/dashboard");
 }
 
 function closeDashboardModal() {
   document.getElementById("dashboardModal").classList.remove("open");
   document.body.classList.remove("modal-open");
+  syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
 
 function switchDashboardTab(tab) {
@@ -2637,19 +3304,24 @@ function handleChatSubmit(e) {
 // MOBILE MENU, SCROLL & TOAST HELPERS
 // ============================================================================
 function closeMobileMenu() {
+  closeAllModalsSilently();
   document.body.classList.add("mobile-started");
   document.getElementById("mobilePanel").classList.remove("open");
   document.getElementById("mobileMenuBtn").setAttribute("aria-expanded", "false");
 }
 
 function scrollToMobileHub() {
+  closeAllModalsSilently();
   document.body.classList.add("mobile-started");
   window.scrollTo({ top: 0, behavior: "instant" });
+  syncUrlWithRoute("/start");
 }
 
 function exitMobileStartScreen() {
+  closeAllModalsSilently();
   document.body.classList.remove("mobile-started");
   window.scrollTo({ top: 0, behavior: "instant" });
+  syncUrlWithRoute("/");
 }
 
 let scrollRevealObserver = null;
@@ -2715,6 +3387,40 @@ document.addEventListener("DOMContentLoaded", () => {
   syncLiveExchangeRates();
   initScrollRevealAnimations();
   animateLiveMemberCount();
+
+  // Restore exact page / screen / wizard step & draft on Refresh
+  const initialRoute = getRouteFromUrlOrStorage();
+  if (initialRoute && initialRoute !== "/") {
+    navigateToPageRoute(initialRoute, true);
+  }
+
+  // Handle browser Back / Forward buttons across all pages & Wizard steps
+  window.addEventListener("popstate", (ev) => {
+    const route = (ev.state && ev.state.route) ? ev.state.route : getRouteFromUrlOrStorage();
+    navigateToPageRoute(route || "/", true);
+  });
+
+  // Intercept section anchor clicks so top header & menu links work from any modal/page and update the URL
+  document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener("click", (e) => {
+      const href = link.getAttribute("href");
+      if (!href || href === "#") return;
+      const secId = href.slice(1);
+      if (secId === "top") {
+        e.preventDefault();
+        exitMobileStartScreen();
+        return;
+      }
+      const targetEl = document.getElementById(secId);
+      if (targetEl) {
+        e.preventDefault();
+        closeAllModalsSilently();
+        document.body.classList.add("mobile-started");
+        syncUrlWithRoute(`/${secId}`);
+        targetEl.scrollIntoView({ behavior: "smooth" });
+      }
+    });
+  });
 
   // Header scroll effect
   const header = document.getElementById("header");
