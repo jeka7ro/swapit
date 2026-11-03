@@ -231,6 +231,7 @@ em {
 .lang-trigger {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   height: 40px;
   padding: 0 12px;
@@ -240,8 +241,16 @@ em {
   color: var(--forest);
   font-weight: 700;
   font-size: 13.5px;
+  line-height: 1;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lang-trigger > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .lang-trigger:hover {
@@ -253,7 +262,7 @@ em {
   width: 20px;
   height: 14px;
   border-radius: 3px;
-  display: inline-block;
+  display: block;
   object-fit: cover;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
@@ -262,6 +271,8 @@ em {
 .lang-chevron {
   width: 14px;
   height: 14px;
+  display: block;
+  flex-shrink: 0;
   transition: transform 0.2s ease;
 }
 
@@ -319,9 +330,10 @@ em {
 }
 
 .lang-option-left {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
+  line-height: 1;
 }
 
 .lang-option-code {
