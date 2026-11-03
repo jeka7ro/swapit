@@ -13,7 +13,7 @@
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="styles.css?v=25" />
+  <link rel="stylesheet" href="styles.css?v=26" />
   <style id="core-ui-fixes">
     button { appearance: none; -webkit-appearance: none; border-radius: 999px; }
     @media (max-width: 768px) {
@@ -36,6 +36,12 @@
       body.mobile-started #categories,
       body.mobile-started #offers {
         animation: mobileScreenFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .wiz-step-btn:not(.active) b {
+        display: none !important;
+      }
+      .wiz-step-btn.active {
+        flex: 2 1 auto !important;
       }
     }
     @keyframes mobileScreenFadeIn {
@@ -327,12 +333,12 @@
           <div class="hero-smart-search-bar">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:0.85;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="search" id="heroSmartSearchInput" autocomplete="off"
-              placeholder="Caută direct fără cont: iPhone, iPad, MacBook, Casă, Apartament, BMW…"
+              placeholder="Search by model, city, or keyword…"
               data-i18n-placeholder="searchPlaceholder"
               oninput="handleHeroLiveSearch(this.value)"
               onkeydown="if(event.key==='Enter'){event.preventDefault(); executeQuickKeywordSearch(this.value);}" />
-            <button type="button" class="btn btn-mint" style="height:38px;padding:0 16px;font-size:13px;" onclick="executeQuickKeywordSearch(document.getElementById('heroSmartSearchInput').value)">
-              Caută →
+            <button type="button" class="btn btn-mint" style="height:38px;padding:0 16px;font-size:13px;" onclick="executeQuickKeywordSearch(document.getElementById('heroSmartSearchInput').value)" data-i18n="smartSearchBtn">
+              Search →
             </button>
           </div>
           <div class="hero-smart-dropdown" id="heroSmartDropdown" style="display:none;"></div>
@@ -340,9 +346,9 @@
             <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('iPhone')">iPhone</button>
             <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('iPad')">iPad</button>
             <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('MacBook')">MacBook</button>
-            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Villa')">Casă / Vilă</button>
-            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Apartment')">Apartament</button>
-            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('BMW')">BMW / Auto</button>
+            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Villa')" data-i18n="qtagHouse">House / Villa</button>
+            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Apartment')" data-i18n="qtagApartment">Apartment</button>
+            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('BMW')" data-i18n="qtagCar">BMW / Auto</button>
           </div>
         </div>
 
@@ -438,7 +444,7 @@
   <section class="mobile-quick-hub" id="mobileQuickHub">
     <div class="wrap">
       <div class="mobile-screen-top">
-        <button type="button" class="mobile-back-cover-btn" onclick="exitMobileStartScreen()">← Înapoi</button>
+        <button type="button" class="mobile-back-cover-btn" onclick="exitMobileStartScreen()" data-i18n="mobileBackBtn">← Back</button>
         <p class="mobile-hub-kicker" style="margin:0 !important;" data-i18n="mHubTitle">What would you like to do?</p>
       </div>
 
@@ -447,7 +453,7 @@
         <div class="mobile-search-input-row">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--forest);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="search" id="mobileSmartSearchInput" autocomplete="off"
-            placeholder="Caută iPhone, iPad, MacBook, Casă, Auto…"
+            placeholder="Search iPhone, iPad, MacBook, House, Auto…"
             data-i18n-placeholder="searchPlaceholder"
             oninput="handleMobileLiveSearch(this.value)"
             onkeydown="if(event.key==='Enter'){event.preventDefault(); executeQuickKeywordSearch(this.value);}" />
@@ -458,9 +464,9 @@
           <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('iPhone')">iPhone</button>
           <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('iPad')">iPad</button>
           <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('MacBook')">MacBook</button>
-          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Villa')">Casă</button>
-          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Apartment')">Apartament</button>
-          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('BMW')">Auto</button>
+          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Villa')" data-i18n="qtagHouse">House / Villa</button>
+          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Apartment')" data-i18n="qtagApartment">Apartment</button>
+          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('BMW')" data-i18n="qtagCar">BMW / Auto</button>
         </div>
       </div>
 
@@ -1566,11 +1572,11 @@
 
       <div class="wiz-steps-bar" id="wizStepsBar">
         <button type="button" class="wiz-step-btn active" onclick="goToWizStep(1)"><span>1</span> <b
-            data-i18n="wizStep1">Photos</b></button>
-        <button type="button" class="wiz-step-btn" onclick="goToWizStep(2)"><span>2</span> <b
             data-i18n="wizStep2">Category</b></button>
-        <button type="button" class="wiz-step-btn" onclick="goToWizStep(3)"><span>3</span> <b data-i18n="wizStep3">What
+        <button type="button" class="wiz-step-btn" onclick="goToWizStep(2)"><span>2</span> <b data-i18n="wizStep3">What
             You Have</b></button>
+        <button type="button" class="wiz-step-btn" onclick="goToWizStep(3)"><span>3</span> <b
+            data-i18n="wizStep1">Photos</b></button>
         <button type="button" class="wiz-step-btn" onclick="goToWizStep(4)"><span>4</span> <b
             data-i18n="wizStep4">Details</b></button>
         <button type="button" class="wiz-step-btn" onclick="goToWizStep(5)"><span>5</span> <b data-i18n="wizStep5">What
@@ -1678,9 +1684,9 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="i18n.js?v=25"></script>
-  <script src="data.js?v=25"></script>
-  <script src="app.js?v=25"></script>
+  <script src="i18n.js?v=26"></script>
+  <script src="data.js?v=26"></script>
+  <script src="app.js?v=26"></script>
 </body>
 
 </html>

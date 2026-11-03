@@ -651,18 +651,35 @@ function handleHeroMatcher(e) {
 }
 
 const SEARCH_SYNONYMS = {
-  "casa": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "real-estate"],
-  "casă": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "real-estate"],
-  "vila": ["villa", "house", "chalet", "vilă", "real-estate"],
-  "apartament": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "real-estate"],
-  "imobiliare": ["real-estate", "apartment", "villa", "penthouse", "house", "teren"],
-  "masina": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto"],
-  "mașină": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto"],
+  "casa": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "дом", "вилла", "real-estate"],
+  "casă": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "дом", "вилла", "real-estate"],
+  "vila": ["villa", "house", "chalet", "vilă", "дом", "вилла", "real-estate"],
+  "дом": ["villa", "house", "chalet", "casă", "vilă", "дом", "вилла", "real-estate"],
+  "вилла": ["villa", "house", "chalet", "casă", "vilă", "дом", "вилла", "real-estate"],
+  "haus": ["villa", "house", "chalet", "haus", "real-estate"],
+  "maison": ["villa", "house", "chalet", "maison", "real-estate"],
+  "apartament": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "квартира", "апартаменты", "real-estate"],
+  "квартира": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "квартира", "апартаменты", "real-estate"],
+  "wohnung": ["apartment", "penthouse", "studio", "wohnung", "real-estate"],
+  "appartement": ["apartment", "penthouse", "studio", "appartement", "real-estate"],
+  "appartamento": ["apartment", "penthouse", "studio", "appartamento", "real-estate"],
+  "piso": ["apartment", "penthouse", "studio", "piso", "real-estate"],
+  "imobiliare": ["real-estate", "apartment", "villa", "penthouse", "house", "teren", "недвижимость"],
+  "недвижимость": ["real-estate", "apartment", "villa", "penthouse", "house"],
+  "masina": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto", "авто", "машина"],
+  "mașină": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto", "авто", "машина"],
+  "авто": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto"],
+  "машина": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto"],
   "auto": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "auto-parts"],
-  "telefon": ["iphone", "smartphone", "samsung", "electronics"],
-  "laptop": ["macbook", "laptop", "notebook", "electronics"],
-  "tableta": ["ipad", "tablet", "oled", "electronics"],
-  "ceas": ["rolex", "watch", "chronograph", "clothing"]
+  "coche": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla"],
+  "voiture": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla"],
+  "telefon": ["iphone", "smartphone", "samsung", "electronics", "айфон", "телефон"],
+  "айфон": ["iphone", "apple", "electronics"],
+  "айпад": ["ipad", "apple", "electronics"],
+  "макбук": ["macbook", "apple", "electronics"],
+  "laptop": ["macbook", "laptop", "notebook", "electronics", "ноутбук"],
+  "tableta": ["ipad", "tablet", "oled", "electronics", "планшет"],
+  "ceas": ["rolex", "watch", "chronograph", "clothing", "часы"]
 };
 
 function matchesSmartSearchQuery(item, rawQuery) {
@@ -682,21 +699,145 @@ function matchesSmartSearchQuery(item, rawQuery) {
   const words = q.split(/\s+/);
   return words.every(w => {
     if (haystack.includes(w)) return true;
-    const syns = SEARCH_SYNONYMS[w];
-    if (syns && syns.some(s => haystack.includes(s))) return true;
+    const directSyns = SEARCH_SYNONYMS[w];
+    if (directSyns && directSyns.some(s => haystack.includes(s))) return true;
+    if (w.length >= 2) {
+      for (const [k, synList] of Object.entries(SEARCH_SYNONYMS)) {
+        if (k.startsWith(w) && synList.some(s => haystack.includes(s))) return true;
+      }
+    }
     return false;
   });
+}
+
+function getSmartUiLabels() {
+  const map = {
+    en: {
+      noMatch: "No exact listing for",
+      postFirst: "+ Post your offer",
+      seeAll: "See all results in catalog →",
+      smartHeader: "Smart Category Assistant",
+      templatesHint: "Quick Models & Templates (auto-fills title + specs + price):",
+      titlePlaceholder: "Type e.g. iPhone 16, iPad, MacBook, BMW X5, 3-Room Apartment, Villa...",
+      specsLabel: "Technical Specifications (auto-filled from chips above or type manually)",
+      specsPlaceholder: "E.g. 256GB · 98% Battery · Warranty / 2022 · 48,000 km / 3 Rooms · 92 m²",
+      geoTitle: "Search City, District or Address (Live Autocomplete)",
+      gpsBtn: "Detect my location (GPS)",
+      geoPlaceholder: "Type city or address (e.g. Vienna, Munich, Bucharest, Zurich, Paris)...",
+      countryLabel: "Country",
+      cityLabel: "City / Area",
+      selectBtn: "Select"
+    },
+    de: {
+      noMatch: "Kein exaktes Inserat für",
+      postFirst: "+ Inserat aufgeben",
+      seeAll: "Alle Ergebnisse im Katalog ansehen →",
+      smartHeader: "Smart-Kategorie-Assistent",
+      templatesHint: "Schnellvorlagen (füllt Titel + Daten + Preis automatisch aus):",
+      titlePlaceholder: "z.B. iPhone 16, iPad, MacBook, BMW X5, 3-Zimmer-Wohnung, Haus...",
+      specsLabel: "Technische Daten (automatisch per Klick oben oder manuell)",
+      specsPlaceholder: "z.B. 256GB · 98% Akku · Garantie / 2022 · 48.000 km / 3 Zimmer · 92 m²",
+      geoTitle: "Stadt, Bezirk oder Adresse suchen (Live-Autocomplete)",
+      gpsBtn: "Meinen Standort erkennen (GPS)",
+      geoPlaceholder: "Stadt oder Adresse eingeben (z.B. Wien, München, Zürich, Berlin)...",
+      countryLabel: "Land",
+      cityLabel: "Stadt / Bezirk",
+      selectBtn: "Wählen"
+    },
+    fr: {
+      noMatch: "Aucune annonce exacte pour",
+      postFirst: "+ Publier une annonce",
+      seeAll: "Voir tous les résultats dans le catalogue →",
+      smartHeader: "Assistant Intelligent par Catégorie",
+      templatesHint: "Modèles rapides (remplit titre + détails + prix en 1 clic) :",
+      titlePlaceholder: "Ex : iPhone 16, iPad, MacBook, BMW X5, Appartement 3 pièces, Villa...",
+      specsLabel: "Caractéristiques clés (remplies automatiquement ou manuellement)",
+      specsPlaceholder: "Ex : 256GB · Batterie 98% / 2022 · 48 000 km / 3 Pièces · 92 m²",
+      geoTitle: "Rechercher Ville, Quartier ou Adresse (Autocomplete Live)",
+      gpsBtn: "Détecter ma position (GPS)",
+      geoPlaceholder: "Tapez la ville ou l'adresse (ex : Paris, Nice, Genève, Lyon)...",
+      countryLabel: "Pays",
+      cityLabel: "Ville / Quartier",
+      selectBtn: "Choisir"
+    },
+    it: {
+      noMatch: "Nessun annuncio esatto per",
+      postFirst: "+ Pubblica annuncio",
+      seeAll: "Vedi tutti i risultati nel catalogo →",
+      smartHeader: "Assistente Smart per Categoria",
+      templatesHint: "Modelli rapidi (compila titolo + specifiche + prezzo in 1 clic):",
+      titlePlaceholder: "Es: iPhone 16, iPad, MacBook, BMW X5, Trilocale, Villa...",
+      specsLabel: "Specifiche tecniche (automatiche dai pulsanti sopra o manuali)",
+      specsPlaceholder: "Es: 256GB · Batteria 98% / 2022 · 48.000 km / 3 Locali · 92 m²",
+      geoTitle: "Cerca Città, Quartiere o Indirizzo (Autocomplete Live)",
+      gpsBtn: "Rileva la mia posizione (GPS)",
+      geoPlaceholder: "Scrivi città o indirizzo (es: Milano, Roma, Zurigo, Torino)...",
+      countryLabel: "Paese",
+      cityLabel: "Città / Zona",
+      selectBtn: "Scegli"
+    },
+    es: {
+      noMatch: "Ningún anuncio exacto para",
+      postFirst: "+ Publicar anuncio",
+      seeAll: "Ver todos los resultados en el catálogo →",
+      smartHeader: "Asistente Inteligente por Categoría",
+      templatesHint: "Plantillas rápidas (completa título + detalles + precio en 1 clic):",
+      titlePlaceholder: "Ej: iPhone 16, iPad, MacBook, BMW X5, Piso 3 hab, Casa / Chalet...",
+      specsLabel: "Especificaciones técnicas (automáticas o manuales)",
+      specsPlaceholder: "Ej: 256GB · Batería 98% / 2022 · 48.000 km / 3 Hab · 92 m²",
+      geoTitle: "Buscar Ciudad, Zona o Dirección (Autocompletado en Vivo)",
+      gpsBtn: "Detectar mi ubicación (GPS)",
+      geoPlaceholder: "Escribe ciudad o dirección (ej: Madrid, Barcelona, Marbella)...",
+      countryLabel: "País",
+      cityLabel: "Ciudad / Zona",
+      selectBtn: "Elegir"
+    },
+    ro: {
+      noMatch: "Niciun anunț exact pentru",
+      postFirst: "+ Adaugă anunțul tău",
+      seeAll: "Vezi toate rezultatele în catalog →",
+      smartHeader: "Asistent Smart pe Categorie",
+      templatesHint: "Modele & Șabloane Rapide (completează automat titlu + specificații + preț):",
+      titlePlaceholder: "Tastează ex: iPhone 16, iPad, MacBook, BMW X5, Apartament 3 camere, Casă...",
+      specsLabel: "Specificații Tehnice (se completează automat din butoanele de mai sus sau manual)",
+      specsPlaceholder: "Ex: 256GB · 98% Battery · Garanție / 2022 · 48.000 km / 3 Camere · 92 m²",
+      geoTitle: "Caută Oraș, Cartier sau Adresă (Autocomplete Live)",
+      gpsBtn: "Detectează locația mea (GPS)",
+      geoPlaceholder: "Tastează orașul sau adresa (ex: Cluj-Napoca, București, Timișoara, Wien)...",
+      countryLabel: "Țară",
+      cityLabel: "Oraș / Zonă",
+      selectBtn: "Selectează"
+    },
+    ru: {
+      noMatch: "Точных объявлений не найдено для",
+      postFirst: "+ Разместить объявление",
+      seeAll: "Смотреть все результаты в каталоге →",
+      smartHeader: "Умный помощник по категории",
+      templatesHint: "Быстрые шаблоны (автозаполнение названия, характеристик и цены в 1 клик):",
+      titlePlaceholder: "Например: iPhone 16, iPad, MacBook, BMW X5, 3-комн. квартира, Дом...",
+      specsLabel: "Характеристики (заполняются автоматически кнопками выше или вручную)",
+      specsPlaceholder: "Напр.: 256GB · АКБ 98% · Гарантия / 2022 · 48 000 км / 3 комн. · 92 м²",
+      geoTitle: "Поиск города, района или адреса (Живой автопоиск на карте)",
+      gpsBtn: "Определить мою геолокацию (GPS)",
+      geoPlaceholder: "Введите город или адрес (например: Вена, Мюнхен, Бухарест, Кишинёв)...",
+      countryLabel: "Страна",
+      cityLabel: "Город / Район",
+      selectBtn: "Выбрать"
+    }
+  };
+  return map[currentLang] || map.en;
 }
 
 function buildLiveSearchDropdownHtml(val) {
   const q = String(val || "").trim();
   if (q.length < 1) return "";
+  const ui = getSmartUiLabels();
   const matches = offers.filter(it => matchesSmartSearchQuery(it, q)).slice(0, 5);
   if (matches.length === 0) {
     return `
-      <div class="smart-dd-empty">
-        <span>Niciun anunț exact pentru „${q}”</span>
-        <button type="button" class="btn btn-mint" style="height:32px;padding:0 12px;font-size:12px;" onclick="openWizardModal()">+ Adaugă tu primul anunț</button>
+      <div class="smart-dd-empty" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span style="font-size:13px;color:var(--muted);font-weight:600;">${ui.noMatch} «${q}»</span>
+        <button type="button" class="btn btn-mint" style="height:32px;padding:0 12px;font-size:12px;" onclick="openWizardModal()">${ui.postFirst}</button>
       </div>
     `;
   }
@@ -715,8 +856,8 @@ function buildLiveSearchDropdownHtml(val) {
         </button>
       `;
     }).join("")}
-    <button type="button" class="smart-dd-footer" onclick="executeQuickKeywordSearch('${q.replace(/'/g, "\\'")}')">
-      Vezi toate rezultatele pentru „${q}” în catalog →
+    <button type="button" class="smart-dd-all" onclick="executeQuickKeywordSearch('${q.replace(/'/g, "\\'")}')">
+      ${ui.seeAll} (${matches.length})
     </button>
   `;
 }
@@ -1491,79 +1632,73 @@ function onWizPriceInputChange() {
 // ============================================================================
 const SMART_WIZ_CATALOG = {
   "electronics": {
-    label: "Asistent Smart Electronice (Brand, Model, Memorie, Stare)",
     templates: [
-      { title: "Apple iPhone 16 Pro Max 256GB Natural Titanium", specs: "256GB · 8GB RAM · 100% Battery Health · Unlocked · Garanție Apple", eur: 1350 },
-      { title: "Apple iPhone 15 Pro Max 512GB Black Titanium", specs: "512GB · Neverlocked · Baterie 98% · Cutie + Factură", eur: 1180 },
-      { title: "Apple iPad Pro 13\" M4 (512GB OLED) + Magic Keyboard", specs: "512GB Wi-Fi + Cellular · Tandem OLED · Apple Pencil Pro inclus", eur: 1550 },
-      { title: "Apple MacBook Pro 16\" M3 Max (64GB RAM / 2TB SSD)", specs: "Apple M3 Max · 64GB RAM · 2TB SSD · 19 Cicluri Baterie · AppleCare+", eur: 3800 },
-      { title: "Apple MacBook Air 15\" M3 (16GB RAM / 512GB SSD)", specs: "Apple M3 · 16GB RAM · 512GB SSD · Midnight · Ca Nou", eur: 1490 },
-      { title: "Samsung Galaxy S24 Ultra 512GB Titanium Gray", specs: "512GB · 12GB RAM · S-Pen · Neverlocked · Garanție 24 luni", eur: 1090 },
-      { title: "Sony PlayStation 5 Pro 2TB + 2 Controllere DualSense", specs: "2TB SSD · 4K 120Hz · 2x DualSense · Cutie Originală", eur: 780 }
+      { title: "Apple iPhone 16 Pro Max 256GB Natural Titanium", specs: "256GB · 8GB RAM · 100% Battery Health · Unlocked · Apple Warranty", eur: 1350 },
+      { title: "Apple iPhone 15 Pro Max 512GB Black Titanium", specs: "512GB · Unlocked · 98% Battery · Original Box + Invoice", eur: 1180 },
+      { title: "Apple iPad Pro 13\" M4 (512GB OLED) + Magic Keyboard", specs: "512GB Wi-Fi + Cellular · Tandem OLED · Apple Pencil Pro", eur: 1550 },
+      { title: "Apple MacBook Pro 16\" M3 Max (64GB RAM / 2TB SSD)", specs: "Apple M3 Max · 64GB RAM · 2TB SSD · 19 Battery Cycles · AppleCare+", eur: 3800 },
+      { title: "Apple MacBook Air 15\" M3 (16GB RAM / 512GB SSD)", specs: "Apple M3 · 16GB RAM · 512GB SSD · Midnight · Mint Condition", eur: 1490 },
+      { title: "Samsung Galaxy S24 Ultra 512GB Titanium Gray", specs: "512GB · 12GB RAM · S-Pen · Unlocked · 24M Warranty", eur: 1090 },
+      { title: "Sony PlayStation 5 Pro 2TB + 2 DualSense Controllers", specs: "2TB SSD · 4K 120Hz · 2x DualSense · Original Box", eur: 780 }
     ],
     groups: [
       { name: "Brand", chips: ["Apple", "Samsung", "Sony", "ASUS ROG", "Lenovo", "DJI", "Xiaomi"] },
-      { name: "Memorie / Stocare", chips: ["128GB", "256GB", "512GB", "1TB SSD", "2TB SSD"] },
-      { name: "RAM & Stare", chips: ["8GB RAM", "16GB RAM", "32GB RAM", "64GB RAM", "Baterie 100%", "Sigilat / Factură", "Neverlocked"] }
+      { name: "Storage", chips: ["128GB", "256GB", "512GB", "1TB SSD", "2TB SSD"] },
+      { name: "RAM & State", chips: ["8GB RAM", "16GB RAM", "32GB RAM", "64GB RAM", "100% Battery", "Warranty / Invoice", "Unlocked"] }
     ]
   },
   "cars": {
-    label: "Asistent Smart Auto (Marcă, Model, An, Motorizare, Rulaj)",
     templates: [
-      { title: "2022 BMW X5 M50d xDrive · Pachet M · Panoramă", specs: "2022 · 48.000 km · 3.0 Diesel 400 CP · Automată 8+1 · xDrive AWD", eur: 68500 },
-      { title: "2022 BMW M5 Competition (F90) 625 CP", specs: "2022 · 29.000 km · 4.4 V8 Biturbo · M xDrive · Carbon Roof", eur: 72000 },
-      { title: "2023 Mercedes-Benz GLE 400d 4MATIC AMG Line", specs: "2023 · 31.000 km · 330 CP Diesel · 9G-Tronic · Burmester 3D", eur: 76000 },
-      { title: "2022 Audi A6 Avant 55 TFSIe Quattro S-Line", specs: "2022 · 41.000 km · 367 CP Plug-in Hybrid · Matrix LED · Quattro", eur: 43500 },
-      { title: "2022 Porsche Panamera 4 E-Hybrid Sport Chrono", specs: "2022 · 24.000 km · 462 CP AWD · PDK · Burmester Audio", eur: 89000 },
-      { title: "2023 Tesla Model 3 Long Range Dual Motor AWD", specs: "2023 · 22.000 km · 602 km WLTP · Autopilot · Pompă Căldură", eur: 36800 }
+      { title: "2022 BMW X5 M50d xDrive · M-Sport · Panorama", specs: "2022 · 48,000 km · 3.0 Diesel 400 HP · Automatic · xDrive AWD", eur: 68500 },
+      { title: "2022 BMW M5 Competition (F90) 625 HP", specs: "2022 · 29,000 km · 4.4 V8 Biturbo · M xDrive · Carbon Roof", eur: 72000 },
+      { title: "2023 Mercedes-Benz GLE 400d 4MATIC AMG Line", specs: "2023 · 31,000 km · 330 HP Diesel · 9G-Tronic · Burmester 3D", eur: 76000 },
+      { title: "2022 Audi A6 Avant 55 TFSIe Quattro S-Line", specs: "2022 · 41,000 km · 367 HP Plug-in Hybrid · Matrix LED · Quattro", eur: 43500 },
+      { title: "2022 Porsche Panamera 4 E-Hybrid Sport Chrono", specs: "2022 · 24,000 km · 462 HP AWD · PDK · Burmester Audio", eur: 89000 },
+      { title: "2023 Tesla Model 3 Long Range Dual Motor AWD", specs: "2023 · 22,000 km · 602 km WLTP · Autopilot · Heat Pump", eur: 36800 }
     ],
     groups: [
-      { name: "Marcă", chips: ["BMW", "Mercedes-Benz", "Audi", "Porsche", "Volkswagen", "Tesla", "Range Rover", "Toyota"] },
-      { name: "An & Rulaj", chips: ["2024", "2023", "2022", "2021", "2020", "< 30.000 km", "60.000 km", "100.000 km"] },
-      { name: "Motor & Cutie", chips: ["Diesel", "Benzină", "Plug-in Hybrid", "100% Electric", "Cutie Automată", "4x4 / AWD", "Carte Service"] }
+      { name: "Brand", chips: ["BMW", "Mercedes-Benz", "Audi", "Porsche", "Volkswagen", "Tesla", "Range Rover", "Toyota"] },
+      { name: "Year & Km", chips: ["2024", "2023", "2022", "2021", "2020", "< 30,000 km", "60,000 km", "100,000 km"] },
+      { name: "Engine & Gearbox", chips: ["Diesel", "Petrol", "Plug-in Hybrid", "100% Electric", "Automatic", "4x4 / AWD", "Full Service History"] }
     ]
   },
   "real-estate": {
-    label: "Asistent Smart Imobiliare (Tip, Camere, Suprafață m², Dotări)",
     templates: [
-      { title: "Apartament 3 Camere Modern + Parcare Subterană", specs: "3 Camere · 86 m² utili + Terasă 14 m² · Etaj 3/6 · Bloc Nou 2023 · Parcare", eur: 175000 },
-      { title: "Casă / Vilă Individuală 5 Camere cu Piscină și Grădină", specs: "5 Camere · 220 m² utili · Teren 600 m² · Piscină Încălzită · Pompă Căldură", eur: 390000 },
-      { title: "Penthouse Panoramic 4 Camere cu Terasă 40 m²", specs: "4 Camere · 135 m² + Terasă 40 m² · 2 Locuri Parcare · Mobilat Lux", eur: 285000 },
-      { title: "Studio / Apartament 2 Camere Ultracentral (Ideal Investiție)", specs: "2 Camere · 54 m² · Complet Mobilat & Utilat · Metrou 3 min", eur: 118000 },
-      { title: "Teren Intravilan Construibil cu Toate Utilitățile", specs: "Teren 850 m² · Deschidere 24m · Curent, Gaz, Apă, Canalizare, Asfalt", eur: 95000 }
+      { title: "Modern 3-Room Apartment + Underground Parking", specs: "3 Rooms · 86 m² + 14 m² Terrace · Floor 3/6 · Built 2023 · Parking", eur: 175000 },
+      { title: "5-Room Detached Villa with Heated Pool & Garden", specs: "5 Rooms · 220 m² · 600 m² Plot · Heated Pool · Heat Pump", eur: 390000 },
+      { title: "Panoramic 4-Room Penthouse with 40 m² Terrace", specs: "4 Rooms · 135 m² + 40 m² Terrace · 2 Parking Spots · Luxury Furnished", eur: 285000 },
+      { title: "Central 2-Room Apartment / Studio (Turnkey)", specs: "2 Rooms · 54 m² · Fully Furnished · Metro 3 min", eur: 118000 },
+      { title: "Buildable Land Plot with Full Utilities", specs: "850 m² Plot · 24m Frontage · Electricity, Gas, Water, Paved Road", eur: 95000 }
     ],
     groups: [
-      { name: "Tip Proprietate", chips: ["Apartament", "Casă / Vilă", "Penthouse", "Studio / Garsonieră", "Teren Construibil", "Spațiu Comercial"] },
-      { name: "Camere & Suprafață", chips: ["2 Camere", "3 Camere", "4+ Camere", "55 m²", "85 m²", "120 m²", "200+ m²"] },
-      { name: "Dotări", chips: ["Parcare Subterană", "Terasă / Grădină", "Mobilat Lux", "Construcție Nouă", "Central", "Cadastru & Intabulare"] }
+      { name: "Type", chips: ["Apartment", "House / Villa", "Penthouse", "Studio", "Land Plot", "Commercial Space"] },
+      { name: "Rooms & Area", chips: ["2 Rooms", "3 Rooms", "4+ Rooms", "55 m²", "85 m²", "120 m²", "200+ m²"] },
+      { name: "Features", chips: ["Underground Parking", "Terrace / Garden", "Luxury Furnished", "New Build", "Central", "Clear Title Deed"] }
     ]
   },
   "home-garden": {
-    label: "Asistent Smart Casă & Grădină",
     templates: [
-      { title: "Canapea Designer Italiană 3 Locuri din Catifea / Piele", specs: "240 x 98 cm · Lemn Masiv · Stare Impecabilă 10/10", eur: 2600 },
-      { title: "Bucătărie Modulară Completă + Insulă & Electrocasnice Bosch", specs: "360 cm · Cuptor, Plită Inducție, Mașină Vase încorporată", eur: 6800 }
+      { title: "Italian Designer 3-Seater Sofa (Velvet / Leather)", specs: "240 x 98 cm · Solid Wood · Mint 10/10 Condition", eur: 2600 },
+      { title: "Complete Modular Kitchen + Island & Bosch Appliances", specs: "360 cm · Oven, Induction Hob, Built-in Dishwasher", eur: 6800 }
     ],
     groups: [
-      { name: "Tip & Stare", chips: ["Mobilier Designer", "Electrocasnice", "Grădină / Terasă", "Sistem Solar / Fotovoltaic", "Nou / Ca Nou"] }
+      { name: "Details", chips: ["Designer Furniture", "Appliances", "Garden / Patio", "Solar System", "New / Like New"] }
     ]
   },
   "auto-parts": {
-    label: "Asistent Smart Piese & Jante Auto",
     templates: [
-      { title: "Set 4 Jante Forjate OEM 21\" + Anvelope Michelin Pilot Sport", specs: "21 inch · 5x112 OEM · Fără suduri sau zgârieturi · Anvelope 90%", eur: 2900 }
+      { title: "Set of 4 Forged OEM 21\" Rims + Michelin Pilot Sport Tires", specs: "21 inch · 5x112 OEM · No welds or scratches · 90% Tread", eur: 2900 }
     ],
     groups: [
-      { name: "Specificații", chips: ["Jante + Anvelope", "19\"", "20\"", "21\"", "5x112", "5x120", "Original OEM", "Evacuare / Frâne"] }
+      { name: "Specs", chips: ["Rims + Tires", "19\"", "20\"", "21\"", "5x112", "5x120", "Original OEM", "Exhaust / Brakes"] }
     ]
   },
   "clothing": {
-    label: "Asistent Smart Ceasuri, Genți & Modă Luxury",
     templates: [
-      { title: "Ceas Automatic Elvețian Chronograph Full-Set (Cutie + Card)", specs: "Oțel 41mm · Safir · Mecanism Automatic · Acte Autenticitate", eur: 6500 }
+      { title: "Swiss Automatic Chronograph Watch Full-Set (Box + Papers)", specs: "41mm Steel · Sapphire · Automatic Movement · Authenticity Card", eur: 6500 }
     ],
     groups: [
-      { name: "Detalii", chips: ["Ceas Automatic", "Geantă Designer", "Full-Set (Cutie + Acte)", "Nepurtat / 10/10", "Verificare Autenticitate"] }
+      { name: "Details", chips: ["Automatic Watch", "Designer Bag", "Full-Set (Box + Papers)", "Unworn 10/10", "Authenticity Verified"] }
     ]
   }
 };
@@ -1617,7 +1752,7 @@ function applyWizSmartTemplate(idx) {
   if (valEl) valEl.value = convertedAmt;
   if (suggEl) suggEl.style.display = "none";
   onWizPriceInputChange();
-  showToast(`✓ Completat automat: ${tpl.title}`);
+  showToast(`✓ ${tpl.title}`);
 }
 
 function appendWizSmartChip(chipText) {
@@ -1697,6 +1832,7 @@ async function handleWizGeoSearchInput(val) {
   ).slice(0, 4);
 
   const renderGeoList = (items) => {
+    const ui = getSmartUiLabels();
     if (!items.length) {
       dd.style.display = "none";
       return;
@@ -1707,7 +1843,7 @@ async function handleWizGeoSearchInput(val) {
           <strong>${loc.city}${loc.region ? ` (${loc.region})` : ""}</strong>
           <span>${loc.country} · GPS: ${Number(loc.lat).toFixed(4)}, ${Number(loc.lng).toFixed(4)}</span>
         </div>
-        <span class="smart-dd-price">Selectează</span>
+        <span class="smart-dd-price">${ui.selectBtn}</span>
       </button>
     `).join("");
     dd.style.display = "block";
@@ -1765,7 +1901,8 @@ function selectWizGeoPlace(country, city, lat, lng) {
   if (searchEl) searchEl.value = `${city}, ${country}`;
   if (dd) dd.style.display = "none";
   if (badge) {
-    badge.innerHTML = `✓ Pin verificat pe hartă: <strong>${city}, ${country}</strong> (${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)})`;
+    badge.style.display = "block";
+    badge.innerHTML = `✓ GPS: <strong>${city}, ${country}</strong> (${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)})`;
   }
 }
 
@@ -1773,7 +1910,7 @@ function detectWizLocationGPS() {
   if (detectedIpInfo && detectedIpInfo.city && detectedIpInfo.countryName) {
     const cCoords = COUNTRY_COORDS[detectedIpInfo.countryName] || { lat: 47.0, lng: 14.0 };
     selectWizGeoPlace(detectedIpInfo.countryName, detectedIpInfo.city, cCoords.lat, cCoords.lng);
-    showToast(`✓ Locație detectată: ${detectedIpInfo.city}, ${detectedIpInfo.countryName}`);
+    showToast(`✓ GPS: ${detectedIpInfo.city}, ${detectedIpInfo.countryName}`);
     return;
   }
   if ("geolocation" in navigator) {
@@ -1783,14 +1920,14 @@ function detectWizLocationGPS() {
         const res = await fetch(`https://photon.komoot.io/reverse?lon=${longitude}&lat=${latitude}`);
         const data = await res.json();
         const p = data?.features?.[0]?.properties || {};
-        selectWizGeoPlace(p.country || "Romania", p.city || p.town || p.name || "Centru", latitude, longitude);
-        showToast("✓ Coordonate GPS detectate cu succes!");
+        selectWizGeoPlace(p.country || "Austria", p.city || p.town || p.name || "Center", latitude, longitude);
+        showToast("✓ GPS Location Detected!");
       } catch (e) {
-        selectWizGeoPlace(wizData.country || "Romania", wizData.city || "București", latitude, longitude);
+        selectWizGeoPlace(wizData.country || "Austria", wizData.city || "Vienna", latitude, longitude);
       }
     }, () => {
-      selectWizGeoPlace("Romania", "Bucharest", 44.4268, 26.1025);
-      showToast("✓ Locație selectată automat!");
+      selectWizGeoPlace("Austria", "Vienna", 48.2082, 16.3738);
+      showToast("✓ Location Selected!");
     });
   }
 }
@@ -1822,6 +1959,23 @@ function handleWizFileUpload(e) {
   reader.readAsDataURL(file);
 }
 
+const WIZ_CATEGORY_PHOTOS = {
+  "cars": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
+  "real-estate": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1000&q=80",
+  "electronics": "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=1000&q=80",
+  "home-garden": "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=1000&q=80",
+  "auto-parts": "https://images.unsplash.com/photo-1600706432502-77a0e2e32795?auto=format&fit=crop&w=1000&q=80",
+  "clothing": "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=1000&q=80"
+};
+
+function selectWizCategoryCard(cat) {
+  wizData.category = cat;
+  if (WIZ_CATEGORY_PHOTOS[cat]) {
+    wizData.image = WIZ_CATEGORY_PHOTOS[cat];
+  }
+  renderWizStep();
+}
+
 function renderWizStep() {
   document.getElementById("wizMeterBar").style.width = `${(wizStep / 7) * 100}%`;
   document.getElementById("wizStepCounter").textContent = `Step ${wizStep} / 7`;
@@ -1837,44 +1991,19 @@ function renderWizStep() {
 
   const c = document.getElementById("wizStepContainer");
   if (wizStep === 1) {
-    const presets = [
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=1000&q=80",
-      "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=1000&q=80"
-    ];
-    c.innerHTML = `
-      <h3 style="margin:0 0 8px;font-size:24px;">1. ${t("wizStep1")}</h3>
-      <p style="color:var(--muted);margin:0 0 18px;">Upload a photo of your item/property or choose a quick preview photo below:</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;">
-        <label style="border:2px dashed var(--forest);background:var(--mint-soft);border-radius:20px;padding:30px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:10px;align-items:center;">
-          <strong style="color:var(--forest);">+ Upload JPG / PNG from device</strong>
-          <span style="font-size:13px;color:var(--muted);">Up to 10 high-resolution photos</span>
-          <input type="file" accept="image/*" style="display:none;" onchange="handleWizFileUpload(event)" />
-        </label>
-        <div style="height:170px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:2px solid var(--forest);"></div>
-      </div>
-      <p style="font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--muted);">Or select a sample category photo:</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        ${presets.map(u => `
-          <img src="${u}" onclick="selectWizPresetPhoto('${u}')" style="width:90px;height:64px;object-fit:cover;border-radius:12px;cursor:pointer;border:3px solid ${wizData.image === u ? 'var(--forest)' : 'transparent'};" alt="Preset" />
-        `).join("")}
-      </div>
-    `;
-  } else if (wizStep === 2) {
     const cats = ["cars", "real-estate", "electronics", "home-garden", "auto-parts", "clothing"];
     c.innerHTML = `
-      <h3 style="margin:0 0 14px;font-size:24px;">2. ${t("wizStep2")}</h3>
+      <h3 style="margin:0 0 14px;font-size:24px;">1. ${t("wizStep2")}</h3>
       <div class="wiz-cat-grid">
         ${cats.map(cat => `
-          <div class="wiz-cat-card ${wizData.category === cat ? 'selected' : ''}" onclick="wizData.category='${cat}'; renderWizStep();">
+          <div class="wiz-cat-card ${wizData.category === cat ? 'selected' : ''}" onclick="selectWizCategoryCard('${cat}')">
             <div class="wiz-cat-icon">${PREMIUM_ICONS[cat] || PREMIUM_ICONS.cars}</div>
             <div>${getCategoryLabel(cat)}</div>
           </div>
         `).join("")}
       </div>
     `;
-  } else if (wizStep === 3) {
+  } else if (wizStep === 2) {
     const activeWizCurr = wizData.originalCurrency || currentCurrency || "EUR";
     const cObj = getCurrencyObj(activeWizCurr);
     const valLabel = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${cObj.short || cObj.code})`);
@@ -1882,15 +2011,16 @@ function renderWizStep() {
       ? wizData.originalAmount
       : (wizData.valueEur ? convertFromEur(wizData.valueEur, activeWizCurr) : "");
     const catCfg = SMART_WIZ_CATALOG[wizData.category] || SMART_WIZ_CATALOG.electronics;
+    const ui = getSmartUiLabels();
     c.innerHTML = `
-      <h3 style="margin:0 0 10px;font-size:22px;">3. ${t("wizStep3")} (${t("haveBadge")})</h3>
+      <h3 style="margin:0 0 10px;font-size:22px;">2. ${t("wizStep3")} (${t("haveBadge")})</h3>
 
       <div class="wiz-smart-box">
         <div class="wiz-smart-header">
-          <span>${catCfg.label || `Asistent Smart · ${getCategoryLabel(wizData.category)}`}</span>
+          <span>${ui.smartHeader} · ${getCategoryLabel(wizData.category)}</span>
           <span style="font-size:11px;font-weight:600;color:var(--muted);">1-Click Autocomplete</span>
         </div>
-        <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px;">Modele & Șabloane Rapide (completează automat titlu + specificații + preț):</div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px;">${ui.templatesHint}</div>
         <div class="wiz-chip-row">
           ${(catCfg.templates || []).map((tpl, idx) => `
             <button type="button" class="wiz-chip wiz-chip-tpl" onclick="applyWizSmartTemplate(${idx})">${tpl.title}</button>
@@ -1908,19 +2038,19 @@ function renderWizStep() {
 
       <div class="field-group" style="position:relative;margin-top:12px;">
         <label style="color:var(--ink);">${t("quickTitleHave")}</label>
-        <input type="text" id="wizTitleHave" class="input-light" placeholder="Tastează ex: iPhone 16, iPad, MacBook, BMW X5, Apartament 3 camere, Casă..." value="${wizData.titleHave}" autocomplete="off" oninput="onWizTitleHaveInput(this.value)" />
+        <input type="text" id="wizTitleHave" class="input-light" placeholder="${ui.titlePlaceholder}" value="${wizData.titleHave}" autocomplete="off" oninput="onWizTitleHaveInput(this.value)" />
         <div id="wizTitleSuggestions" class="wiz-autocomplete-list" style="display:none;"></div>
       </div>
 
       <div class="field-group">
-        <label style="color:var(--ink);">Specificații Tehnice (se completează automat din butoanele de mai sus sau manual)</label>
-        <input type="text" id="wizSpecsPreview" class="input-light" placeholder="Ex: 256GB · 98% Battery · Garanție / 2021 · 64.000 km / 3 Camere · 92 m²" value="${wizData.specs || ''}" oninput="wizData.specs = this.value" />
+        <label style="color:var(--ink);">${ui.specsLabel}</label>
+        <input type="text" id="wizSpecsPreview" class="input-light" placeholder="${ui.specsPlaceholder}" value="${wizData.specs || ''}" oninput="wizData.specs = this.value" />
       </div>
 
       <div class="field-group">
         <label id="wizValueCurrencyLabel" style="color:var(--ink);">${valLabel}</label>
         <div style="display:grid;grid-template-columns:1fr 145px;gap:10px;">
-          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" placeholder="Ex: 1150" oninput="onWizPriceInputChange()" />
+          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" placeholder="1150" oninput="onWizPriceInputChange()" />
           <select id="wizCurrencySelect" class="input-light" onchange="onWizPriceInputChange()">
             ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === activeWizCurr ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
           </select>
@@ -1928,27 +2058,54 @@ function renderWizStep() {
         <div id="wizParityPreview">${buildParityPreviewHtml(displayVal, activeWizCurr)}</div>
       </div>
     `;
+  } else if (wizStep === 3) {
+    const presets = [
+      WIZ_CATEGORY_PHOTOS["cars"],
+      WIZ_CATEGORY_PHOTOS["real-estate"],
+      WIZ_CATEGORY_PHOTOS["electronics"],
+      WIZ_CATEGORY_PHOTOS["home-garden"]
+    ];
+    c.innerHTML = `
+      <h3 style="margin:0 0 8px;font-size:24px;">3. ${t("wizStep1")}</h3>
+      <p style="color:var(--muted);margin:0 0 18px;">Upload a photo of your item/property or choose a quick preview photo below:</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;">
+        <label style="border:2px dashed var(--forest);background:var(--mint-soft);border-radius:20px;padding:30px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:10px;align-items:center;">
+          <strong style="color:var(--forest);">+ Upload JPG / PNG from device</strong>
+          <span style="font-size:13px;color:var(--muted);">Up to 10 high-resolution photos</span>
+          <input type="file" accept="image/*" style="display:none;" onchange="handleWizFileUpload(event)" />
+        </label>
+        <div style="height:170px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:2px solid var(--forest);"></div>
+      </div>
+      <p style="font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--muted);">Or select a sample category photo:</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        ${presets.map(u => `
+          <img src="${u}" onclick="selectWizPresetPhoto('${u}')" style="width:90px;height:64px;object-fit:cover;border-radius:12px;cursor:pointer;border:3px solid ${wizData.image === u ? 'var(--forest)' : 'transparent'};" alt="Preset" />
+        `).join("")}
+      </div>
+    `;
   } else if (wizStep === 4) {
+    const ui = getSmartUiLabels();
     c.innerHTML = `
       <h3 style="margin:0 0 14px;font-size:24px;">4. ${t("wizStep4")}</h3>
       <div class="field-group">
-        <label style="color:var(--ink);">Specificații Cheie (An, Memorie, Suprafață m², Rulaj, Stare)</label>
+        <label style="color:var(--ink);">${ui.specsLabel}</label>
         <input type="text" id="wizSpecs" class="input-light" value="${wizData.specs}" oninput="wizData.specs = this.value" />
         <div class="wiz-chip-row" style="margin-top:8px;">
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Factură & Garanție'; wizData.specs = document.getElementById('wizSpecs').value;">+ Factură & Garanție</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Cutie Originală'; wizData.specs = document.getElementById('wizSpecs').value;">+ Cutie Originală</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Istoric Service Complet'; wizData.specs = document.getElementById('wizSpecs').value;">+ Istoric Service Complet</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Fără accident / Vopsea originală'; wizData.specs = document.getElementById('wizSpecs').value;">+ Fără accident</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Proprietar în acte · Fiscal pe loc'; wizData.specs = document.getElementById('wizSpecs').value;">+ Proprietar în acte</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Warranty / Invoice'; wizData.specs = document.getElementById('wizSpecs').value;">+ Warranty / Invoice</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Original Box'; wizData.specs = document.getElementById('wizSpecs').value;">+ Original Box</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Full Service History'; wizData.specs = document.getElementById('wizSpecs').value;">+ Full Service History</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Accident-Free'; wizData.specs = document.getElementById('wizSpecs').value;">+ Accident-Free</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Verified Owner'; wizData.specs = document.getElementById('wizSpecs').value;">+ Verified Owner</button>
         </div>
       </div>
       <div class="field-group">
         <label style="color:var(--ink);">${t("quickDescription")}</label>
-        <textarea id="wizDesc" class="input-light" rows="3" placeholder="Descrie starea produsului/proprietății și ce variante de schimb sau vânzare accepți...">${wizData.desc}</textarea>
+        <textarea id="wizDesc" class="input-light" rows="3">${wizData.desc}</textarea>
       </div>
     `;
   } else if (wizStep === 5) {
     const isSaleOnly = wizData.dealType === "sale";
+    const ui = getSmartUiLabels();
     c.innerHTML = `
       <h3 style="margin:0 0 14px;font-size:24px;">5. ${t("wizStep5")} (${isSaleOnly ? t("saleBadge") : t("wantBadge")})</h3>
       <div class="field-group">
@@ -1961,42 +2118,43 @@ function renderWizStep() {
         </select>
       </div>
       <div class="field-group">
-        <label style="color:var(--ink);">${isSaleOnly ? `${t("dealSaleOnly")} (Payment / Handover notes)` : t("quickTitleWant")}</label>
-        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" placeholder="Ex: MacBook Pro M3, iPhone 16 Pro, SUV Automat sau Vânzare Cash" />
+        <label style="color:var(--ink);">${isSaleOnly ? `${t("dealSaleOnly")}` : t("quickTitleWant")}</label>
+        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" placeholder="${ui.titlePlaceholder}" />
         <div class="wiz-chip-row" style="margin-top:8px;">
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='iPhone 16 Pro Max / iPad Pro M4 / MacBook Pro (+/- diferență)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">iPhone / iPad / MacBook</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='SUV Automat 2020+ (BMW X5, Mercedes GLE, Audi Q7) +/- diferență'; wizData.titleWant=document.getElementById('wizTitleWant').value;">SUV / Auto 2020+</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='Apartament 2-3 camere / Casă / Teren (+/- diferență)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">Imobiliare / Apartament</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='Accept Schimb 1:1 sau Vânzare Directă Cash'; wizData.titleWant=document.getElementById('wizTitleWant').value;">Schimb sau Vânzare Cash</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='iPhone 16 Pro Max / iPad Pro M4 / MacBook Pro'; wizData.titleWant=document.getElementById('wizTitleWant').value;">iPhone / iPad / MacBook</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='SUV 2020+ (BMW X5, Mercedes GLE, Audi Q7)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">${t("qtagCar")}</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='${t("qtagApartment")} / ${t("qtagHouse")}'; wizData.titleWant=document.getElementById('wizTitleWant').value;">${t("qtagApartment")} / ${t("qtagHouse")}</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='${t("dealSwapOrSale")}'; wizData.titleWant=document.getElementById('wizTitleWant').value;">${t("dealSwapOrSale")}</button>
         </div>
       </div>
     `;
   } else if (wizStep === 6) {
+    const ui = getSmartUiLabels();
     c.innerHTML = `
-      <h3 style="margin:0 0 10px;font-size:22px;">6. ${t("wizStep6")} · Asistent Hartă & GPS</h3>
+      <h3 style="margin:0 0 10px;font-size:22px;">6. ${t("wizStep6")} · GPS & Map</h3>
       <div class="wiz-smart-box" style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-          <strong style="font-size:13px;color:var(--forest);">Caută Oraș, Cartier sau Adresă (Autocomplete Live)</strong>
-          <button type="button" id="wizGpsBtn" class="wiz-chip wiz-chip-tpl" onclick="detectWizLocationGPS()">Detectează locația mea (GPS)</button>
+          <strong style="font-size:13px;color:var(--forest);">${ui.geoTitle}</strong>
+          <button type="button" id="wizGpsBtn" class="wiz-chip wiz-chip-tpl" onclick="detectWizLocationGPS()">${ui.gpsBtn}</button>
         </div>
         <div style="position:relative;">
-          <input type="text" id="wizGeoSearchInput" class="input-light" placeholder="Tastează orașul sau adresa (ex: Cluj-Napoca, București, Timișoara, Wien, München)..." autocomplete="off" oninput="handleWizGeoSearchInput(this.value)" />
+          <input type="text" id="wizGeoSearchInput" class="input-light" placeholder="${ui.geoPlaceholder}" autocomplete="off" oninput="handleWizGeoSearchInput(this.value)" />
           <div id="wizGeoDropdown" class="wiz-autocomplete-list" style="display:none;"></div>
         </div>
         <div id="wizGeoVerifiedBadge" style="display:${wizData.lat ? 'block' : 'none'};margin-top:8px;padding:8px 12px;border-radius:10px;background:#ecfdf5;border:1px solid #10b981;color:#065f46;font-size:12.5px;font-weight:700;">
-          ${wizData.lat ? `✓ Pin verificat pe hartă: ${wizData.city}, ${wizData.country} (${Number(wizData.lat).toFixed(4)}, ${Number(wizData.lng).toFixed(4)})` : ''}
+          ${wizData.lat ? `✓ GPS: ${wizData.city}, ${wizData.country} (${Number(wizData.lat).toFixed(4)}, ${Number(wizData.lng).toFixed(4)})` : ''}
         </div>
       </div>
       <div class="form-grid-2">
         <div class="field-group">
-          <label style="color:var(--ink);">Țară (Country)</label>
+          <label style="color:var(--ink);">${ui.countryLabel}</label>
           <select id="wizCountry" class="input-light" onchange="wizData.country=this.value">
             ${Object.keys(COUNTRY_COORDS).map(cnt => `<option value="${cnt}" ${wizData.country === cnt ? 'selected' : ''}>${cnt}</option>`).join("")}
           </select>
         </div>
         <div class="field-group">
-          <label style="color:var(--ink);">Oraș / Zonă (City / Area)</label>
-          <input type="text" id="wizCity" class="input-light" value="${wizData.city}" placeholder="Ex: Cluj-Napoca, Sopor / București, Sector 1" oninput="wizData.city=this.value" />
+          <label style="color:var(--ink);">${ui.cityLabel}</label>
+          <input type="text" id="wizCity" class="input-light" value="${wizData.city}" placeholder="Vienna / Munich / Bucharest / Paris" oninput="wizData.city=this.value" />
         </div>
       </div>
     `;
