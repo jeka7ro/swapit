@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Change It 4 Me — Don't buy it. Swap it. | Global 1:1 Exchange</title>
+  <meta name="description"
+    content="A modern platform for key-for-key exchange. Swap cars, real estate, electronics, and goods directly — without fees or middlemen. Available in EN, DE, FR, IT, ES, RO, RU with automatic European IP language detection." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="styles.css?v=16" />
+  <style id="core-ui-fixes">
+    button { appearance: none; -webkit-appearance: none; border-radius: 999px; }
+    #geoIpStatusPill, .lang-geo-footer, [data-tab="geoip"] { display: none !important; }
+    .price-range-mini {
+      display: inline-flex !important;
+      align-items: center !important;
+      height: 44px !important;
+      background: var(--bg) !important;
+      border: 1px solid var(--line-strong) !important;
+      border-radius: 999px !important;
+      padding: 0 14px !important;
+      gap: 8px !important;
+    }
+    .price-range-mini input {
+      width: 92px !important;
+      height: 100% !important;
+      border: 0 !important;
+      background: transparent !important;
+      color: var(--ink) !important;
+      font-size: 13.5px !important;
+      font-weight: 600 !important;
+      text-align: center !important;
+      outline: none !important;
+      border-radius: 999px !important;
+      appearance: textfield !important;
+      -moz-appearance: textfield !important;
+    }
+    .price-range-mini input::-webkit-outer-spin-button,
+    .price-range-mini input::-webkit-inner-spin-button {
+      -webkit-appearance: none !important;
+      margin: 0 !important;
+    }
+    .swap-fav-btn {
+      width: 36px !important;
+      height: 36px !important;
+      border-radius: 999px !important;
+      border: 1px solid rgba(255, 255, 255, 0.45) !important;
+      background: rgba(12, 44, 40, 0.78) !important;
+      color: #ffffff !important;
+      backdrop-filter: blur(8px) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      padding: 0 !important;
+    }
+    .swap-fav-btn.is-fav {
+      background: var(--mint) !important;
+      color: var(--forest) !important;
+      border-color: var(--mint) !important;
+    }
+    .swap-card-match {
+      position: absolute !important;
+      bottom: 12px !important;
+      left: 12px !important;
+      top: auto !important;
+      z-index: 2 !important;
+      background: rgba(12, 44, 40, 0.88) !important;
+      color: var(--mint) !important;
+      padding: 4px 11px !important;
+      border-radius: 999px !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+    }
+    .wiz-steps-bar {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 5px !important;
+      padding: 12px 16px !important;
+      overflow: hidden !important;
+    }
+    .wiz-step-btn {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+      padding: 7px 8px !important;
+      font-size: 12px !important;
+      border-radius: 999px !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOP LAUNCH BONUS NOTICE BAR -->
+  <div class="top-notice">
+    <span class="top-notice-badge" data-i18n="topNoticeBadge">Launch Bonus</span>
+    <span data-i18n="topNoticeText">Direct 1:1 global swapping with 0% commission. Register now and receive 10 free
+      swaps.</span>
+    <button type="button" class="top-notice-cta" onclick="openAuthModal('register')" data-i18n="topNoticeCta">Claim 10
+      free swaps →</button>
+  </div>
+
+  <!-- STICKY HEADER -->
+  <header class="header" id="header">
+    <a class="logo" href="#top" aria-label="Change It 4 Me">
+      <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="16" fill="#0c2c28"></circle>
+        <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
+        <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
+        <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"
+          stroke-linejoin="round"></path>
+        <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"
+          stroke-linejoin="round"></path>
+      </svg>
+      <span class="logo-word">ChangeIt4Me</span>
+    </a>
+
+    <nav class="nav" aria-label="Primary">
+      <a href="#categories" data-i18n="navCategories">Categories</a>
+      <a href="#offers" data-i18n="navOffers">Live Offers</a>
+      <a href="#world" data-i18n="navWhere">Where we work</a>
+      <a href="#process" data-i18n="navHow">How it works</a>
+      <a href="#enroll" data-i18n="navEnroll">Quick Enroll</a>
+    </nav>
+
+    <div class="header-actions">
+      <!-- 7-LANGUAGE SWITCHER (Default EN + DE / FR / IT / ES / RO / RU) -->
+      <div class="header-lang" id="langDropdown">
+        <button type="button" class="lang-trigger" id="langTriggerBtn" aria-haspopup="listbox" aria-expanded="false"
+          aria-label="Select Language">
+          <span id="currentLangFlag"></span>
+          <span id="currentLangShort">EN</span>
+          <svg class="lang-chevron" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3.5 6.2 8 10.2l4.5-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+              stroke-linejoin="round"></path>
+          </svg>
+        </button>
+        <div class="lang-list" id="langListWrapper" role="listbox" aria-label="Languages">
+          <ul id="langList" style="list-style:none;margin:0;padding:0;"></ul>
+        </div>
+      </div>
+
+      <!-- MULTI-CURRENCY SWITCHER (Auto by Language + User Choice: EUR / USD / RON LEI / MDL / RUB / GBP / CHF) -->
+      <div class="header-lang" id="currencyDropdown">
+        <button type="button" class="lang-trigger" id="currencyTriggerBtn" aria-haspopup="listbox" aria-expanded="false"
+          aria-label="Select Currency">
+          <span id="currentCurrencySymbol" style="font-weight:800;color:var(--forest);">€</span>
+          <span id="currentCurrencyCode">EUR</span>
+          <svg class="lang-chevron" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3.5 6.2 8 10.2l4.5-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+              stroke-linejoin="round"></path>
+          </svg>
+        </button>
+        <div class="lang-list" id="currencyListWrapper" role="listbox" aria-label="Currencies" style="min-width:215px;">
+          <ul id="currencyList" style="list-style:none;margin:0;padding:0;"></ul>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-login" id="headerDashboardBtn" style="display:none;" onclick="openDashboardModal('proposals')">
+        <span data-i18n="navDashboard">Dashboard</span>
+        <span id="headerProposalsBadge"
+          style="background:var(--forest);color:var(--mint);border-radius:999px;padding:1px 7px;font-size:11.5px;">2</span>
+      </button>
+
+      <button type="button" class="btn btn-login" id="postWizardHeaderBtn" style="display:none;" onclick="openWizardModal()"
+        data-i18n="navPostSwap">+ Post a Swap</button>
+
+      <div id="guestAuthButtons" style="display:flex;align-items:center;gap:8px;">
+        <button type="button" class="btn btn-login" onclick="openAuthModal('login')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span data-i18n="navLogin">Sign In</span>
+        </button>
+        <button type="button" class="btn btn-mint ani1" onclick="openAuthModal('register')">
+          <span data-i18n="navFreeSwaps">10 free swaps</span>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+
+      <div id="userAccountPill" style="display:none;"></div>
+
+      <button class="menu-toggle" id="mobileMenuBtn" type="button" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MOBILE MENU DRAWER -->
+  <div class="mobile-panel" id="mobilePanel">
+    <a href="#categories" onclick="closeMobileMenu()" data-i18n="navCategories">Categories</a>
+    <a href="#offers" onclick="closeMobileMenu()" data-i18n="navOffers">Live Offers</a>
+    <a href="#world" onclick="closeMobileMenu()" data-i18n="navWhere">Where we work</a>
+    <a href="#process" onclick="closeMobileMenu()" data-i18n="navHow">How it works</a>
+    <a href="#enroll" onclick="closeMobileMenu()" data-i18n="navEnroll">Quick Enroll</a>
+    <button type="button" class="mobile-nav-btn" id="mobileDashboardBtn" style="display:none;" onclick="closeMobileMenu(); openDashboardModal('proposals');"
+      data-i18n="navDashboard">Dashboard</button>
+    <button type="button" class="mobile-nav-btn" onclick="closeMobileMenu(); openWizardModal();"
+      data-i18n="navPostSwap">+ Post a Swap</button>
+    <button type="button" class="mobile-nav-btn" id="mobileAuthBtn" onclick="closeMobileMenu(); openAuthModal('login');"
+      data-i18n="navLogin">Log in</button>
+    <button type="button" class="btn btn-mint btn-block" id="mobileRegisterBtn" style="margin-top:16px;"
+      onclick="closeMobileMenu(); openAuthModal('register');">
+      <span data-i18n="heroCtaPrimary">Register · 10 free swaps</span>
+      <span class="arrow">→</span>
+    </button>
+  </div>
+
+  <!-- HERO SECTION -->
+  <section class="hero" id="top">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-kicker">
+          <span class="hero-kicker-dot"></span>
+          <span data-i18n="heroKicker">Direct Key-for-Key Exchange · 0% Platform Fees</span>
+        </div>
+        <h1 data-i18n-html="heroTitleHtml">Don't buy it —<br /><em>Swap it.</em></h1>
+        <p class="lead" data-i18n="heroLead">
+          Look — this is the good part. Swap what you already own (cars, homes, electronics, or goods) directly with
+          verified owners across Europe and worldwide. Register today and get 10 free swaps.
+        </p>
+        <div class="hero-actions">
+          <button type="button" class="btn btn-mint ani1" onclick="openAuthModal('register')">
+            <span data-i18n="heroCtaPrimary">Register · 10 free swaps</span>
+            <span class="arrow">→</span>
+          </button>
+          <button type="button" class="btn btn-outline-light" onclick="openWizardModal()">
+            <span data-i18n="heroCtaSecondary">Post your swap offer</span>
+            <span>+</span>
+          </button>
+          <a class="linkish" href="#offers" data-i18n="heroCtaExplore">Explore live offers ↗</a>
+        </div>
+      </div>
+
+      <aside class="stat-card">
+        <strong><span id="liveUserCount">1,480</span> <small data-i18n="statUsersLabel">active members</small></strong>
+        <span data-i18n="statCountriesText">from 18+ countries already swapping on ChangeIt4Me</span>
+        <div class="avatars">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=60"
+            alt="Member" />
+          <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=60"
+            alt="Member" />
+          <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=80&q=60"
+            alt="Member" />
+          <button type="button" class="more" onclick="openAuthModal('register')" aria-label="Register">+</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- INTERACTIVE SMART SWAP MATCHER BAR -->
+    <div class="hero-matcher-wrap">
+      <form class="hero-matcher" onsubmit="handleHeroMatcher(event)">
+        <div class="matcher-field">
+          <label for="matcherHave" data-i18n="matcherHaveLabel">I have to offer</label>
+          <select id="matcherHave">
+            <option value="all" data-i18n="catAll">All Categories</option>
+            <option value="cars" selected data-i18n="catCars">Cars</option>
+            <option value="real-estate" data-i18n="catRealEstate">Real Estate</option>
+            <option value="electronics" data-i18n="catElectronics">Electronics</option>
+            <option value="home-garden" data-i18n="catHomeGarden">Home & Garden</option>
+            <option value="auto-parts" data-i18n="catAutoParts">Auto Parts</option>
+            <option value="clothing" data-i18n="catClothing">Clothing</option>
+          </select>
+        </div>
+
+        <button type="button" class="matcher-swap-icon" onclick="invertMatcherCategories()" title="Swap directions"
+          aria-label="Swap directions">⇄</button>
+
+        <div class="matcher-field">
+          <label for="matcherWant" data-i18n="matcherWantLabel">I want in return</label>
+          <select id="matcherWant">
+            <option value="all" selected data-i18n="catAll">All Categories</option>
+            <option value="cars" data-i18n="catCars">Cars</option>
+            <option value="real-estate" data-i18n="catRealEstate">Real Estate</option>
+            <option value="electronics" data-i18n="catElectronics">Electronics</option>
+            <option value="home-garden" data-i18n="catHomeGarden">Home & Garden</option>
+            <option value="auto-parts" data-i18n="catAutoParts">Auto Parts</option>
+            <option value="clothing" data-i18n="catClothing">Clothing</option>
+          </select>
+        </div>
+
+        <div class="matcher-field">
+          <label for="matcherCountry" data-i18n="matcherCountryLabel">Preferred Location</label>
+          <select id="matcherCountry">
+            <option value="all" data-i18n="matcherAnyCountry">All countries (Worldwide)</option>
+            <option value="Germany">Germany</option>
+            <option value="Romania">Romania</option>
+            <option value="Spain">Spain</option>
+            <option value="Italy">Italy</option>
+            <option value="France">France</option>
+            <option value="Austria">Austria</option>
+            <option value="Switzerland">Switzerland</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="Moldova">Moldova</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-mint" data-i18n="matcherBtn">Find matching swaps →</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- TRUST & CATEGORY MARQUEE -->
+  <div class="trust">
+    <p data-i18n="trustText">Swap cars, homes and things people already own</p>
+    <div class="marquee" aria-label="Categories">
+      <button type="button" onclick="filterByCategory('cars')" data-i18n="catCars">Cars</button>
+      <button type="button" onclick="filterByCategory('real-estate')" data-i18n="catRealEstate">Real Estate</button>
+      <button type="button" onclick="filterByCategory('electronics')" data-i18n="catElectronics">Electronics</button>
+      <button type="button" onclick="filterByCategory('home-garden')" data-i18n="catHomeGarden">Home & Garden</button>
+      <button type="button" onclick="filterByCategory('auto-parts')" data-i18n="catAutoParts">Auto Parts</button>
+      <button type="button" onclick="filterByCategory('clothing')" data-i18n="catClothing">Clothing</button>
+    </div>
+  </div>
+
+  <!-- ABOUT & 4 STATS + SPLIT COMPARISON -->
+  <section id="about">
+    <div class="wrap about-grid">
+      <div class="about-copy">
+        <p data-i18n-html="aboutLead1Html">
+          <strong>Change It 4 Me</strong> is for the moment someone needs a different city, a different car, or an item
+          sitting unused in someone else’s home.
+        </p>
+        <p data-i18n="aboutLead2">
+          Forget the usual marketplace noise and middlemen markups. Describe what you have, state what you want in
+          return, and our smart matching connects you with people ready to swap 1:1 or with fair cash adjustment.
+        </p>
+      </div>
+    </div>
+
+    <div class="wrap stats">
+      <article class="stat">
+        <b>6</b>
+        <div>
+          <h3 data-i18n="stat1Title">Categories</h3>
+          <p data-i18n="stat1Desc">Cars, real estate, electronics, home & garden, auto parts and clothing.</p>
+        </div>
+      </article>
+      <article class="stat">
+        <b>0%</b>
+        <div>
+          <h3 data-i18n="stat2Title">Platform fees</h3>
+          <p data-i18n="stat2Desc">Agree the terms yourselves and exchange directly without commission.</p>
+        </div>
+      </article>
+      <article class="stat">
+        <b>1:1</b>
+        <div>
+          <h3 data-i18n="stat3Title">Key-for-key</h3>
+          <p data-i18n="stat3Desc">A car for a car. A home for a home. An item for an item (or ± cash).</p>
+        </div>
+      </article>
+      <article class="stat">
+        <b>7</b>
+        <div>
+          <h3 data-i18n="stat4Title">Languages & EU IP</h3>
+          <p data-i18n="stat4Desc">Auto-adapts to your European country IP (EN, DE, FR, IT, ES, RO, RU).</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="wrap split">
+      <div class="photo-card">
+        <div class="float-note">
+          <div class="badge" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M7 7h10M7 12h10M7 17h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+          </div>
+          <div>
+            <strong data-i18n="splitFloatTitle">Direct exchange</strong>
+            <span data-i18n="splitFloatSub">You talk to the owner, not a broker.</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 data-i18n-html="splitHeadingHtml">It’s not just another <em>classifieds board</em></h2>
+        <ul class="checks">
+          <li>
+            <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <circle cx="9" cy="9" r="9" fill="#a9ffca"></circle>
+              <path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"></path>
+            </svg>
+            <span data-i18n="splitCheck1">List your car, property or item — and specify exactly what you want in
+              return.</span>
+          </li>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <circle cx="9" cy="9" r="9" fill="#a9ffca"></circle>
+              <path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"></path>
+            </svg>
+            <span data-i18n="splitCheck2">Browse verified people who are actively looking to trade, not just to
+              sell.</span>
+          </li>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <circle cx="9" cy="9" r="9" fill="#a9ffca"></circle>
+              <path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"></path>
+            </svg>
+            <span data-i18n="splitCheck3">Agree the terms together (1:1 key-for-key or cash difference). Zero platform
+              fee.</span>
+          </li>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <circle cx="9" cy="9" r="9" fill="#a9ffca"></circle>
+              <path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"></path>
+            </svg>
+            <span data-i18n="splitCheck4">Automatic translation in 7 languages so you can swap across borders
+              effortlessly.</span>
+          </li>
+        </ul>
+        <button type="button" class="btn btn-dark ani1" onclick="openAuthModal('register')">
+          <span data-i18n="heroCtaPrimary">Register · 10 free swaps</span>
+          <span class="arrow">→</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 CATEGORIES SECTION -->
+  <section id="categories">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <h2 data-i18n-html="catSectionHeadingHtml">Trade what you own<br />for <em>what you need</em></h2>
+        </div>
+        <p data-i18n="catSectionSub">Six dedicated verticals. Open a category to filter live offers, or post your own
+          swap in under 2 minutes.</p>
+      </div>
+
+      <div class="cards-3">
+        <article class="service"
+          style="background-image:url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80')"
+          onclick="filterByCategory('cars')">
+          <span class="service-count-badge">1:1 Auto Swap</span>
+          <div class="service-body">
+            <h3 data-i18n="catCars">Cars</h3>
+            <p data-i18n="catCarsDesc">Swap your vehicle for another car, SUV, EV, or van.</p>
+            <span class="btn btn-mint"><span data-i18n="seeListings">See listings</span> <span
+                class="arrow">→</span></span>
+          </div>
+        </article>
+
+        <article class="service"
+          style="background-image:url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80')"
+          onclick="filterByCategory('real-estate')">
+          <span class="service-count-badge">0% Broker Fee</span>
+          <div class="service-body">
+            <h3 data-i18n="catRealEstate">Real Estate</h3>
+            <p data-i18n="catRealEstateDesc">Apartments, houses, vacation villas, or land plots.</p>
+            <span class="btn btn-mint"><span data-i18n="seeListings">See listings</span> <span
+                class="arrow">→</span></span>
+          </div>
+        </article>
+
+        <article class="service"
+          style="background-image:url('https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80')"
+          onclick="filterByCategory('electronics')">
+          <span class="service-count-badge">Verified Tech</span>
+          <div class="service-body">
+            <h3 data-i18n="catElectronics">Electronics</h3>
+            <p data-i18n="catElectronicsDesc">Laptops, smartphones, cameras, audio, and setups.</p>
+            <span class="btn btn-mint"><span data-i18n="seeListings">See listings</span> <span
+                class="arrow">→</span></span>
+          </div>
+        </article>
+
+        <article class="service"
+          style="background-image:url('https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=1200&q=80')"
+          onclick="filterByCategory('home-garden')">
+          <span class="service-count-badge">Home & Living</span>
+          <div class="service-body">
+            <h3 data-i18n="catHomeGarden">Home & Garden</h3>
+            <p data-i18n="catHomeGardenDesc">Designer furniture, appliances, tools, and outdoor gear.</p>
+            <span class="btn btn-mint"><span data-i18n="seeListings">See listings</span> <span
+                class="arrow">→</span></span>
+          </div>
+        </article>
+
+        <article class="service"
+          style="background-image:url('https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1200&q=80')"
+          onclick="filterByCategory('auto-parts')">
+          <span class="service-count-badge">OEM & Tuning</span>
+          <div class="service-body">
+            <h3 data-i18n="catAutoParts">Auto Parts</h3>
+            <p data-i18n="catAutoPartsDesc">OEM rims, tires, performance parts, and accessories.</p>
+            <span class="btn btn-mint"><span data-i18n="seeListings">See listings</span> <span
+                class="arrow">→</span></span>
+          </div>
+        </article>
+
+        <article class="service"
+          style="background-image:url('https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1200&q=80')"
+          onclick="filterByCategory('clothing')">
+          <span class="service-count-badge">Luxury & Style</span>
+          <div class="service-body">
+            <h3 data-i18n="catClothing">Clothing</h3>
+            <p data-i18n="catClothingDesc">Luxury watches, designer bags, sneakers, and apparel.</p>
+            <span class="btn btn-mint"><span data-i18n="seeListings">See listings</span> <span
+                class="arrow">→</span></span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- HORIZONTAL STORY SLIDER -->
+  <section class="story-stage">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <h2 data-i18n-html="storyHeadingHtml">A calmer way to <em>change what you have</em></h2>
+        </div>
+        <p data-i18n="storySub">Show your offer to people who want that exact thing — and already own what you are
+          looking for.</p>
+      </div>
+
+      <div class="slider" id="storySlider">
+        <article class="feature">
+          <div class="ico">↔</div>
+          <div>
+            <h3 data-i18n="story1Title">Say what you want back</h3>
+            <p data-i18n="story1Desc">Every listing clearly shows both sides: HAVE (your item) and WANT (what you accept
+              in return).</p>
+          </div>
+        </article>
+        <article class="shot"
+          style="background-image:url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=900&q=80')"
+          role="img" aria-label="Car swap"></article>
+        <article class="feature">
+          <div class="ico">◷</div>
+          <div>
+            <h3 data-i18n="story2Title">Move without the markup</h3>
+            <p data-i18n="story2Desc">When you relocate to another city or need a different car, a direct swap skips the
+              double resale loss.</p>
+          </div>
+        </article>
+        <article class="shot"
+          style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80')"
+          role="img" aria-label="Apartment swap"></article>
+        <article class="feature">
+          <div class="ico">✓</div>
+          <div>
+            <h3 data-i18n="story3Title">You set the terms</h3>
+            <p data-i18n="story3Desc">Meet, inspect, and agree the exchange yourselves. The platform never takes a cut.
+            </p>
+          </div>
+        </article>
+      </div>
+      <div class="progress" aria-hidden="true"><span id="sliderProgress"></span></div>
+    </div>
+  </section>
+
+  <!-- LIVE OFFERS & INTERACTIVE FILTERABLE CATALOG -->
+  <section id="offers">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <h2 data-i18n-html="offersHeadingHtml">From a city studio<br />to <em>a weekend car</em></h2>
+        </div>
+        <button type="button" class="btn btn-dark ani1" onclick="openWizardModal()">
+          <span data-i18n="offersSeeAll">Post your own offer</span>
+          <span class="arrow">+</span>
+        </button>
+      </div>
+
+      <!-- INTERACTIVE FILTER TOOLBAR -->
+      <div class="catalog-toolbar">
+        <div class="catalog-pills" id="categoryFilterPills">
+          <button type="button" class="cat-pill active" data-cat="all" onclick="filterByCategory('all')"
+            data-i18n="catAll">All Categories</button>
+          <button type="button" class="cat-pill" data-cat="cars" onclick="filterByCategory('cars')"
+            data-i18n="catCars">Cars</button>
+          <button type="button" class="cat-pill" data-cat="real-estate" onclick="filterByCategory('real-estate')"
+            data-i18n="catRealEstate">Real Estate</button>
+          <button type="button" class="cat-pill" data-cat="electronics" onclick="filterByCategory('electronics')"
+            data-i18n="catElectronics">Electronics</button>
+          <button type="button" class="cat-pill" data-cat="home-garden" onclick="filterByCategory('home-garden')"
+            data-i18n="catHomeGarden">Home & Garden</button>
+          <button type="button" class="cat-pill" data-cat="auto-parts" onclick="filterByCategory('auto-parts')"
+            data-i18n="catAutoParts">Auto Parts</button>
+          <button type="button" class="cat-pill" data-cat="clothing" onclick="filterByCategory('clothing')"
+            data-i18n="catClothing">Clothing</button>
+          <button type="button" class="cat-pill" data-cat="favs" onclick="filterByCategory('favs')">
+            <span data-i18n="catSavedFavs">♥ Saved</span> (<span id="favCountPill">0</span>)
+          </button>
+        </div>
+
+        <div class="catalog-filters-right">
+          <input type="search" id="catalogSearchInput" class="catalog-search"
+            placeholder="Search by model, city, or keyword…" data-i18n-placeholder="searchPlaceholder"
+            oninput="renderOffers()" />
+          <div class="price-range-mini">
+            <input type="number" id="catalogMinEur" placeholder="Min €" data-i18n-placeholder="minEurPlaceholder"
+              oninput="renderOffers()" min="0" />
+            <span>–</span>
+            <input type="number" id="catalogMaxEur" placeholder="Max €" data-i18n-placeholder="maxEurPlaceholder"
+              oninput="renderOffers()" min="0" />
+          </div>
+          <select id="catalogDealSelect" class="catalog-select" onchange="renderOffers()" aria-label="Deal type">
+            <option value="all" data-i18n="dealAll">All deal types</option>
+            <option value="1to1" data-i18n="deal1to1">1:1 Key-for-Key</option>
+            <option value="cash" data-i18n="dealCashAdd">+ Cash top-up possible</option>
+            <option value="either" data-i18n="dealSwapOrSale">Swap or Sale</option>
+          </select>
+          <select id="catalogSortSelect" class="catalog-select" onchange="renderOffers()" aria-label="Sort">
+            <option value="match" data-i18n="sortNewest">Sort: Best Match</option>
+            <option value="valDesc" data-i18n="sortValDesc">Value: High → Low</option>
+            <option value="valAsc" data-i18n="sortValAsc">Value: Low → High</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- LIVE OFFERS GRID -->
+      <div class="offers-grid" id="offersGrid"></div>
+    </div>
+  </section>
+
+  <!-- WORLDWIDE INTERACTIVE MAP SECTION -->
+  <section id="world">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <h2 data-i18n-html="worldHeadingHtml">We work <em>worldwide</em></h2>
+        </div>
+        <p data-i18n="worldSub">Each glowing pin marks a country with live swap offers. Click a pin or country chip to
+          inspect offers.</p>
+      </div>
+
+      <div class="map-layout">
+        <div class="map-frame">
+          <div id="worldMap" role="application" aria-label="World map of countries with live swap offers"></div>
+        </div>
+        <aside class="country-panel" aria-live="polite">
+          <h3 id="selectedCountryHeading" data-i18n="pickCountryTitle">Pick a country</h3>
+          <p class="hint" id="selectedCountrySub" data-i18n="pickCountryHint">Click any glowing dot on the map or select
+            a country below to view active swap offers there.</p>
+          <div class="country-chips" id="countryChipsContainer"></div>
+          <div class="offer-list" id="countryOffersList"></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW A SWAP ACTUALLY HAPPENS (4 STEPS) -->
+  <section id="process">
+    <div class="wrap">
+      <h2 data-i18n-html="processHeadingHtml">How a swap <em>actually happens</em></h2>
+      <div class="steps">
+        <article class="step">
+          <div class="num">01</div>
+          <h3 data-i18n="step1Title">Post your offer</h3>
+          <p data-i18n="step1Desc">List your car, property or item — and describe what you want in return.</p>
+        </article>
+        <article class="step">
+          <div class="num">02</div>
+          <h3 data-i18n="step2Title">Find a match</h3>
+          <p data-i18n="step2Desc">Browse matching offers and connect with owners looking for your item.</p>
+        </article>
+        <article class="step">
+          <div class="num">03</div>
+          <h3 data-i18n="step3Title">Make the deal</h3>
+          <p data-i18n="step3Desc">Agree the terms (1:1 or cash balance) and exchange directly. No fees.</p>
+        </article>
+        <article class="step">
+          <div class="num">04</div>
+          <h3 data-i18n="step4Title">Meet safely</h3>
+          <p data-i18n="step4Desc">Verify documents, meet in a safe place, and complete the key-for-key swap.</p>
+        </article>
+      </div>
+      <div class="center">
+        <button type="button" class="btn btn-mint" onclick="openWizardModal()">
+          <span data-i18n="postFreeAdBtn">Post a free swap ad</span>
+          <span class="arrow">→</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLEAR EXCHANGES, NO PLATFORM FEE (PLANS) -->
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <h2 data-i18n-html="plansHeadingHtml">Clear exchanges,<br /><em>no platform fee</em></h2>
+        </div>
+        <p data-i18n="plansSub">Pick the kind of trade you have in mind. Listing is free. You and the other person
+          decide the terms.</p>
+      </div>
+
+      <div class="plans">
+        <article class="plan">
+          <h3 data-i18n="catCars">Cars</h3>
+          <div class="price"><span data-i18n="planFreeLabel">Free</span> <small data-i18n="planPerList">/ to
+              list</small></div>
+          <p class="sub" data-i18n="plan1Desc">A vehicle for another vehicle, with or without cash difference.</p>
+          <ul>
+            <li data-i18n="plan1Item1">Year, mileage, VIN check and condition</li>
+            <li data-i18n="plan1Item2">Exact vehicle you would take in return</li>
+            <li data-i18n="plan1Item3">City and country on the interactive map</li>
+            <li data-i18n="plan1Item4">Direct chat & swap proposals with owners</li>
+          </ul>
+          <button type="button" class="btn btn-dark btn-block" onclick="filterByCategory('cars')"
+            data-i18n="seeListings">See listings</button>
+        </article>
+
+        <article class="plan">
+          <span class="tag" data-i18n="plan2Tag">Most wanted</span>
+          <h3 data-i18n="plan2Title">Homes & Real Estate</h3>
+          <div class="price"><span data-i18n="planFreeLabel">Free</span> <small data-i18n="planPerList">/ to
+              list</small></div>
+          <p class="sub" data-i18n="plan2Desc">Apartment, house or land — including relocating to another city or
+            country.</p>
+          <ul>
+            <li data-i18n="plan2Item1">High-res photos, floor area & rooms</li>
+            <li data-i18n="plan2Item2">Permanent swap, temporary swap, or sale</li>
+            <li data-i18n="plan2Item3">Target city and property type you need next</li>
+            <li data-i18n="plan2Item4">0% real estate brokerage fee from platform</li>
+          </ul>
+          <button type="button" class="btn btn-dark btn-block" onclick="filterByCategory('real-estate')"
+            data-i18n="seeListings">See listings</button>
+        </article>
+
+        <article class="plan dark">
+          <div>
+            <h3 data-i18n="plan3Title">Something more specific</h3>
+            <p style="color:rgba(255,255,255,0.82);margin-top:12px;" data-i18n="plan3Desc">
+              Electronics, furniture, auto parts, watches or clothes. If it is useful to someone else, it can be an
+              offer. Register now and get 10 free swaps.
+            </p>
+          </div>
+          <button type="button" class="btn btn-mint btn-block ani1" onclick="openAuthModal('register')">
+            <span data-i18n="heroCtaPrimary">Register · 10 free swaps</span>
+            <span class="arrow">→</span>
+          </button>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEDICATED LANDING PAGE REGISTRATION & QUICK SWAP ENROLLMENT FORMS (#enroll) -->
+  <section id="enroll">
+    <div class="wrap">
+      <div class="enroll-hub">
+        <div class="section-head" style="margin-bottom:20px;">
+          <div>
+            <h2 style="color:#fff;" data-i18n-html="enrollSectionHeadingHtml">Start swapping in <em>60 seconds</em></h2>
+          </div>
+          <p style="color:rgba(255,255,255,0.82);" data-i18n="enrollSectionSub">
+            Register your free account (10 free swaps included) or submit your swap listing directly from this page.
+          </p>
+        </div>
+
+        <div class="enroll-tabs" role="tablist">
+          <button type="button" class="enroll-tab active" id="tabBtnAccount" onclick="switchEnrollTab('account')"
+            data-i18n="enrollTabAccount">
+            1. Create Account (10 Free Swaps)
+          </button>
+          <button type="button" class="enroll-tab" id="tabBtnSignIn" onclick="switchEnrollTab('signin')">
+            2. <span data-i18n="navLogin">Sign In</span>
+          </button>
+          <button type="button" class="enroll-tab" id="tabBtnQuickPost" onclick="switchEnrollTab('quickpost')"
+            data-i18n="enrollTabQuickPost">
+            3. Quick Swap Listing Form
+          </button>
+        </div>
+
+        <div class="enroll-grid">
+          <div>
+            <ul class="enroll-perks">
+              <li data-i18n="enrollPerk1">✓ 10 Free Swaps credited immediately upon registration</li>
+              <li data-i18n="enrollPerk2">✓ Automatic listing translation in EN, DE, FR, IT, ES, RO, RU</li>
+              <li data-i18n="enrollPerk3">✓ Instant smart-matching notifications when someone has what you want</li>
+              <li data-i18n="enrollPerk4">✓ 0% commission on cars, real estate, and high-value goods</li>
+            </ul>
+            <div
+              style="margin-top:24px;padding:20px;border-radius:20px;background:rgba(169,255,202,0.1);border:1px solid rgba(169,255,202,0.28);">
+              <strong style="display:block;color:var(--mint);font-size:15px;margin-bottom:6px;"
+                data-i18n="wizBoxTitle">Full 7-Step Listing Wizard</strong>
+              <p style="margin:0 0 14px;font-size:13.5px;color:rgba(255,255,202,0.85);" data-i18n="wizBoxDesc">
+                Want to upload multiple photos and complete detailed specifications by category? Launch the advanced
+                7-step form:
+              </p>
+              <button type="button" class="btn btn-mint" onclick="openWizardModal()">
+                <span data-i18n="wizTitle">7-Step Swap Listing Wizard</span>
+                <span class="arrow">→</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- FORM 1: CREATE ACCOUNT (FROSTED GLASS PILL DESIGN + GOOGLE & APPLE) -->
+          <div class="enroll-form-card glass-auth-card" id="enrollAccountPanel">
+            <h3 class="glass-auth-heading" data-i18n="authCreateHeading">Create account</h3>
+
+            <form onsubmit="handleInlineRegistration(event)" autocomplete="off" class="glass-pill-form">
+              <div class="pill-input-group">
+                <input type="text" class="pill-input" name="name" autocomplete="name" required
+                  data-i18n-placeholder="formFullName" placeholder="Full name" />
+              </div>
+
+              <div class="pill-input-group">
+                <input type="email" class="pill-input" name="email" autocomplete="email" required
+                  data-i18n-placeholder="formEmailShort" placeholder="Email" />
+              </div>
+
+              <div class="pill-input-group">
+                <input type="password" class="pill-input" name="password" id="inlineRegPwd" required minlength="6"
+                  data-i18n-placeholder="formPassword" placeholder="Password" />
+                <button type="button" class="pill-pwd-eye" onclick="togglePasswordVisibility('inlineRegPwd', this)"
+                  aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="pill-input-group">
+                <input type="password" class="pill-input" name="confirmPassword" id="inlineRegPwdConfirm" required
+                  minlength="6" data-i18n-placeholder="formConfirmPassword" placeholder="Confirm password" />
+                <button type="button" class="pill-pwd-eye"
+                  onclick="togglePasswordVisibility('inlineRegPwdConfirm', this)" aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="pill-select-block">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <div>
+                    <label class="pill-select-label" data-i18n="formPrefLang">Preferred language</label>
+                    <select class="pill-input pill-select" name="prefLang" id="inlineRegLangSelect" onchange="onRegLangSelectChange(this.value, 'inlineRegCurrencySelect')">
+                      <option value="en" selected>English</option>
+                      <option value="de">Deutsch</option>
+                      <option value="fr">Français</option>
+                      <option value="it">Italiano</option>
+                      <option value="es">Español</option>
+                      <option value="ro">Română</option>
+                      <option value="ru">Русский</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="pill-select-label" data-i18n="formPrefCurrency">Preferred currency</label>
+                    <select class="pill-input pill-select" name="prefCurrency" id="inlineRegCurrencySelect" onchange="setCurrency(this.value, true)">
+                      <option value="EUR" selected>EUR (€)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="RON">LEI (RON)</option>
+                      <option value="MDL">Lei (MDL)</option>
+                      <option value="RUB">RUB (₽)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="CHF">CHF (Fr)</option>
+                    </select>
+                  </div>
+                </div>
+                <span class="pill-select-hint" data-i18n="authLangHint">Used for the interface and automatic listing
+                  translation.</span>
+              </div>
+
+              <button type="submit" class="pill-btn-mint" data-i18n="authSignUpBtn">Sign up</button>
+
+              <button type="button" class="pill-btn-white" onclick="handleGoogleAuth()">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#4285F4"
+                    d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+                  <path fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
+                  <path fill="#FBBC05"
+                    d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
+                  <path fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
+                </svg>
+                <span data-i18n="formGoogleBtn">Continue with Google</span>
+              </button>
+
+              <button type="button" class="pill-btn-white" onclick="handleAppleAuth()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#082228" aria-hidden="true">
+                  <path
+                    d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                </svg>
+                <span data-i18n="formAppleBtn">Continue with Apple</span>
+              </button>
+
+              <p class="glass-legal-line" data-i18n-html="authLegalHtml">
+                I agree to the <a href="#before-trade" onclick="openGuideModal('meet-and-check')">Terms of Use</a> and
+                <a href="#enroll">Privacy Policy</a>
+              </p>
+
+              <p class="glass-bottom-switch">
+                <span data-i18n="authHaveAccount">Do you have an account?</span>
+                <button type="button" onclick="switchEnrollTab('signin')" data-i18n="navLogin">Log in</button>
+              </p>
+            </form>
+          </div>
+
+          <!-- FORM 2: INLINE SIGN IN (WELCOME BACK FROSTED GLASS PILL DESIGN) -->
+          <div class="enroll-form-card glass-auth-card" id="enrollSignInPanel" style="display:none;">
+            <h3 class="glass-auth-heading" data-i18n="authSignInHeading">Welcome back</h3>
+
+            <form onsubmit="handleModalLogin(event)" autocomplete="off" class="glass-pill-form">
+              <div class="pill-input-group">
+                <input type="email" class="pill-input" name="email" autocomplete="email" required
+                  data-i18n-placeholder="formEmailShort" placeholder="Email" />
+              </div>
+
+              <div class="pill-input-group">
+                <input type="password" class="pill-input" name="password" id="inlineLoginPwd"
+                  autocomplete="current-password" required data-i18n-placeholder="formPassword"
+                  placeholder="Password" />
+                <button type="button" class="pill-pwd-eye" onclick="togglePasswordVisibility('inlineLoginPwd', this)"
+                  aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+              </div>
+
+              <button type="submit" class="pill-btn-mint" data-i18n="navLogin">Log in</button>
+
+              <button type="button" class="pill-btn-white" onclick="handleGoogleAuth()">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#4285F4"
+                    d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+                  <path fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
+                  <path fill="#FBBC05"
+                    d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
+                  <path fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
+                </svg>
+                <span data-i18n="authGoogleLoginBtn">Log in with Google</span>
+              </button>
+
+              <button type="button" class="pill-btn-white" onclick="handleAppleAuth()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#082228" aria-hidden="true">
+                  <path
+                    d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                </svg>
+                <span data-i18n="formAppleBtn">Continue with Apple</span>
+              </button>
+
+              <label class="glass-remember-row">
+                <input type="checkbox" checked />
+                <span data-i18n="authRememberShort">Remember me</span>
+              </label>
+
+              <button type="button" class="glass-forgot-link" onclick="handleForgotPassword()"
+                data-i18n="authForgotPwd">Forgot your password?</button>
+
+              <p class="glass-bottom-switch">
+                <span data-i18n="authNoAccount">Don't have an account?</span>
+                <button type="button" onclick="switchEnrollTab('account')" data-i18n="authSignUpBtn">Sign up</button>
+              </p>
+            </form>
+          </div>
+
+          <!-- FORM 2: QUICK SWAP LISTING FORM -->
+          <div class="enroll-form-card" id="enrollQuickPostPanel" style="display:none;">
+            <form onsubmit="handleInlineQuickPost(event)" autocomplete="off">
+              <div class="form-grid-2">
+                <div class="field-group">
+                  <label data-i18n="navCategories">Categories</label>
+                  <select class="input-glass" name="category" required>
+                    <option value="cars" data-i18n="catCars">Cars</option>
+                    <option value="real-estate" data-i18n="catRealEstate">Real Estate</option>
+                    <option value="electronics" data-i18n="catElectronics">Electronics</option>
+                    <option value="home-garden" data-i18n="catHomeGarden">Home & Garden</option>
+                    <option value="auto-parts" data-i18n="catAutoParts">Auto Parts</option>
+                    <option value="clothing" data-i18n="catClothing">Clothing</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label id="quickValueLabel" data-i18n="quickValueEur">Estimated value</label>
+                  <div style="display:grid;grid-template-columns:1fr 115px;gap:8px;">
+                    <input type="number" class="input-glass" name="valueEur" required min="1" />
+                    <select class="input-glass" name="valueCurrency" id="quickPostCurrencySelect" onchange="setCurrency(this.value, true)">
+                      <option value="EUR">EUR (€)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="RON">LEI (RON)</option>
+                      <option value="MDL">Lei (MDL)</option>
+                      <option value="RUB">RUB (₽)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="CHF">CHF (Fr)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label data-i18n="quickTitleHave">What you HAVE</label>
+                <input type="text" class="input-glass" name="titleHave" required />
+              </div>
+
+              <div class="field-group">
+                <label data-i18n="quickTitleWant">What you WANT in exchange</label>
+                <input type="text" class="input-glass" name="titleWant" required />
+              </div>
+
+              <div class="form-grid-2">
+                <div class="field-group">
+                  <label data-i18n="quickDealType">Exchange structure</label>
+                  <select class="input-glass" name="dealType">
+                    <option value="1to1" data-i18n="deal1to1">1:1 Key-for-Key</option>
+                    <option value="cash" data-i18n="dealCashAdd">+ Cash top-up possible</option>
+                    <option value="either" data-i18n="dealSwapOrSale">Swap or Sale</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label data-i18n="formCountry">Country & City</label>
+                  <input type="text" class="input-glass" name="location" required />
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label data-i18n="quickDescription">Condition & swap notes</label>
+                <input type="text" class="input-glass" name="desc" required />
+              </div>
+
+              <button type="submit" class="btn btn-mint btn-block" data-i18n="quickSubmitBtn">
+                Publish Swap Offer Now →
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEFORE YOU MAKE THE TRADE (GUIDES) -->
+  <section id="before-trade">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <h2 data-i18n-html="guidesHeadingHtml">Before you <em>make the trade</em></h2>
+        </div>
+      </div>
+
+      <div class="articles">
+        <article class="article" onclick="openGuideModal('car-offer')">
+          <div class="thumb"
+            style="background-image:url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1000&q=80')">
+          </div>
+          <div class="body">
+            <h3 data-i18n="guide1Title">What to put in a car offer</h3>
+            <p data-i18n="guide1Desc">Year, service history, real photos, and the car you would actually accept in
+              return.</p>
+            <span class="more" data-i18n="readMore">Read checklist →</span>
+          </div>
+        </article>
+
+        <article class="article" onclick="openGuideModal('home-swap')">
+          <div class="thumb"
+            style="background-image:url('https://images.unsplash.com/photo-1560185007-cde436f6a4d0?auto=format&fit=crop&w=1000&q=80')">
+          </div>
+          <div class="body">
+            <h3 data-i18n="guide2Title">Swapping a place, not just selling it</h3>
+            <p data-i18n="guide2Desc">Say which city you are leaving, and the exact kind of home you want next.</p>
+            <span class="more" data-i18n="readMore">Read checklist →</span>
+          </div>
+        </article>
+
+        <article class="article" onclick="openGuideModal('meet-and-check')">
+          <div class="thumb"
+            style="background-image:url('https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1000&q=80')">
+          </div>
+          <div class="body">
+            <h3 data-i18n="guide3Title">Meet, check, then exchange</h3>
+            <p data-i18n="guide3Desc">A practical checklist for viewing a car or a home and keeping the deal tidy.</p>
+            <span class="more" data-i18n="readMore">Read checklist →</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- WATCHLIST ALERT CTA -->
+  <section class="cta">
+    <div class="cta-card">
+      <h2 data-i18n-html="ctaHeadingHtml">Tell us <em>what to watch</em></h2>
+      <p data-i18n="ctaSub">Say what you're interested in and the country. When a matching offer appears, we'll send it
+        to you.</p>
+      <form class="cta-form" onsubmit="handleWatchlistSubmit(event)">
+        <input type="text" required name="interest" data-i18n-placeholder="ctaInterestPlaceholder"
+          placeholder="What you're interested in" />
+        <input type="text" required name="country" data-i18n-placeholder="ctaCountryPlaceholder"
+          placeholder="Country" />
+        <input type="email" required name="email" data-i18n-placeholder="ctaEmailPlaceholder"
+          placeholder="Email for notifications" />
+        <button class="btn btn-mint btn-block" type="submit">
+          <span data-i18n="ctaSubmitBtn">Notify me</span>
+          <span class="arrow">→</span>
+        </button>
+        <p class="form-note" id="watchlistNote" role="status"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="foot">
+      <div>
+        <a class="logo" href="#top">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="16" fill="#a9ffca"></circle>
+            <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#0c2c28" stroke-width="1.8" stroke-linecap="round"></path>
+            <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#0c2c28" stroke-width="1.8" stroke-linecap="round"></path>
+            <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#0c2c28" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round"></path>
+            <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#0c2c28" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round"></path>
+          </svg>
+          <span>ChangeIt4Me</span>
+        </a>
+        <p data-i18n="footerAbout">A modern platform for key-for-key exchange. Swap cars, real estate and goods directly
+          — without overpaying or using middlemen.</p>
+      </div>
+      <div>
+        <nav class="foot-nav" aria-label="Footer">
+          <a href="#offers" data-i18n="navOffers">Live Offers</a>
+          <a href="#about">About</a>
+          <a href="#process" data-i18n="navHow">How it works</a>
+          <a href="#enroll" data-i18n="navEnroll">Quick Enroll</a>
+          <a href="mailto:info@changeit4me.com">info@changeit4me.com</a>
+        </nav>
+        <div class="socials" aria-label="Languages quick select">
+          <a href="#top" onclick="setLanguage('en', true); return false;" title="English">EN</a>
+          <a href="#top" onclick="setLanguage('de', true); return false;" title="Deutsch">DE</a>
+          <a href="#top" onclick="setLanguage('fr', true); return false;" title="Français">FR</a>
+          <a href="#top" onclick="setLanguage('it', true); return false;" title="Italiano">IT</a>
+          <a href="#top" onclick="setLanguage('es', true); return false;" title="Español">ES</a>
+          <a href="#top" onclick="setLanguage('ro', true); return false;" title="Română">RO</a>
+          <a href="#top" onclick="setLanguage('ru', true); return false;" title="Русский">RU</a>
+        </div>
+      </div>
+    </div>
+    <div class="wordmark">ChangeIt4Me</div>
+    <div class="legal">
+      <span>© 2026 Change It 4 Me · Global 1:1 Exchange Platform</span>
+      <nav>
+        <a href="#before-trade" onclick="openGuideModal('meet-and-check')">Terms & Safety</a>
+        <a href="#enroll">Privacy</a>
+        <a href="#enroll">Cookies</a>
+      </nav>
+    </div>
+  </footer>
+
+  <!-- =======================================================================
+       MODAL 1: AUTH MODAL (EXACT FROSTED GLASS VILLA DESIGN FROM SCREENSHOTS 1 & 2 + GOOGLE & APPLE)
+       ======================================================================= -->
+  <div class="modal-backdrop auth-scenic-backdrop" id="authModal" onclick="if(event.target===this)closeAuthModal()">
+    <div class="glass-auth-modal">
+      <button type="button" class="glass-auth-close" onclick="closeAuthModal()" aria-label="Close">✕</button>
+
+      <h2 class="glass-auth-heading" id="authModalTitle" data-i18n="authCreateHeading">Create account</h2>
+
+      <!-- REGISTER FORM (Matches Screenshot 2: Create account + Google & Apple) -->
+      <form id="modalRegisterForm" onsubmit="handleModalRegister(event)" autocomplete="off" class="glass-pill-form">
+        <div class="pill-input-group">
+          <input type="text" class="pill-input" name="name" autocomplete="name" required
+            data-i18n-placeholder="formFullName" placeholder="Full name" />
+        </div>
+
+        <div class="pill-input-group">
+          <input type="email" class="pill-input" name="email" autocomplete="email" required
+            data-i18n-placeholder="formEmailShort" placeholder="Email" />
+        </div>
+
+        <div class="pill-input-group">
+          <input type="password" class="pill-input" name="password" id="modalRegPwd" required minlength="6"
+            data-i18n-placeholder="formPassword" placeholder="Password" />
+          <button type="button" class="pill-pwd-eye" onclick="togglePasswordVisibility('modalRegPwd', this)"
+            aria-label="Show password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="pill-input-group">
+          <input type="password" class="pill-input" name="confirmPassword" id="modalRegPwdConfirm" required
+            minlength="6" data-i18n-placeholder="formConfirmPassword" placeholder="Confirm password" />
+          <button type="button" class="pill-pwd-eye" onclick="togglePasswordVisibility('modalRegPwdConfirm', this)"
+            aria-label="Show password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="pill-select-block">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label class="pill-select-label" data-i18n="formPrefLang">Preferred language</label>
+              <select class="pill-input pill-select" name="prefLang" id="modalRegLangSelect" onchange="onRegLangSelectChange(this.value, 'modalRegCurrencySelect')">
+                <option value="en" selected>English</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="it">Italiano</option>
+                <option value="es">Español</option>
+                <option value="ro">Română</option>
+                <option value="ru">Русский</option>
+              </select>
+            </div>
+            <div>
+              <label class="pill-select-label" data-i18n="formPrefCurrency">Preferred currency</label>
+              <select class="pill-input pill-select" name="prefCurrency" id="modalRegCurrencySelect" onchange="setCurrency(this.value, true)">
+                <option value="EUR" selected>EUR (€)</option>
+                <option value="USD">USD ($)</option>
+                <option value="RON">LEI (RON)</option>
+                <option value="MDL">Lei (MDL)</option>
+                <option value="RUB">RUB (₽)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="CHF">CHF (Fr)</option>
+              </select>
+            </div>
+          </div>
+          <span class="pill-select-hint" data-i18n="authLangHint">Used for the interface and automatic listing
+            translation.</span>
+        </div>
+
+        <button type="submit" class="pill-btn-mint" data-i18n="authSignUpBtn">Sign up</button>
+
+        <button type="button" class="pill-btn-white" onclick="handleGoogleAuth()">
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4"
+              d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+            <path fill="#34A853"
+              d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
+            <path fill="#FBBC05"
+              d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
+            <path fill="#EA4335"
+              d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
+          </svg>
+          <span data-i18n="formGoogleBtn">Continue with Google</span>
+        </button>
+
+        <button type="button" class="pill-btn-white" onclick="handleAppleAuth()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#082228" aria-hidden="true">
+            <path
+              d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+          </svg>
+          <span data-i18n="formAppleBtn">Continue with Apple</span>
+        </button>
+
+        <p class="glass-legal-line" data-i18n-html="authLegalHtml">
+          I agree to the <a href="#before-trade" onclick="closeAuthModal(); openGuideModal('meet-and-check')">Terms of
+            Use</a> and <a href="#enroll" onclick="closeAuthModal()">Privacy Policy</a>
+        </p>
+
+        <p class="glass-bottom-switch">
+          <span data-i18n="authHaveAccount">Do you have an account?</span>
+          <button type="button" onclick="switchAuthTab('login')" data-i18n="navLogin">Log in</button>
+        </p>
+      </form>
+
+      <!-- SIGN IN FORM (Matches Screenshot 1: Welcome back + Google & Apple) -->
+      <form id="modalLoginForm" style="display:none;" onsubmit="handleModalLogin(event)" autocomplete="off"
+        class="glass-pill-form">
+        <div class="pill-input-group">
+          <input type="email" class="pill-input" name="email" autocomplete="email" required
+            data-i18n-placeholder="formEmailShort" placeholder="Email" />
+        </div>
+
+        <div class="pill-input-group">
+          <input type="password" class="pill-input" name="password" id="modalLoginPwd" autocomplete="current-password"
+            required data-i18n-placeholder="formPassword" placeholder="Password" />
+          <button type="button" class="pill-pwd-eye" onclick="togglePasswordVisibility('modalLoginPwd', this)"
+            aria-label="Show password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+
+        <button type="submit" class="pill-btn-mint" data-i18n="navLogin">Log in</button>
+
+        <button type="button" class="pill-btn-white" onclick="handleGoogleAuth()">
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4"
+              d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+            <path fill="#34A853"
+              d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
+            <path fill="#FBBC05"
+              d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
+            <path fill="#EA4335"
+              d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
+          </svg>
+          <span data-i18n="authGoogleLoginBtn">Log in with Google</span>
+        </button>
+
+        <button type="button" class="pill-btn-white" onclick="handleAppleAuth()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#082228" aria-hidden="true">
+            <path
+              d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+          </svg>
+          <span data-i18n="formAppleBtn">Continue with Apple</span>
+        </button>
+
+        <label class="glass-remember-row">
+          <input type="checkbox" checked />
+          <span data-i18n="authRememberShort">Remember me</span>
+        </label>
+
+        <button type="button" class="glass-forgot-link" onclick="handleForgotPassword()"
+          data-i18n="authForgotPwd">Forgot your password?</button>
+
+        <p class="glass-bottom-switch">
+          <span data-i18n="authNoAccount">Don't have an account?</span>
+          <button type="button" onclick="switchAuthTab('register')" data-i18n="authSignUpBtn">Sign up</button>
+        </p>
+      </form>
+
+      <!-- 6-DIGIT EMAIL VERIFICATION CODE FORM (Matches Screenshot: Enter the code from email to finish registration) -->
+      <form id="modalVerifyForm" style="display:none;" onsubmit="handleVerifyEmailCode(event)" autocomplete="off"
+        class="glass-pill-form">
+        <p class="glass-verify-prompt" data-i18n="authVerifyPrompt">Enter the code from email to finish registration.</p>
+
+        <div class="pill-input-group">
+          <input type="text" id="verifyCodeInput" class="pill-input" inputmode="numeric" maxlength="6"
+            pattern="[0-9]{6}" required data-i18n-placeholder="authVerifyPlaceholder" placeholder="6-digit code"
+            autocomplete="one-time-code" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6)" />
+        </div>
+
+        <button type="submit" class="pill-btn-mint" data-i18n="authVerifyBtn">Verify code</button>
+
+        <button type="button" id="verifyResendBtn" class="pill-btn-white" onclick="handleResendVerificationCode()"
+          disabled>
+          <span id="verifyResendText">Resend in 60s</span>
+        </button>
+
+        <p class="glass-verify-sent" id="verifySentStatus" data-i18n="authCodeSentMsg">
+          Verification code has been sent to your email.
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 2: 7-STEP SWAP LISTING WIZARD (Upgraded from /add-post)
+       ======================================================================= -->
+  <div class="modal-backdrop" id="wizardModal" onclick="if(event.target===this)closeWizardModal()">
+    <div class="modal-card wizard-modal">
+      <div class="wiz-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="16" fill="#a9ffca"></circle>
+            <path d="M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2" stroke="#0c2c28" stroke-width="2"
+              stroke-linecap="round"></path>
+          </svg>
+          <strong style="font-size:18px;" data-i18n="wizTitle">7-Step Swap Listing Wizard</strong>
+        </div>
+        <button type="button" class="modal-close" onclick="closeWizardModal()" aria-label="Close">✕</button>
+      </div>
+
+      <div class="wiz-steps-bar" id="wizStepsBar">
+        <button type="button" class="wiz-step-btn active" onclick="goToWizStep(1)"><span>1</span> <b
+            data-i18n="wizStep1">Photos</b></button>
+        <button type="button" class="wiz-step-btn" onclick="goToWizStep(2)"><span>2</span> <b
+            data-i18n="wizStep2">Category</b></button>
+        <button type="button" class="wiz-step-btn" onclick="goToWizStep(3)"><span>3</span> <b data-i18n="wizStep3">What
+            You Have</b></button>
+        <button type="button" class="wiz-step-btn" onclick="goToWizStep(4)"><span>4</span> <b
+            data-i18n="wizStep4">Details</b></button>
+        <button type="button" class="wiz-step-btn" onclick="goToWizStep(5)"><span>5</span> <b data-i18n="wizStep5">What
+            You Want</b></button>
+        <button type="button" class="wiz-step-btn" onclick="goToWizStep(6)"><span>6</span> <b
+            data-i18n="wizStep6">Location</b></button>
+        <button type="button" class="wiz-step-btn" onclick="goToWizStep(7)"><span>7</span> <b
+            data-i18n="wizStep7">Contact</b></button>
+      </div>
+
+      <div class="wiz-body">
+        <div class="wiz-meter"><i id="wizMeterBar" style="width:14.28%"></i></div>
+        <div id="wizStepContainer"></div>
+      </div>
+
+      <div class="wiz-footer">
+        <button type="button" class="btn btn-login" id="wizPrevBtn" onclick="prevWizStep()">← Back</button>
+        <span id="wizStepCounter" style="font-size:13.5px;color:var(--muted);font-weight:700;">Step 1 / 7</span>
+        <button type="button" class="btn btn-mint" id="wizNextBtn" onclick="nextWizStep()">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 3: OFFER DETAIL, VALUE CALCULATOR & "PROPOSE A SWAP" MODAL
+       ======================================================================= -->
+  <div class="modal-backdrop" id="offerModal" onclick="if(event.target===this)closeOfferModal()">
+    <div class="modal-card" id="offerModalContent"></div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 4: GUIDE CHECKLIST MODAL
+       ======================================================================= -->
+  <div class="modal-backdrop" id="guideModal" onclick="if(event.target===this)closeGuideModal()">
+    <div class="modal-card" id="guideModalContent"></div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 5: PERSONAL DASHBOARD (PROPOSALS, MY LISTINGS, FAVORITES, GEO-IP)
+       ======================================================================= -->
+  <div class="modal-backdrop" id="dashboardModal" onclick="if(event.target===this)closeDashboardModal()">
+    <div class="modal-card" style="width:min(780px,100%);">
+      <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeDashboardModal()">✕</button>
+      <div
+        style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding-right:44px;flex-wrap:wrap;">
+        <h2 style="font-size:26px;margin:0;" data-i18n="dashTitle">Personal Swap Dashboard</h2>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span
+            style="background:var(--mint);color:var(--forest);padding:6px 14px;border-radius:999px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span id="dashFreeSwapsCount">10</span> / 10 Free Swaps Available
+          </span>
+          <button type="button" id="dashLogoutBtn" class="btn btn-login" style="display:none;padding:6px 14px;font-size:12.5px;gap:6px;" onclick="handleUserLogout()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Log out</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="catalog-pills" style="margin-bottom:20px;" id="dashTabsBar">
+        <button type="button" class="cat-pill active" data-tab="proposals" onclick="switchDashboardTab('proposals')"
+          data-i18n="dashTabProposals">Swap Proposals</button>
+        <button type="button" class="cat-pill" data-tab="mylistings" onclick="switchDashboardTab('mylistings')"
+          data-i18n="dashTabMyListings">My Listings</button>
+        <button type="button" class="cat-pill" data-tab="favorites" onclick="switchDashboardTab('favorites')"
+          data-i18n="dashTabFavorites">Saved Favorites</button>
+      </div>
+
+      <div id="dashboardBodyContent"></div>
+    </div>
+  </div>
+
+  <!-- FLOATING LIVE SWAP ASSISTANT CHAT DOCK -->
+  <div class="chat-dock" id="chatDock">
+    <div class="chat-panel">
+      <header>
+        <div>
+          <p style="margin:0;font-size:11px;color:var(--mint);text-transform:uppercase;letter-spacing:0.06em;"
+            data-i18n="chatSubtitle">Online · 7 Languages</p>
+          <h3 style="margin:2px 0 0;font-size:18px;" data-i18n="chatTitle">Swap Assistant</h3>
+        </div>
+        <button type="button" onclick="toggleChatDock()"
+          style="background:rgba(255,255,255,0.12);border:0;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;">✕</button>
+      </header>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-bubble bot" data-i18n="chatWelcome">
+          Hi! Tell me what you HAVE and what you WANT to swap — I can find matching offers or help you list yours!
+        </div>
+      </div>
+      <form class="chat-input-bar" onsubmit="handleChatSubmit(event)">
+        <input type="text" id="chatInput" required />
+        <button type="submit" class="btn btn-mint" style="padding:8px 14px;">→</button>
+      </form>
+    </div>
+    <button type="button" class="chat-launcher" onclick="toggleChatDock()" aria-label="Open Swap Assistant">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="i18n.js?v=16"></script>
+  <script src="data.js?v=16"></script>
+  <script src="app.js?v=16"></script>
+</body>
+
+</html>
