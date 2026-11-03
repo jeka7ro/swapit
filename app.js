@@ -649,6 +649,133 @@ function handleHeroMatcher(e) {
   showToast(`✓ ${t("navOffers")}: ${wantCat === "all" ? t("catAll") : getCategoryLabel(wantCat)}`);
 }
 
+const SEARCH_SYNONYMS = {
+  "casa": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "real-estate"],
+  "casă": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "real-estate"],
+  "vila": ["villa", "house", "chalet", "vilă", "real-estate"],
+  "apartament": ["apartment", "penthouse", "studio", "wohnung", "appartement", "piso", "real-estate"],
+  "imobiliare": ["real-estate", "apartment", "villa", "penthouse", "house", "teren"],
+  "masina": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto"],
+  "mașină": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "suv", "auto"],
+  "auto": ["cars", "bmw", "mercedes", "audi", "porsche", "tesla", "auto-parts"],
+  "telefon": ["iphone", "smartphone", "samsung", "electronics"],
+  "laptop": ["macbook", "laptop", "notebook", "electronics"],
+  "tableta": ["ipad", "tablet", "oled", "electronics"],
+  "ceas": ["rolex", "watch", "chronograph", "clothing"]
+};
+
+function matchesSmartSearchQuery(item, rawQuery) {
+  if (!rawQuery) return true;
+  const q = rawQuery.trim().toLowerCase();
+  if (!q) return true;
+
+  let allText = `${item.category} ${item.country} ${item.city} ${item.specs || ""} ${item.title || ""} ${item.want || ""} ${item.desc || ""}`;
+  if (item.i18n) {
+    Object.values(item.i18n).forEach(tr => {
+      allText += ` ${tr.title || ""} ${tr.want || ""} ${tr.desc || ""}`;
+    });
+  }
+  const haystack = allText.toLowerCase();
+  if (haystack.includes(q)) return true;
+
+  const words = q.split(/\s+/);
+  return words.every(w => {
+    if (haystack.includes(w)) return true;
+    const syns = SEARCH_SYNONYMS[w];
+    if (syns && syns.some(s => haystack.includes(s))) return true;
+    return false;
+  });
+}
+
+function buildLiveSearchDropdownHtml(val) {
+  const q = String(val || "").trim();
+  if (q.length < 1) return "";
+  const matches = offers.filter(it => matchesSmartSearchQuery(it, q)).slice(0, 5);
+  if (matches.length === 0) {
+    return `
+      <div class="smart-dd-empty">
+        <span>Niciun anunț exact pentru „${q}”</span>
+        <button type="button" class="btn btn-mint" style="height:32px;padding:0 12px;font-size:12px;" onclick="openWizardModal()">+ Adaugă tu primul anunț</button>
+      </div>
+    `;
+  }
+  return `
+    ${matches.map(item => {
+      const loc = getOfferLocalized(item);
+      const price = formatOfferPrice(item, currentCurrency);
+      return `
+        <button type="button" class="smart-dd-item" onclick="document.getElementById('heroSmartDropdown').style.display='none'; document.getElementById('mobileSmartDropdown').style.display='none'; openOfferModal(${item.id}, 'details');">
+          <img src="${item.image}" alt="" />
+          <div class="smart-dd-info">
+            <strong>${loc.title}</strong>
+            <span>${getCategoryLabel(item.category)} · ${item.city}, ${item.country} · ${getDealTypeLabel(item.dealType)}</span>
+          </div>
+          <span class="smart-dd-price">~${price}</span>
+        </button>
+      `;
+    }).join("")}
+    <button type="button" class="smart-dd-footer" onclick="executeQuickKeywordSearch('${q.replace(/'/g, "\\'")}')">
+      Vezi toate rezultatele pentru „${q}” în catalog →
+    </button>
+  `;
+}
+
+function handleHeroLiveSearch(val) {
+  const dd = document.getElementById("heroSmartDropdown");
+  if (!dd) return;
+  const html = buildLiveSearchDropdownHtml(val);
+  dd.innerHTML = html;
+  dd.style.display = html ? "block" : "none";
+}
+
+function handleMobileLiveSearch(val) {
+  const dd = document.getElementById("mobileSmartDropdown");
+  if (!dd) return;
+  const html = buildLiveSearchDropdownHtml(val);
+  dd.innerHTML = html;
+  dd.style.display = html ? "block" : "none";
+}
+
+function executeQuickKeywordSearch(keyword) {
+  const clean = String(keyword || "").trim();
+  const heroDd = document.getElementById("heroSmartDropdown");
+  const mobDd = document.getElementById("mobileSmartDropdown");
+  if (heroDd) heroDd.style.display = "none";
+  if (mobDd) mobDd.style.display = "none";
+
+  currentCategoryFilter = "all";
+  currentDealModeFilter = "all";
+  document.querySelectorAll("#categoryFilterPills .cat-pill").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.cat === "all");
+  });
+  document.querySelectorAll("#dealModePills .cat-pill").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mode === "all");
+  });
+
+  const catSearch = document.getElementById("catalogSearchInput");
+  if (catSearch) catSearch.value = clean;
+  const heroInput = document.getElementById("heroSmartSearchInput");
+  if (heroInput && clean) heroInput.value = clean;
+  const mobInput = document.getElementById("mobileSmartSearchInput");
+  if (mobInput && clean) mobInput.value = clean;
+
+  renderOffers();
+  document.getElementById("offers")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.addEventListener("click", (e) => {
+  const heroWrap = document.getElementById("heroSmartSearchWrap");
+  const heroDd = document.getElementById("heroSmartDropdown");
+  if (heroDd && heroWrap && !heroWrap.contains(e.target)) {
+    heroDd.style.display = "none";
+  }
+  const mobDd = document.getElementById("mobileSmartDropdown");
+  const mobInput = document.getElementById("mobileSmartSearchInput");
+  if (mobDd && mobInput && !mobInput.parentElement?.parentElement?.contains(e.target)) {
+    mobDd.style.display = "none";
+  }
+});
+
 function renderOffers() {
   const grid = document.getElementById("offersGrid");
   if (!grid) return;
@@ -683,10 +810,8 @@ function renderOffers() {
     if (minVal > 0 && itemValInCurrentCurr < minVal) return false;
     if (maxVal > 0 && itemValInCurrentCurr > maxVal) return false;
 
-    if (query) {
-      const loc = getOfferLocalized(item);
-      const haystack = `${loc.title} ${loc.want} ${loc.desc} ${item.country} ${item.city} ${item.specs}`.toLowerCase();
-      if (!haystack.includes(query)) return false;
+    if (query && !matchesSmartSearchQuery(item, query)) {
+      return false;
     }
     return true;
   });
@@ -1330,6 +1455,7 @@ function saveCurrentWizStepInputs() {
     }
   }
   if (val("wizSpecs") !== undefined) wizData.specs = val("wizSpecs");
+  if (val("wizSpecsPreview") !== undefined) wizData.specs = val("wizSpecsPreview");
   if (val("wizDesc") !== undefined) wizData.desc = val("wizDesc");
   if (val("wizTitleWant") !== undefined) wizData.titleWant = val("wizTitleWant");
   if (val("wizDealType") !== undefined) wizData.dealType = val("wizDealType");
@@ -1344,13 +1470,327 @@ function onWizPriceInputChange() {
   const valEl = document.getElementById("wizValueEur");
   const currEl = document.getElementById("wizCurrencySelect");
   const previewEl = document.getElementById("wizParityPreview");
+  const labelEl = document.getElementById("wizValueCurrencyLabel");
   const rawVal = Number(valEl?.value) || 0;
   const chosenCurr = currEl?.value || currentCurrency;
   wizData.originalCurrency = chosenCurr;
   wizData.originalAmount = rawVal > 0 ? rawVal : "";
   wizData.valueEur = rawVal > 0 ? convertToEur(rawVal, chosenCurr) : "";
+  if (labelEl) {
+    const cObj = getCurrencyObj(chosenCurr);
+    labelEl.textContent = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${cObj.short || cObj.code})`);
+  }
   if (previewEl) {
     previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
+  }
+}
+
+// ============================================================================
+// MEGA-SMART CATEGORY ASSISTANT & LIVE LOCATION GEOCODER FOR WIZARD
+// ============================================================================
+const SMART_WIZ_CATALOG = {
+  "electronics": {
+    label: "Asistent Smart Electronice (Brand, Model, Memorie, Stare)",
+    templates: [
+      { title: "Apple iPhone 16 Pro Max 256GB Natural Titanium", specs: "256GB · 8GB RAM · 100% Battery Health · Unlocked · Garanție Apple", eur: 1350 },
+      { title: "Apple iPhone 15 Pro Max 512GB Black Titanium", specs: "512GB · Neverlocked · Baterie 98% · Cutie + Factură", eur: 1180 },
+      { title: "Apple iPad Pro 13\" M4 (512GB OLED) + Magic Keyboard", specs: "512GB Wi-Fi + Cellular · Tandem OLED · Apple Pencil Pro inclus", eur: 1550 },
+      { title: "Apple MacBook Pro 16\" M3 Max (64GB RAM / 2TB SSD)", specs: "Apple M3 Max · 64GB RAM · 2TB SSD · 19 Cicluri Baterie · AppleCare+", eur: 3800 },
+      { title: "Apple MacBook Air 15\" M3 (16GB RAM / 512GB SSD)", specs: "Apple M3 · 16GB RAM · 512GB SSD · Midnight · Ca Nou", eur: 1490 },
+      { title: "Samsung Galaxy S24 Ultra 512GB Titanium Gray", specs: "512GB · 12GB RAM · S-Pen · Neverlocked · Garanție 24 luni", eur: 1090 },
+      { title: "Sony PlayStation 5 Pro 2TB + 2 Controllere DualSense", specs: "2TB SSD · 4K 120Hz · 2x DualSense · Cutie Originală", eur: 780 }
+    ],
+    groups: [
+      { name: "Brand", chips: ["Apple", "Samsung", "Sony", "ASUS ROG", "Lenovo", "DJI", "Xiaomi"] },
+      { name: "Memorie / Stocare", chips: ["128GB", "256GB", "512GB", "1TB SSD", "2TB SSD"] },
+      { name: "RAM & Stare", chips: ["8GB RAM", "16GB RAM", "32GB RAM", "64GB RAM", "Baterie 100%", "Sigilat / Factură", "Neverlocked"] }
+    ]
+  },
+  "cars": {
+    label: "Asistent Smart Auto (Marcă, Model, An, Motorizare, Rulaj)",
+    templates: [
+      { title: "2022 BMW X5 M50d xDrive · Pachet M · Panoramă", specs: "2022 · 48.000 km · 3.0 Diesel 400 CP · Automată 8+1 · xDrive AWD", eur: 68500 },
+      { title: "2022 BMW M5 Competition (F90) 625 CP", specs: "2022 · 29.000 km · 4.4 V8 Biturbo · M xDrive · Carbon Roof", eur: 72000 },
+      { title: "2023 Mercedes-Benz GLE 400d 4MATIC AMG Line", specs: "2023 · 31.000 km · 330 CP Diesel · 9G-Tronic · Burmester 3D", eur: 76000 },
+      { title: "2022 Audi A6 Avant 55 TFSIe Quattro S-Line", specs: "2022 · 41.000 km · 367 CP Plug-in Hybrid · Matrix LED · Quattro", eur: 43500 },
+      { title: "2022 Porsche Panamera 4 E-Hybrid Sport Chrono", specs: "2022 · 24.000 km · 462 CP AWD · PDK · Burmester Audio", eur: 89000 },
+      { title: "2023 Tesla Model 3 Long Range Dual Motor AWD", specs: "2023 · 22.000 km · 602 km WLTP · Autopilot · Pompă Căldură", eur: 36800 }
+    ],
+    groups: [
+      { name: "Marcă", chips: ["BMW", "Mercedes-Benz", "Audi", "Porsche", "Volkswagen", "Tesla", "Range Rover", "Toyota"] },
+      { name: "An & Rulaj", chips: ["2024", "2023", "2022", "2021", "2020", "< 30.000 km", "60.000 km", "100.000 km"] },
+      { name: "Motor & Cutie", chips: ["Diesel", "Benzină", "Plug-in Hybrid", "100% Electric", "Cutie Automată", "4x4 / AWD", "Carte Service"] }
+    ]
+  },
+  "real-estate": {
+    label: "Asistent Smart Imobiliare (Tip, Camere, Suprafață m², Dotări)",
+    templates: [
+      { title: "Apartament 3 Camere Modern + Parcare Subterană", specs: "3 Camere · 86 m² utili + Terasă 14 m² · Etaj 3/6 · Bloc Nou 2023 · Parcare", eur: 175000 },
+      { title: "Casă / Vilă Individuală 5 Camere cu Piscină și Grădină", specs: "5 Camere · 220 m² utili · Teren 600 m² · Piscină Încălzită · Pompă Căldură", eur: 390000 },
+      { title: "Penthouse Panoramic 4 Camere cu Terasă 40 m²", specs: "4 Camere · 135 m² + Terasă 40 m² · 2 Locuri Parcare · Mobilat Lux", eur: 285000 },
+      { title: "Studio / Apartament 2 Camere Ultracentral (Ideal Investiție)", specs: "2 Camere · 54 m² · Complet Mobilat & Utilat · Metrou 3 min", eur: 118000 },
+      { title: "Teren Intravilan Construibil cu Toate Utilitățile", specs: "Teren 850 m² · Deschidere 24m · Curent, Gaz, Apă, Canalizare, Asfalt", eur: 95000 }
+    ],
+    groups: [
+      { name: "Tip Proprietate", chips: ["Apartament", "Casă / Vilă", "Penthouse", "Studio / Garsonieră", "Teren Construibil", "Spațiu Comercial"] },
+      { name: "Camere & Suprafață", chips: ["2 Camere", "3 Camere", "4+ Camere", "55 m²", "85 m²", "120 m²", "200+ m²"] },
+      { name: "Dotări", chips: ["Parcare Subterană", "Terasă / Grădină", "Mobilat Lux", "Construcție Nouă", "Central", "Cadastru & Intabulare"] }
+    ]
+  },
+  "home-garden": {
+    label: "Asistent Smart Casă & Grădină",
+    templates: [
+      { title: "Canapea Designer Italiană 3 Locuri din Catifea / Piele", specs: "240 x 98 cm · Lemn Masiv · Stare Impecabilă 10/10", eur: 2600 },
+      { title: "Bucătărie Modulară Completă + Insulă & Electrocasnice Bosch", specs: "360 cm · Cuptor, Plită Inducție, Mașină Vase încorporată", eur: 6800 }
+    ],
+    groups: [
+      { name: "Tip & Stare", chips: ["Mobilier Designer", "Electrocasnice", "Grădină / Terasă", "Sistem Solar / Fotovoltaic", "Nou / Ca Nou"] }
+    ]
+  },
+  "auto-parts": {
+    label: "Asistent Smart Piese & Jante Auto",
+    templates: [
+      { title: "Set 4 Jante Forjate OEM 21\" + Anvelope Michelin Pilot Sport", specs: "21 inch · 5x112 OEM · Fără suduri sau zgârieturi · Anvelope 90%", eur: 2900 }
+    ],
+    groups: [
+      { name: "Specificații", chips: ["Jante + Anvelope", "19\"", "20\"", "21\"", "5x112", "5x120", "Original OEM", "Evacuare / Frâne"] }
+    ]
+  },
+  "clothing": {
+    label: "Asistent Smart Ceasuri, Genți & Modă Luxury",
+    templates: [
+      { title: "Ceas Automatic Elvețian Chronograph Full-Set (Cutie + Card)", specs: "Oțel 41mm · Safir · Mecanism Automatic · Acte Autenticitate", eur: 6500 }
+    ],
+    groups: [
+      { name: "Detalii", chips: ["Ceas Automatic", "Geantă Designer", "Full-Set (Cutie + Acte)", "Nepurtat / 10/10", "Verificare Autenticitate"] }
+    ]
+  }
+};
+
+const SMART_EUROPEAN_CITIES = [
+  { city: "Bucharest", region: "Sector 1 / Herăstrău", country: "Romania", lat: 44.4268, lng: 26.1025 },
+  { city: "Cluj-Napoca", region: "Centru / Sopor", country: "Romania", lat: 46.7712, lng: 23.6236 },
+  { city: "Timișoara", region: "Timiș", country: "Romania", lat: 45.7489, lng: 21.2087 },
+  { city: "Iași", region: "Palas / Copou", country: "Romania", lat: 47.1585, lng: 27.6014 },
+  { city: "Brașov", region: "Centru", country: "Romania", lat: 45.6427, lng: 25.5887 },
+  { city: "Constanța", region: "Mamaia / Nord", country: "Romania", lat: 44.1598, lng: 28.6348 },
+  { city: "Chișinău", region: "Centru / Valea Morilor", country: "Moldova", lat: 47.0105, lng: 28.8638 },
+  { city: "Vienna", region: "Innere Stadt / Donaustadt", country: "Austria", lat: 48.2082, lng: 16.3738 },
+  { city: "Salzburg", region: "Zentrum", country: "Austria", lat: 47.8095, lng: 13.0550 },
+  { city: "Graz", region: "Steiermark", country: "Austria", lat: 47.0707, lng: 15.4395 },
+  { city: "Munich", region: "Bavaria", country: "Germany", lat: 48.1351, lng: 11.5820 },
+  { city: "Berlin", region: "Mitte / Charlottenburg", country: "Germany", lat: 52.5200, lng: 13.4050 },
+  { city: "Frankfurt", region: "Hessen", country: "Germany", lat: 50.1109, lng: 8.6821 },
+  { city: "Stuttgart", region: "Baden-Württemberg", country: "Germany", lat: 48.7758, lng: 9.1829 },
+  { city: "Zurich", region: "Zürichsee", country: "Switzerland", lat: 47.3769, lng: 8.5417 },
+  { city: "Geneva", region: "Genève", country: "Switzerland", lat: 46.2044, lng: 6.1432 },
+  { city: "Paris", region: "Île-de-France", country: "France", lat: 48.8566, lng: 2.3522 },
+  { city: "Nice", region: "Côte d'Azur", country: "France", lat: 43.7102, lng: 7.2620 },
+  { city: "Milan", region: "Lombardia", country: "Italy", lat: 45.4642, lng: 9.1900 },
+  { city: "Rome", region: "Lazio", country: "Italy", lat: 41.9028, lng: 12.4964 },
+  { city: "Madrid", region: "Comunidad de Madrid", country: "Spain", lat: 40.4168, lng: -3.7038 },
+  { city: "Barcelona", region: "Catalunya", country: "Spain", lat: 41.3874, lng: 2.1686 },
+  { city: "Marbella", region: "Costa del Sol", country: "Spain", lat: 36.5101, lng: -4.8824 },
+  { city: "London", region: "Greater London", country: "United Kingdom", lat: 51.5072, lng: -0.1276 }
+];
+
+function applyWizSmartTemplate(idx) {
+  const cfg = SMART_WIZ_CATALOG[wizData.category] || SMART_WIZ_CATALOG.electronics;
+  const tpl = cfg.templates[idx];
+  if (!tpl) return;
+  const activeCurr = document.getElementById("wizCurrencySelect")?.value || wizData.originalCurrency || currentCurrency;
+  const convertedAmt = convertFromEur(tpl.eur, activeCurr);
+
+  wizData.titleHave = tpl.title;
+  wizData.specs = tpl.specs;
+  wizData.originalCurrency = activeCurr;
+  wizData.originalAmount = convertedAmt;
+  wizData.valueEur = tpl.eur;
+
+  const titleEl = document.getElementById("wizTitleHave");
+  const specsEl = document.getElementById("wizSpecsPreview");
+  const valEl = document.getElementById("wizValueEur");
+  const suggEl = document.getElementById("wizTitleSuggestions");
+  if (titleEl) titleEl.value = tpl.title;
+  if (specsEl) specsEl.value = tpl.specs;
+  if (valEl) valEl.value = convertedAmt;
+  if (suggEl) suggEl.style.display = "none";
+  onWizPriceInputChange();
+  showToast(`✓ Completat automat: ${tpl.title}`);
+}
+
+function appendWizSmartChip(chipText) {
+  const titleEl = document.getElementById("wizTitleHave");
+  const specsEl = document.getElementById("wizSpecsPreview");
+  const curTitle = String(titleEl ? titleEl.value : wizData.titleHave || "").trim();
+  if (!curTitle.toLowerCase().includes(chipText.toLowerCase())) {
+    const updated = curTitle ? `${curTitle} · ${chipText}` : chipText;
+    wizData.titleHave = updated;
+    if (titleEl) titleEl.value = updated;
+  }
+  const curSpecs = String(specsEl ? specsEl.value : wizData.specs || "").trim();
+  if (!curSpecs.toLowerCase().includes(chipText.toLowerCase())) {
+    const nextSpecs = curSpecs ? `${curSpecs} · ${chipText}` : chipText;
+    wizData.specs = nextSpecs;
+    if (specsEl) specsEl.value = nextSpecs;
+  }
+}
+
+function onWizTitleHaveInput(val) {
+  wizData.titleHave = val;
+  const suggEl = document.getElementById("wizTitleSuggestions");
+  if (!suggEl) return;
+  const q = String(val || "").trim().toLowerCase();
+  if (q.length < 2) {
+    suggEl.style.display = "none";
+    return;
+  }
+  const activeCurr = document.getElementById("wizCurrencySelect")?.value || wizData.originalCurrency || currentCurrency;
+  const allTemplates = [];
+  Object.entries(SMART_WIZ_CATALOG).forEach(([catKey, groupObj]) => {
+    groupObj.templates.forEach((tObj, i) => {
+      allTemplates.push({ ...tObj, catKey, idx: i });
+    });
+  });
+  const matches = allTemplates.filter(item =>
+    `${item.title} ${item.specs} ${item.catKey}`.toLowerCase().includes(q)
+  ).slice(0, 5);
+
+  if (matches.length === 0) {
+    suggEl.style.display = "none";
+    return;
+  }
+  suggEl.innerHTML = matches.map(m => {
+    const priceStr = formatAmountInCurrentCurrency(convertFromEur(m.eur, activeCurr), activeCurr);
+    return `
+      <button type="button" class="smart-dd-item" onclick="selectCrossCategoryWizTemplate('${m.catKey}', ${m.idx})">
+        <div class="smart-dd-info">
+          <strong>⚡ ${m.title}</strong>
+          <span>${m.specs}</span>
+        </div>
+        <span class="smart-dd-price">~${priceStr}</span>
+      </button>
+    `;
+  }).join("");
+  suggEl.style.display = "block";
+}
+
+function selectCrossCategoryWizTemplate(catKey, idx) {
+  wizData.category = catKey;
+  applyWizSmartTemplate(idx);
+}
+
+let geoSearchTimer = null;
+async function handleWizGeoSearchInput(val) {
+  const dd = document.getElementById("wizGeoDropdown");
+  if (!dd) return;
+  const q = String(val || "").trim();
+  if (q.length < 2) {
+    dd.style.display = "none";
+    return;
+  }
+
+  // 1. Instant local match from curated European cities
+  const localMatches = SMART_EUROPEAN_CITIES.filter(c =>
+    `${c.city} ${c.region} ${c.country}`.toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 4);
+
+  const renderGeoList = (items) => {
+    if (!items.length) {
+      dd.style.display = "none";
+      return;
+    }
+    dd.innerHTML = items.map(loc => `
+      <button type="button" class="smart-dd-item" onclick="selectWizGeoPlace('${loc.country.replace(/'/g, "\\'")}', '${loc.city.replace(/'/g, "\\'")}', ${loc.lat}, ${loc.lng})">
+        <div class="smart-dd-info">
+          <strong>📍 ${loc.city}${loc.region ? ` (${loc.region})` : ""}</strong>
+          <span>${loc.country} · GPS: ${Number(loc.lat).toFixed(4)}, ${Number(loc.lng).toFixed(4)}</span>
+        </div>
+        <span class="smart-dd-price">Selectează</span>
+      </button>
+    `).join("");
+    dd.style.display = "block";
+  };
+
+  renderGeoList(localMatches);
+
+  // 2. Live OpenStreetMap Photon Geocoding API (Streets, Cities, Postcodes across Europe)
+  if (geoSearchTimer) clearTimeout(geoSearchTimer);
+  geoSearchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && Array.isArray(data.features) && data.features.length > 0) {
+        const apiPlaces = data.features.map(f => {
+          const p = f.properties || {};
+          const coords = (f.geometry && f.geometry.coordinates) || [11.58, 48.13];
+          return {
+            city: p.city || p.town || p.name || q,
+            region: p.street ? `${p.street} ${p.housenumber || ""}`.trim() : (p.state || p.county || ""),
+            country: p.country || wizData.country || "Germany",
+            lat: coords[1],
+            lng: coords[0]
+          };
+        });
+        const merged = [...localMatches, ...apiPlaces].slice(0, 6);
+        renderGeoList(merged);
+      }
+    } catch (e) {}
+  }, 240);
+}
+
+function selectWizGeoPlace(country, city, lat, lng) {
+  wizData.country = country;
+  wizData.city = city;
+  wizData.lat = Number(lat);
+  wizData.lng = Number(lng);
+  const countryEl = document.getElementById("wizCountry");
+  const cityEl = document.getElementById("wizCity");
+  const searchEl = document.getElementById("wizGeoSearchInput");
+  const dd = document.getElementById("wizGeoDropdown");
+  const badge = document.getElementById("wizGeoVerifiedBadge");
+  if (countryEl) {
+    // Add option if country isn't in the static list
+    if (!Array.from(countryEl.options).some(o => o.value === country)) {
+      const opt = document.createElement("option");
+      opt.value = country;
+      opt.textContent = country;
+      countryEl.appendChild(opt);
+    }
+    countryEl.value = country;
+  }
+  if (cityEl) cityEl.value = city;
+  if (searchEl) searchEl.value = `${city}, ${country}`;
+  if (dd) dd.style.display = "none";
+  if (badge) {
+    badge.innerHTML = `✓ Pin verificat pe hartă: <strong>${city}, ${country}</strong> (${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)})`;
+  }
+}
+
+function detectWizLocationGPS() {
+  if (detectedIpInfo && detectedIpInfo.city && detectedIpInfo.countryName) {
+    const cCoords = COUNTRY_COORDS[detectedIpInfo.countryName] || { lat: 47.0, lng: 14.0 };
+    selectWizGeoPlace(detectedIpInfo.countryName, detectedIpInfo.city, cCoords.lat, cCoords.lng);
+    showToast(`✓ Locație detectată: ${detectedIpInfo.city}, ${detectedIpInfo.countryName}`);
+    return;
+  }
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        const res = await fetch(`https://photon.komoot.io/reverse?lon=${longitude}&lat=${latitude}`);
+        const data = await res.json();
+        const p = data?.features?.[0]?.properties || {};
+        selectWizGeoPlace(p.country || "Romania", p.city || p.town || p.name || "Centru", latitude, longitude);
+        showToast("✓ Coordonate GPS detectate cu succes!");
+      } catch (e) {
+        selectWizGeoPlace(wizData.country || "Romania", wizData.city || "București", latitude, longitude);
+      }
+    }, () => {
+      selectWizGeoPlace("Romania", "Bucharest", 44.4268, 26.1025);
+      showToast("✓ Locație selectată automat!");
+    });
   }
 }
 
@@ -1434,22 +1874,52 @@ function renderWizStep() {
       </div>
     `;
   } else if (wizStep === 3) {
-    const activeWizCurr = wizData.originalCurrency || currentCurrency;
+    const activeWizCurr = wizData.originalCurrency || currentCurrency || "EUR";
     const cObj = getCurrencyObj(activeWizCurr);
-    const valLabel = t("quickValueEur").replace(/\(EUR\)|\(€\)/gi, `(${cObj.short || cObj.code})`);
+    const valLabel = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${cObj.short || cObj.code})`);
     const displayVal = wizData.originalAmount !== "" && wizData.originalAmount !== undefined
       ? wizData.originalAmount
       : (wizData.valueEur ? convertFromEur(wizData.valueEur, activeWizCurr) : "");
+    const catCfg = SMART_WIZ_CATALOG[wizData.category] || SMART_WIZ_CATALOG.electronics;
     c.innerHTML = `
-      <h3 style="margin:0 0 14px;font-size:24px;">3. ${t("wizStep3")} (${t("haveBadge")})</h3>
-      <div class="field-group">
-        <label style="color:var(--ink);">${t("quickTitleHave")}</label>
-        <input type="text" id="wizTitleHave" class="input-light" value="${wizData.titleHave}" />
+      <h3 style="margin:0 0 10px;font-size:22px;">3. ${t("wizStep3")} (${t("haveBadge")})</h3>
+
+      <div class="wiz-smart-box">
+        <div class="wiz-smart-header">
+          <span>✨ ${catCfg.label || `Asistent Smart · ${getCategoryLabel(wizData.category)}`}</span>
+          <span style="font-size:11px;font-weight:600;color:var(--muted);">1-Click Autocomplete</span>
+        </div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px;">Modele & Șabloane Rapide (completează automat titlu + specificații + preț):</div>
+        <div class="wiz-chip-row">
+          ${(catCfg.templates || []).map((tpl, idx) => `
+            <button type="button" class="wiz-chip wiz-chip-tpl" onclick="applyWizSmartTemplate(${idx})">⚡ ${tpl.title}</button>
+          `).join("")}
+        </div>
+        ${(catCfg.groups || []).map(grp => `
+          <div style="margin-top:8px;display:flex;align-items:center;flex-wrap:wrap;gap:5px;">
+            <span style="font-size:11px;font-weight:800;color:var(--forest);margin-right:4px;">${grp.name}:</span>
+            ${(grp.chips || []).map(ch => `
+              <button type="button" class="wiz-chip" onclick="appendWizSmartChip('${ch.replace(/'/g, "\\'")}')">+ ${ch}</button>
+            `).join("")}
+          </div>
+        `).join("")}
       </div>
+
+      <div class="field-group" style="position:relative;margin-top:12px;">
+        <label style="color:var(--ink);">${t("quickTitleHave")}</label>
+        <input type="text" id="wizTitleHave" class="input-light" placeholder="Tastează ex: iPhone 16, iPad, MacBook, BMW X5, Apartament 3 camere, Casă..." value="${wizData.titleHave}" autocomplete="off" oninput="onWizTitleHaveInput(this.value)" />
+        <div id="wizTitleSuggestions" class="wiz-autocomplete-list" style="display:none;"></div>
+      </div>
+
       <div class="field-group">
-        <label style="color:var(--ink);">${valLabel}</label>
+        <label style="color:var(--ink);">Specificații Tehnice (se completează automat din butoanele de mai sus sau manual)</label>
+        <input type="text" id="wizSpecsPreview" class="input-light" placeholder="Ex: 256GB · 98% Battery · Garanție / 2021 · 64.000 km / 3 Camere · 92 m²" value="${wizData.specs || ''}" oninput="wizData.specs = this.value" />
+      </div>
+
+      <div class="field-group">
+        <label id="wizValueCurrencyLabel" style="color:var(--ink);">${valLabel}</label>
         <div style="display:grid;grid-template-columns:1fr 145px;gap:10px;">
-          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" oninput="onWizPriceInputChange()" />
+          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" placeholder="Ex: 1150" oninput="onWizPriceInputChange()" />
           <select id="wizCurrencySelect" class="input-light" onchange="onWizPriceInputChange()">
             ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === activeWizCurr ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
           </select>
@@ -1461,12 +1931,19 @@ function renderWizStep() {
     c.innerHTML = `
       <h3 style="margin:0 0 14px;font-size:24px;">4. ${t("wizStep4")}</h3>
       <div class="field-group">
-        <label style="color:var(--ink);">Key Specifications (Year, Area m², Mileage, Condition)</label>
-        <input type="text" id="wizSpecs" class="input-light" value="${wizData.specs}" />
+        <label style="color:var(--ink);">Specificații Cheie (An, Memorie, Suprafață m², Rulaj, Stare)</label>
+        <input type="text" id="wizSpecs" class="input-light" value="${wizData.specs}" oninput="wizData.specs = this.value" />
+        <div class="wiz-chip-row" style="margin-top:8px;">
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Factură & Garanție'; wizData.specs = document.getElementById('wizSpecs').value;">+ Factură & Garanție</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Cutie Originală'; wizData.specs = document.getElementById('wizSpecs').value;">+ Cutie Originală</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Istoric Service Complet'; wizData.specs = document.getElementById('wizSpecs').value;">+ Istoric Service Complet</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Fără accident / Vopsea originală'; wizData.specs = document.getElementById('wizSpecs').value;">+ Fără accident</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Proprietar în acte · Fiscal pe loc'; wizData.specs = document.getElementById('wizSpecs').value;">+ Proprietar în acte</button>
+        </div>
       </div>
       <div class="field-group">
         <label style="color:var(--ink);">${t("quickDescription")}</label>
-        <textarea id="wizDesc" class="input-light" rows="3">${wizData.desc}</textarea>
+        <textarea id="wizDesc" class="input-light" rows="3" placeholder="Descrie starea produsului/proprietății și ce variante de schimb sau vânzare accepți...">${wizData.desc}</textarea>
       </div>
     `;
   } else if (wizStep === 5) {
@@ -1484,22 +1961,41 @@ function renderWizStep() {
       </div>
       <div class="field-group">
         <label style="color:var(--ink);">${isSaleOnly ? `${t("dealSaleOnly")} (Payment / Handover notes)` : t("quickTitleWant")}</label>
-        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" />
+        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" placeholder="Ex: MacBook Pro M3, iPhone 16 Pro, SUV Automat sau Vânzare Cash" />
+        <div class="wiz-chip-row" style="margin-top:8px;">
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='iPhone 16 Pro Max / iPad Pro M4 / MacBook Pro (+/- diferență)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">📱 iPhone / iPad / MacBook</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='SUV Automat 2020+ (BMW X5, Mercedes GLE, Audi Q7) +/- diferență'; wizData.titleWant=document.getElementById('wizTitleWant').value;">🚗 SUV / Auto 2020+</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='Apartament 2-3 camere / Casă / Teren (+/- diferență)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">🏠 Imobiliare / Apartament</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='Accept Schimb 1:1 sau Vânzare Directă Cash'; wizData.titleWant=document.getElementById('wizTitleWant').value;">💶 Schimb sau Vânzare Cash</button>
+        </div>
       </div>
     `;
   } else if (wizStep === 6) {
     c.innerHTML = `
-      <h3 style="margin:0 0 14px;font-size:24px;">6. ${t("wizStep6")}</h3>
+      <h3 style="margin:0 0 10px;font-size:22px;">6. ${t("wizStep6")} · Asistent Hartă & GPS</h3>
+      <div class="wiz-smart-box" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          <strong style="font-size:13px;color:var(--forest);">🌍 Caută Oraș, Cartier sau Adresă (Autocomplete Live)</strong>
+          <button type="button" id="wizGpsBtn" class="wiz-chip wiz-chip-tpl" onclick="detectWizLocationGPS()">📍 Detectează locația mea (GPS)</button>
+        </div>
+        <div style="position:relative;">
+          <input type="text" id="wizGeoSearchInput" class="input-light" placeholder="Tastează orașul sau adresa (ex: Cluj-Napoca, București, Timișoara, Wien, München)..." autocomplete="off" oninput="handleWizGeoSearchInput(this.value)" />
+          <div id="wizGeoDropdown" class="wiz-autocomplete-list" style="display:none;"></div>
+        </div>
+        <div id="wizGeoVerifiedBadge" style="display:${wizData.lat ? 'block' : 'none'};margin-top:8px;padding:8px 12px;border-radius:10px;background:#ecfdf5;border:1px solid #10b981;color:#065f46;font-size:12.5px;font-weight:700;">
+          ${wizData.lat ? `✓ Pin verificat pe hartă: ${wizData.city}, ${wizData.country} (${Number(wizData.lat).toFixed(4)}, ${Number(wizData.lng).toFixed(4)})` : ''}
+        </div>
+      </div>
       <div class="form-grid-2">
         <div class="field-group">
-          <label style="color:var(--ink);">Country</label>
-          <select id="wizCountry" class="input-light">
+          <label style="color:var(--ink);">Țară (Country)</label>
+          <select id="wizCountry" class="input-light" onchange="wizData.country=this.value">
             ${Object.keys(COUNTRY_COORDS).map(cnt => `<option value="${cnt}" ${wizData.country === cnt ? 'selected' : ''}>${cnt}</option>`).join("")}
           </select>
         </div>
         <div class="field-group">
-          <label style="color:var(--ink);">City / Locality</label>
-          <input type="text" id="wizCity" class="input-light" value="${wizData.city}" />
+          <label style="color:var(--ink);">Oraș / Zonă (City / Area)</label>
+          <input type="text" id="wizCity" class="input-light" value="${wizData.city}" placeholder="Ex: Cluj-Napoca, Sopor / București, Sector 1" oninput="wizData.city=this.value" />
         </div>
       </div>
     `;
@@ -1525,7 +2021,9 @@ function renderWizStep() {
 }
 
 function publishWizardOffer() {
-  const coords = COUNTRY_COORDS[wizData.country] || { lat: 48.13, lng: 11.58 };
+  const fallbackCoords = COUNTRY_COORDS[wizData.country] || { lat: 48.13, lng: 11.58 };
+  const finalLat = wizData.lat || fallbackCoords.lat;
+  const finalLng = wizData.lng || fallbackCoords.lng;
   const chosenCurr = wizData.originalCurrency || currentCurrency;
   const chosenAmt = Number(wizData.originalAmount) || convertFromEur(20000, chosenCurr);
   const exactEur = convertToEur(chosenAmt, chosenCurr);
@@ -1534,8 +2032,8 @@ function publishWizardOffer() {
     category: wizData.category,
     country: wizData.country,
     city: wizData.city || "Center",
-    lat: coords.lat,
-    lng: coords.lng,
+    lat: finalLat,
+    lng: finalLng,
     valueEur: exactEur,
     originalAmount: chosenAmt,
     originalCurrency: chosenCurr,

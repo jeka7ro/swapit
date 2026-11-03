@@ -636,6 +636,58 @@ window.INITIAL_OFFERS = [
     }
   },
   {
+    id: 306,
+    category: "electronics",
+    country: "Austria",
+    city: "Vienna",
+    lat: 48.2082,
+    lng: 16.3738,
+    valueEur: 1550,
+    dealType: "either",
+    owner: "Lukas M.",
+    verified: true,
+    matchScore: 97,
+    image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=1000&q=80",
+    specs: "iPad Pro 13\" M4 OLED · 512GB Wi-Fi + Cellular · Magic Keyboard + Apple Pencil Pro",
+    i18n: {
+      en: {
+        title: "Apple iPad Pro 13\" M4 (512GB OLED) + Magic Keyboard & Pencil Pro",
+        want: "MacBook Air/Pro M3, iPhone 16 Pro Max, or Direct Cash Sale",
+        desc: "Ultra-thin Tandem OLED iPad Pro M4 512GB in Space Black with original Apple Magic Keyboard and Apple Pencil Pro."
+      },
+      ro: {
+        title: "Apple iPad Pro 13\" M4 (512GB OLED) + Magic Keyboard & Apple Pencil Pro",
+        want: "MacBook Air/Pro M3, iPhone 16 Pro Max sau Vânzare Directă",
+        desc: "iPad Pro 13 inch M4 Tandem OLED 512GB Space Black cu tastatură originală Apple Magic Keyboard și Apple Pencil Pro."
+      },
+      de: {
+        title: "Apple iPad Pro 13\" M4 (512GB OLED) + Magic Keyboard & Pencil Pro",
+        want: "MacBook Air/Pro M3, iPhone 16 Pro Max oder Direktverkauf",
+        desc: "Neuwertiges iPad Pro 13 Zoll M4 OLED 512GB Space Schwarz inkl. Magic Keyboard und Apple Pencil Pro in Wien."
+      },
+      fr: {
+        title: "Apple iPad Pro 13\" M4 (512 Go OLED) + Magic Keyboard & Pencil Pro",
+        want: "MacBook Air/Pro M3, iPhone 16 Pro Max ou Vente directe",
+        desc: "iPad Pro 13 pouces M4 OLED 512 Go Noir Sidéral avec clavier Magic Keyboard et Apple Pencil Pro."
+      },
+      it: {
+        title: "Apple iPad Pro 13\" M4 (512GB OLED) + Magic Keyboard & Pencil Pro",
+        want: "MacBook Air/Pro M3, iPhone 16 Pro Max o Vendita diretta",
+        desc: "iPad Pro 13 pollici M4 OLED 512GB Nero Siderale con Magic Keyboard originale e Apple Pencil Pro."
+      },
+      es: {
+        title: "Apple iPad Pro 13\" M4 (512GB OLED) + Magic Keyboard y Pencil Pro",
+        want: "MacBook Air/Pro M3, iPhone 16 Pro Max o Venta directa",
+        desc: "iPad Pro 13 pulgadas M4 OLED 512GB Negro Espacial con teclado Magic Keyboard y Apple Pencil Pro."
+      },
+      ru: {
+        title: "Apple iPad Pro 13\" M4 (512 ГБ OLED) + Magic Keyboard и Pencil Pro",
+        want: "MacBook Air/Pro M3, iPhone 16 Pro Max или прямая продажа",
+        desc: "Планшет iPad Pro 13 M4 Tandem OLED 512 ГБ с оригинальной клавиатурой Magic Keyboard и стилусом."
+      }
+    }
+  },
+  {
     id: 303,
     category: "electronics",
     country: "Italy",

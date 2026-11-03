@@ -3476,7 +3476,8 @@ select.input-light {
   /* Hide desktop clutter in Mobile Hero */
   .hero-actions,
   .hero .stat-card,
-  .hero-matcher-wrap {
+  .hero-matcher-wrap,
+  .hero-smart-search-wrap {
     display: none !important;
   }
 
@@ -3633,5 +3634,280 @@ select.input-light {
     display: none !important;
   }
 }
+
+/* ============================================================================
+   INSTANT GUEST SEARCH BAR (HERO + MOBILE) & MEGA-SMART WIZARD ASSISTANT
+   ============================================================================ */
+.hero-smart-search-wrap {
+  position: relative;
+  margin: 18px 0 18px;
+  max-width: 640px;
+  z-index: 35;
+}
+
+.hero-smart-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 2px solid rgba(151, 232, 182, 0.75);
+  border-radius: 999px;
+  padding: 6px 8px 6px 18px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.hero-smart-search-bar .search-icon {
+  font-size: 16px;
+  opacity: 0.75;
+}
+
+.hero-smart-search-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  outline: none;
+  min-width: 0;
+}
+
+.hero-smart-search-bar input::placeholder {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.hero-smart-btn {
+  background: var(--forest);
+  color: var(--mint);
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.hero-smart-btn:hover {
+  transform: translateY(-1px);
+  background: #082228;
+}
+
+.hero-quick-tags,
+.mobile-quick-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.hero-quick-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  margin-right: 2px;
+}
+
+.hero-qtag {
+  background: rgba(12, 44, 40, 0.72);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.15s ease;
+}
+
+.hero-qtag:hover {
+  background: var(--mint);
+  color: var(--forest);
+  border-color: var(--mint);
+}
+
+.mobile-instant-search {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.mobile-smart-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 2px solid var(--forest);
+  border-radius: 16px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 20px rgba(12, 44, 40, 0.08);
+}
+
+.mobile-smart-search-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  outline: none;
+}
+
+.mobile-quick-tags .hero-qtag {
+  background: #ffffff;
+  color: var(--forest);
+  border: 1px solid rgba(12, 44, 40, 0.16);
+  font-size: 11.5px;
+  padding: 5px 10px;
+}
+
+.hero-smart-dropdown,
+.wiz-autocomplete-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid rgba(12, 44, 40, 0.16);
+  border-radius: 18px;
+  box-shadow: 0 20px 45px rgba(12, 44, 40, 0.22);
+  overflow: hidden;
+  z-index: 999;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.smart-dd-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+   gap: 12px;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.smart-dd-item:hover {
+  background: #f0fdf4;
+}
+
+.smart-dd-item img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.smart-dd-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.smart-dd-info strong {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-dd-info span {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-dd-price {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--forest);
+  background: var(--mint-soft);
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.smart-dd-all {
+  width: 100%;
+  padding: 11px 14px;
+  border: none;
+  background: var(--forest);
+  color: var(--mint);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Smart Category Assistant Box in 7-Step Wizard */
+.wiz-smart-box {
+  background: #f4fbf7;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.wiz-smart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--forest);
+}
+
+.wiz-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wiz-chip {
+  background: #ffffff;
+  color: var(--forest);
+  border: 1px solid rgba(12, 44, 40, 0.2);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.wiz-chip:hover {
+  background: var(--mint);
+  border-color: var(--forest);
+  transform: translateY(-1px);
+}
+
+.wiz-chip-tpl {
+  background: var(--forest);
+  color: var(--mint);
+  border-color: var(--forest);
+}
+
+.wiz-chip-tpl:hover {
+  background: #082228;
+  color: #ffffff;
+}
+
 
 
