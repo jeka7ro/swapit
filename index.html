@@ -13,7 +13,7 @@
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="styles.css?v=20" />
+  <link rel="stylesheet" href="styles.css?v=21" />
   <style id="core-ui-fixes">
     button { appearance: none; -webkit-appearance: none; border-radius: 999px; }
     .top-notice, #geoIpStatusPill, .lang-geo-footer, [data-tab="geoip"] { display: none !important; }
@@ -242,6 +242,13 @@
           </button>
           <a class="linkish" href="#offers" data-i18n="heroCtaExplore">Explore live offers ↗</a>
         </div>
+        <!-- COMPACT MOBILE SINGLE CTA ("Începe acum →") -->
+        <div class="mobile-hero-cta-wrap">
+          <button type="button" class="btn btn-mint ani1 mobile-start-cta" onclick="scrollToMobileHub()">
+            <span data-i18n="mobileStartNow">Start now</span>
+            <span class="arrow">→</span>
+          </button>
+        </div>
       </div>
 
       <aside class="stat-card">
@@ -309,6 +316,41 @@
 
         <button type="submit" class="btn btn-mint" data-i18n="matcherBtn">Find matching swaps →</button>
       </form>
+    </div>
+  </section>
+
+  <!-- MOBILE QUICK START HUB (Intuitive 3-Action Launcher after "Începe acum") -->
+  <section class="mobile-quick-hub" id="mobileQuickHub">
+    <div class="wrap">
+      <p class="mobile-hub-kicker" data-i18n="mHubTitle">What would you like to do?</p>
+      <div class="mobile-hub-grid">
+        <button type="button" class="mobile-hub-card primary" onclick="document.getElementById('offers').scrollIntoView({behavior:'smooth'})">
+          <span class="mhub-icon">⇄</span>
+          <span class="mhub-copy">
+            <strong data-i18n="mHubExploreTitle">Explore Offers</strong>
+            <small data-i18n="mHubExploreSub">Swap 1:1 or Buy direct</small>
+          </span>
+          <span class="mhub-arrow">→</span>
+        </button>
+
+        <button type="button" class="mobile-hub-card" onclick="openWizardModal()">
+          <span class="mhub-icon">＋</span>
+          <span class="mhub-copy">
+            <strong data-i18n="mHubPostTitle">Post an Ad</strong>
+            <small data-i18n="mHubPostSub">Swap or Sell in 60s</small>
+          </span>
+          <span class="mhub-arrow">→</span>
+        </button>
+
+        <button type="button" class="mobile-hub-card" onclick="openAuthModal('register')">
+          <span class="mhub-icon">✓</span>
+          <span class="mhub-copy">
+            <strong data-i18n="mHubAccountTitle">Free Account</strong>
+            <small data-i18n="mHubAccountSub">Activate 10 free swaps</small>
+          </span>
+          <span class="mhub-arrow">→</span>
+        </button>
+      </div>
     </div>
   </section>
 
@@ -1495,9 +1537,9 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="i18n.js?v=20"></script>
-  <script src="data.js?v=20"></script>
-  <script src="app.js?v=20"></script>
+  <script src="i18n.js?v=21"></script>
+  <script src="data.js?v=21"></script>
+  <script src="app.js?v=21"></script>
 </body>
 
 </html>

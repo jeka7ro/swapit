@@ -1984,6 +1984,13 @@ function closeMobileMenu() {
   document.getElementById("mobileMenuBtn").setAttribute("aria-expanded", "false");
 }
 
+function scrollToMobileHub() {
+  const hub = document.getElementById("mobileQuickHub") || document.getElementById("offers");
+  if (hub) {
+    hub.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
 let scrollRevealObserver = null;
 
 function initScrollRevealAnimations() {
