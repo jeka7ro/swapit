@@ -250,7 +250,12 @@ window.TRANSLATIONS = {
     enrollSectionHeadingHtml: `Start swapping in <em>60 seconds</em>`,
     enrollSectionSub: "Register your free account (10 free swaps included) or submit your swap listing directly from this page.",
     enrollTabAccount: "1. Create Account (10 Free Swaps)",
-    enrollTabQuickPost: "2. Quick Swap Listing Form",
+    enrollTabQuickPost: "3. Quick Swap Listing Form",
+    quickHavePlaceholder: "e.g. 2022 BMW X5 / 3-Room Apartment / iPhone 16 Pro Max",
+    quickWantPlaceholder: "e.g. Porsche Macan / Villa / MacBook Pro M3",
+    quickLocPlaceholder: "e.g. Bucharest, Romania / Munich, Germany",
+    quickDescPlaceholder: "e.g. First owner, full service history, mint condition",
+    chatPlaceholder: "Type what you have or want (e.g. iPhone, Villa, BMW)...",
     enrollPerk1: "✓ 10 Free Swaps credited immediately upon registration",
     enrollPerk2: "✓ Automatic listing translation in EN, DE, FR, IT, ES, RO, RU",
     enrollPerk3: "✓ Instant smart-matching notifications when someone has what you want",
@@ -477,7 +482,12 @@ window.TRANSLATIONS = {
     enrollSectionHeadingHtml: `In <em>60 Sekunden</em> starten`,
     enrollSectionSub: "Erstellen Sie Ihr kostenloses Konto (inkl. 10 Gratis-Swaps) oder reichen Sie direkt Ihr Tauschangebot ein.",
     enrollTabAccount: "1. Konto registrieren (10 Gratis-Swaps)",
-    enrollTabQuickPost: "2. Schnell-Formular für Tauschangebot",
+    enrollTabQuickPost: "3. Schnell-Formular für Tauschangebot",
+    quickHavePlaceholder: "z. B. 2022 BMW X5 / 3-Zimmer-Wohnung / iPhone 16 Pro Max",
+    quickWantPlaceholder: "z. B. Porsche Macan / Villa / MacBook Pro M3",
+    quickLocPlaceholder: "z. B. München, Deutschland / Wien, Österreich",
+    quickDescPlaceholder: "z. B. Erste Hand, Scheckheftgepflegt, Top-Zustand",
+    chatPlaceholder: "Was bieten oder suchen Sie? (z. B. iPhone, Villa, BMW)...",
     enrollPerk1: "✓ 10 kostenlose Tausch-Inserate sofort nach Registrierung aktiv",
     enrollPerk2: "✓ Automatische Übersetzung in EN, DE, FR, IT, ES, RO, RU",
     enrollPerk3: "✓ Sofort-Benachrichtigung bei passenden Tausch-Matches",
@@ -704,7 +714,12 @@ window.TRANSLATIONS = {
     enrollSectionHeadingHtml: `Commencez à échanger en <em>60 secondes</em>`,
     enrollSectionSub: "Créez votre compte gratuit (10 échanges offerts) ou publiez directement votre offre d'échange.",
     enrollTabAccount: "1. Créer un Compte (10 Échanges Gratuits)",
-    enrollTabQuickPost: "2. Publier une Offre d'Échange",
+    enrollTabQuickPost: "3. Publier une Offre d'Échange",
+    quickHavePlaceholder: "ex. BMW X5 2022 / Appartement 3 pièces / iPhone 16 Pro Max",
+    quickWantPlaceholder: "ex. Porsche Macan / Villa / MacBook Pro M3",
+    quickLocPlaceholder: "ex. Paris, France / Genève, Suisse",
+    quickDescPlaceholder: "ex. Première main, carnet d'entretien complet, état neuf",
+    chatPlaceholder: "Que proposez-vous ou cherchez-vous ? (ex. iPhone, Villa, BMW)...",
     enrollPerk1: "✓ 10 échanges gratuits crédités immédiatement",
     enrollPerk2: "✓ Traduction automatique en EN, DE, FR, IT, ES, RO, RU",
     enrollPerk3: "✓ Alertes instantanées dès qu'un match parfait apparaît",
@@ -931,7 +946,12 @@ window.TRANSLATIONS = {
     enrollSectionHeadingHtml: `Inizia a scambiare in <em>60 secondi</em>`,
     enrollSectionSub: "Crea il tuo account gratuito (10 scambi inclusi) o pubblica subito la tua offerta di scambio.",
     enrollTabAccount: "1. Crea Account (10 Scambi Gratis)",
-    enrollTabQuickPost: "2. Modulo Rapido Offerta di Scambio",
+    enrollTabQuickPost: "3. Modulo Rapido Offerta di Scambio",
+    quickHavePlaceholder: "es. BMW X5 2022 / Trilocale / iPhone 16 Pro Max",
+    quickWantPlaceholder: "es. Porsche Macan / Villa / MacBook Pro M3",
+    quickLocPlaceholder: "es. Milano, Italia / Zurigo, Svizzera",
+    quickDescPlaceholder: "es. Unico proprietario, tagliandi certificati, condizioni perfette",
+    chatPlaceholder: "Cosa offri o cerchi? (es. iPhone, Villa, BMW)...",
     enrollPerk1: "✓ 10 Scambi Gratuiti attivati subito",
     enrollPerk2: "✓ Traduzione automatica in EN, DE, FR, IT, ES, RO, RU",
     enrollPerk3: "✓ Notifiche istantanee sui match compatibili",
@@ -1158,7 +1178,12 @@ window.TRANSLATIONS = {
     enrollSectionHeadingHtml: `Empieza a intercambiar en <em>60 segundos</em>`,
     enrollSectionSub: "Crea tu cuenta gratuita (10 cambios incluidos) o publica tu oferta directamente aquí.",
     enrollTabAccount: "1. Crear Cuenta (10 Cambios Gratis)",
-    enrollTabQuickPost: "2. Publicación Rápida de Oferta",
+    enrollTabQuickPost: "3. Publicación Rápida de Oferta",
+    quickHavePlaceholder: "ej. BMW X5 2022 / Piso 3 hab. / iPhone 16 Pro Max",
+    quickWantPlaceholder: "ej. Porsche Macan / Villa / MacBook Pro M3",
+    quickLocPlaceholder: "ej. Madrid, España / Marbella, España",
+    quickDescPlaceholder: "ej. Único propietario, historial completo, estado impecable",
+    chatPlaceholder: "¿Qué tienes o buscas? (ej. iPhone, Villa, BMW)...",
     enrollPerk1: "✓ 10 Intercambios Gratis activados al instante",
     enrollPerk2: "✓ Traducción automática en EN, DE, FR, IT, ES, RO, RU",
     enrollPerk3: "✓ Alertas instantáneas de coincidencias",
@@ -1385,7 +1410,12 @@ window.TRANSLATIONS = {
     enrollSectionHeadingHtml: `Începe schimbul în <em>60 de secunde</em>`,
     enrollSectionSub: "Înregistrează-ți contul gratuit (10 schimburi gratuite incluse) sau înscrie direct oferta ta de schimb din formularul de mai jos.",
     enrollTabAccount: "1. Formular Înscriere Cont (10 Schimburi Gratuite)",
-    enrollTabQuickPost: "2. Formular Înscriere Rapidă Ofertă Schimb",
+    enrollTabQuickPost: "3. Formular Înscriere Rapidă Ofertă Schimb",
+    quickHavePlaceholder: "ex: BMW X5 2022 / Apartament 3 camere / iPhone 16 Pro Max",
+    quickWantPlaceholder: "ex: Porsche Macan / Casă sau Vilă / MacBook Pro M3",
+    quickLocPlaceholder: "ex: București, România / Cluj-Napoca / München",
+    quickDescPlaceholder: "ex: Primul proprietar, istoric complet service, stare impecabilă",
+    chatPlaceholder: "Scrie ce oferi sau ce cauți (ex: iPhone, Vilă, BMW)...",
     enrollPerk1: "✓ 10 Schimburi Gratuite activate instant la crearea contului",
     enrollPerk2: "✓ Traducere automată a anunțurilor în EN, DE, FR, IT, ES, RO, RU",
     enrollPerk3: "✓ Alerte inteligente când apare cineva care are ce cauți și vrea ce oferi",
@@ -1612,7 +1642,12 @@ window.TRANSLATIONS = {
     enrollSectionHeadingHtml: `Начните обмен за <em>60 секунд</em>`,
     enrollSectionSub: "Создайте бесплатный аккаунт (10 бесплатных обменов включены) или сразу добавьте предложение обмена.",
     enrollTabAccount: "1. Регистрация аккаунта (10 бесплатных обменов)",
-    enrollTabQuickPost: "2. Быстрое размещение предложения обмена",
+    enrollTabQuickPost: "3. Быстрое размещение предложения обмена",
+    quickHavePlaceholder: "напр.: BMW X5 2022 / 3-комн. квартира / iPhone 16 Pro Max",
+    quickWantPlaceholder: "напр.: Porsche Macan / Дом или Вилла / MacBook Pro M3",
+    quickLocPlaceholder: "напр.: Кишинёв, Молдова / Бухарест / Вена",
+    quickDescPlaceholder: "напр.: Один владелец, полная сервисная история, идеальное состояние",
+    chatPlaceholder: "Напишите, что отдаёте или ищете (напр.: iPhone, Вилла, BMW)...",
     enrollPerk1: "✓ 10 бесплатных обменов начисляются сразу после регистрации",
     enrollPerk2: "✓ Автоперевод объявлений на EN, DE, FR, IT, ES, RO, RU",
     enrollPerk3: "✓ Мгновенные уведомления при появлении подходящего обмена",
@@ -1699,3 +1734,68 @@ window.TRANSLATIONS = {
     calcTheyAdd: "Ориентировочная доплата вам:"
   }
 };
+
+// Supplemental multi-language keys for 100% UI coverage across all 7 languages
+const EXTRA_I18N_KEYS = {
+  en: {
+    formPrefCurrency: "Preferred currency",
+    badgeVerifiedTech: "Verified Tech",
+    badgeHomeLiving: "Home & Living",
+    badgeOemTuning: "OEM & Tuning",
+    badgeLuxuryStyle: "Luxury & Style",
+    dashLogout: "Log out"
+  },
+  de: {
+    formPrefCurrency: "Bevorzugte Währung",
+    badgeVerifiedTech: "Geprüfte Technik",
+    badgeHomeLiving: "Wohnen & Garten",
+    badgeOemTuning: "OEM & Tuning",
+    badgeLuxuryStyle: "Luxus & Stil",
+    dashLogout: "Abmelden"
+  },
+  fr: {
+    formPrefCurrency: "Devise préférée",
+    badgeVerifiedTech: "Tech Vérifiée",
+    badgeHomeLiving: "Maison & Jardin",
+    badgeOemTuning: "Pièces OEM & Tuning",
+    badgeLuxuryStyle: "Luxe & Style",
+    dashLogout: "Déconnexion"
+  },
+  it: {
+    formPrefCurrency: "Valuta preferita",
+    badgeVerifiedTech: "Tech Verificata",
+    badgeHomeLiving: "Casa & Arredo",
+    badgeOemTuning: "OEM & Tuning",
+    badgeLuxuryStyle: "Lusso & Stile",
+    dashLogout: "Esci"
+  },
+  es: {
+    formPrefCurrency: "Moneda preferida",
+    badgeVerifiedTech: "Tech Verificada",
+    badgeHomeLiving: "Hogar y Jardín",
+    badgeOemTuning: "OEM y Tuning",
+    badgeLuxuryStyle: "Lujo y Estilo",
+    dashLogout: "Cerrar sesión"
+  },
+  ro: {
+    formPrefCurrency: "Moneda preferată",
+    badgeVerifiedTech: "Tech Verificat",
+    badgeHomeLiving: "Casă & Living",
+    badgeOemTuning: "Piese OEM & Tuning",
+    badgeLuxuryStyle: "Lux & Stil",
+    dashLogout: "Deconectare"
+  },
+  ru: {
+    formPrefCurrency: "Предпочтительная валюта",
+    badgeVerifiedTech: "Проверенная техника",
+    badgeHomeLiving: "Дом и уют",
+    badgeOemTuning: "OEM и тюнинг",
+    badgeLuxuryStyle: "Люкс и стиль",
+    dashLogout: "Выйти"
+  }
+};
+Object.keys(EXTRA_I18N_KEYS).forEach(lang => {
+  if (window.TRANSLATIONS[lang]) {
+    Object.assign(window.TRANSLATIONS[lang], EXTRA_I18N_KEYS[lang]);
+  }
+});

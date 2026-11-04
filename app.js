@@ -71,21 +71,67 @@ let swapProposals = (() => {
   ];
 })();
 
-// Load offers from localStorage or initial dataset
-let offers = (() => {
+// Load offers from localStorage + merge user-created offers with latest INITIAL_OFFERS
+let deletedOfferIds = (() => {
   try {
+    const saved = localStorage.getItem("ci4m_deleted_offers_v1");
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+})();
+
+let offers = (() => {
+  const baseOffers = (window.INITIAL_OFFERS || []).filter(o => !deletedOfferIds.includes(o.id));
+  try {
+    const userSavedRaw = localStorage.getItem("ci4m_user_offers_v1");
+    const userSaved = userSavedRaw ? JSON.parse(userSavedRaw) : [];
+    if (Array.isArray(userSaved) && userSaved.length > 0) {
+      const userMap = new Map(userSaved.map(u => [u.id, u]));
+      const mergedBase = baseOffers.map(b => userMap.has(b.id) ? userMap.get(b.id) : b);
+      const baseIds = new Set(baseOffers.map(b => b.id));
+      const customOnly = userSaved.filter(u => !baseIds.has(u.id) && !deletedOfferIds.includes(u.id));
+      return [...customOnly, ...mergedBase];
+    }
     const saved = localStorage.getItem("ci4m_offers_v4");
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length >= window.INITIAL_OFFERS.length) {
-        return parsed;
+        const baseIds = new Set(baseOffers.map(b => b.id));
+        const customFromOld = parsed.filter(u => !baseIds.has(u.id) && !deletedOfferIds.includes(u.id));
+        return [...customFromOld, ...baseOffers];
       }
     }
   } catch (e) {}
-  return [...window.INITIAL_OFFERS];
+  return [...baseOffers];
 })();
 
+function saveOffersToStorage() {
+  try {
+    localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
+    const customOrEdited = offers.filter(o => o.createdByUser || o.id > 100000);
+    localStorage.setItem("ci4m_user_offers_v1", JSON.stringify(customOrEdited));
+    localStorage.setItem("ci4m_deleted_offers_v1", JSON.stringify(deletedOfferIds));
+  } catch (e) {}
+}
+
 let currentDealModeFilter = "all";
+
+// Persistent Accounts Database (Email -> Account Object)
+let accountsDb = (() => {
+  try {
+    const saved = localStorage.getItem("ci4m_accounts_db");
+    return saved ? JSON.parse(saved) : {};
+  } catch (e) {
+    return {};
+  }
+})();
+
+function saveAccountsDb() {
+  try {
+    localStorage.setItem("ci4m_accounts_db", JSON.stringify(accountsDb));
+  } catch (e) {}
+}
 
 // Current logged-in user state
 let currentUser = (() => {
@@ -99,6 +145,7 @@ let currentUser = (() => {
 
 // 7-Step Wizard State (Persisted in localStorage so refresh never loses data)
 const DEFAULT_WIZ_DATA = {
+  editingOfferId: null,
   image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
   category: "cars",
   titleHave: "",
@@ -502,8 +549,9 @@ function updateCurrencyDependentLabels() {
 
   const quickValLabel = document.getElementById("quickValueLabel");
   if (quickValLabel) {
-    quickValLabel.textContent = t("quickValueEur").replace(/\(EUR\)|\(€\)/gi, `(${c.short || c.code})`);
+    quickValLabel.textContent = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(MDL\)|\(RUB\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${c.short || c.code})`);
   }
+  onQuickPostPriceChange();
 }
 
 function setCurrency(currCode, isManualUserAction = false) {
@@ -800,6 +848,10 @@ function handleHeroMatcher(e) {
     document.getElementById("catalogSearchInput").value = country;
   } else {
     document.getElementById("catalogSearchInput").value = "";
+    const heroSearch = document.getElementById("heroSmartSearchInput");
+    if (heroSearch) heroSearch.value = "";
+    const mobSearch = document.getElementById("mobileSmartSearchInput");
+    if (mobSearch) mobSearch.value = "";
   }
 
   renderOffers();
@@ -1778,6 +1830,11 @@ function renderUserHeaderState() {
   const mobileRegBtn = document.getElementById("mobileRegisterBtn");
   if (!guestBtns || !userPill) return;
 
+  const dashSwapsEl = document.getElementById("dashFreeSwapsCount");
+  if (dashSwapsEl) {
+    dashSwapsEl.textContent = String(currentUser ? (currentUser.freeSwaps ?? 10) : 10);
+  }
+
   if (currentUser) {
     guestBtns.style.display = "none";
     userPill.style.display = "inline-flex";
@@ -1787,16 +1844,16 @@ function renderUserHeaderState() {
     if (mobileDashBtn) mobileDashBtn.style.display = "block";
     if (mobileRegBtn) mobileRegBtn.style.display = "none";
     if (mobileAuthBtn) {
-      mobileAuthBtn.textContent = "Log out (" + (currentUser.name.split(" ")[0] || "Account") + ")";
+      mobileAuthBtn.textContent = t("dashLogout") + " (" + (currentUser.name.split(" ")[0] || "Account") + ")";
       mobileAuthBtn.onclick = () => { closeMobileMenu(); handleUserLogout(); };
     }
     const initials = (currentUser.name || "U").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
     userPill.innerHTML = `
-      <div class="user-pill" onclick="openDashboardModal('proposals')" title="Open Personal Swap Dashboard">
+      <div class="user-pill" onclick="openDashboardModal('proposals')" title="${t('navMyDashboard')}">
         <span class="user-pill-avatar">${initials}</span>
         <span>${currentUser.name.split(" ")[0]}</span>
-        <span class="user-swaps-badge">${currentUser.freeSwaps} Swaps</span>
-        <button type="button" class="user-logout-btn" onclick="event.stopPropagation(); handleUserLogout();" title="Log out / Delogare" aria-label="Log out">
+        <span class="user-swaps-badge">${currentUser.freeSwaps ?? 10} Swaps</span>
+        <button type="button" class="user-logout-btn" onclick="event.stopPropagation(); handleUserLogout();" title="${t('dashLogout')}" aria-label="${t('dashLogout')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
       </div>
@@ -1822,21 +1879,44 @@ function handleUserLogout() {
   localStorage.removeItem("ci4m_user");
   renderUserHeaderState();
   closeDashboardModal();
-  showToast("✓ Logged out successfully");
+  const logoutMsgMap = {
+    en: "✓ Logged out successfully",
+    de: "✓ Erfolgreich abgemeldet",
+    fr: "✓ Déconnexion réussie",
+    it: "✓ Disconnessione effettuata",
+    es: "✓ Sesión cerrada correctamente",
+    ro: "✓ Te-ai delogat cu succes",
+    ru: "✓ Вы успешно вышли из аккаунта"
+  };
+  showToast(logoutMsgMap[currentLang] || logoutMsgMap.en);
 }
 
 function activateUserAccount(userData) {
+  const emailKey = String(userData.email || "").trim().toLowerCase();
+  const existingAcc = emailKey && accountsDb[emailKey] ? accountsDb[emailKey] : null;
   currentUser = {
-    name: userData.name || "Alexandru",
-    email: userData.email || "",
-    phone: userData.phone || "",
-    country: userData.country || detectedIpInfo.countryName || "Europe",
-    prefLang: userData.prefLang || currentLang,
-    freeSwaps: 10
+    name: userData.name || existingAcc?.name || "Alexandru",
+    email: userData.email || existingAcc?.email || "",
+    phone: userData.phone || existingAcc?.phone || "",
+    country: userData.country || existingAcc?.country || detectedIpInfo.countryName || "Europe",
+    prefLang: userData.prefLang || existingAcc?.prefLang || currentLang,
+    prefCurrency: userData.prefCurrency || existingAcc?.prefCurrency || currentCurrency,
+    freeSwaps: typeof userData.freeSwaps === "number" ? userData.freeSwaps : (typeof existingAcc?.freeSwaps === "number" ? existingAcc.freeSwaps : 10)
   };
+  if (emailKey) {
+    accountsDb[emailKey] = {
+      ...existingAcc,
+      ...currentUser,
+      password: userData.password || existingAcc?.password || ""
+    };
+    saveAccountsDb();
+  }
   localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
   if (userData.prefLang && window.TRANSLATIONS[userData.prefLang]) {
     setLanguage(userData.prefLang, true);
+  }
+  if (userData.prefCurrency) {
+    setCurrency(userData.prefCurrency, true);
   }
   renderUserHeaderState();
 
@@ -1844,24 +1924,39 @@ function activateUserAccount(userData) {
   if (counterEl) {
     counterEl.textContent = "1,481";
   }
-  showToast(`✓ ${currentUser.name} — 10 Free Swaps Activated!`);
+  showToast(`✓ ${currentUser.name} — ${currentUser.freeSwaps} Free Swaps!`);
+}
+
+function getAuthMsg() {
+  const map = {
+    en: { pwdMismatch: "! Passwords do not match!", wrongPwd: "! Incorrect password for this registered email.", codeAutoFill: "Instant code:", clickToFill: "Click to auto-fill", resetSent: "✓ Password reset instructions sent to your email!" },
+    de: { pwdMismatch: "! Passwörter stimmen nicht überein!", wrongPwd: "! Falsches Passwort für diese E-Mail.", codeAutoFill: "Sofort-Code:", clickToFill: "Klicken zum Einfügen", resetSent: "✓ Link zum Zurücksetzen des Passworts gesendet!" },
+    fr: { pwdMismatch: "! Les mots de passe ne correspondent pas !", wrongPwd: "! Mot de passe incorrect pour cet e-mail.", codeAutoFill: "Code instantané :", clickToFill: "Cliquer pour remplir", resetSent: "✓ Lien de réinitialisation envoyé par e-mail !" },
+    it: { pwdMismatch: "! Le password non coincidono!", wrongPwd: "! Password errata per questa email.", codeAutoFill: "Codice istantaneo:", clickToFill: "Clicca per compilare", resetSent: "✓ Link di reimpostazione password inviato!" },
+    es: { pwdMismatch: "! ¡Las contraseñas no coinciden!", wrongPwd: "! Contraseña incorrecta para este correo.", codeAutoFill: "Código instantáneo:", clickToFill: "Clic para autocompletar", resetSent: "✓ ¡Enlace de restablecimiento enviado!" },
+    ro: { pwdMismatch: "! Parolele nu coincid!", wrongPwd: "! Parolă incorectă pentru acest email înregistrat.", codeAutoFill: "Cod generat instant:", clickToFill: "Click pentru completare automată", resetSent: "✓ Link-ul de resetare a parolei a fost trimis pe email!" },
+    ru: { pwdMismatch: "! Пароли не совпадают!", wrongPwd: "! Неверный пароль для этого email.", codeAutoFill: "Мгновенный код:", clickToFill: "Нажмите для автозаполнения", resetSent: "✓ Ссылка для сброса пароля отправлена!" }
+  };
+  return map[currentLang] || map.en;
 }
 
 function handleInlineRegistration(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
-  const pass = fd.get("password");
-  const confirm = fd.get("confirmPassword");
+  const pass = String(fd.get("password") || "");
+  const confirm = String(fd.get("confirmPassword") || "");
   if (pass !== confirm) {
-    showToast("! Passwords do not match!");
+    showToast(getAuthMsg().pwdMismatch);
     return;
   }
   startEmailVerification({
-    name: fd.get("name"),
-    email: fd.get("email"),
-    phone: fd.get("phone"),
-    country: fd.get("country"),
-    prefLang: fd.get("prefLang")
+    name: String(fd.get("name") || "").trim(),
+    email: String(fd.get("email") || "").trim(),
+    password: pass,
+    phone: String(fd.get("phone") || "").trim(),
+    country: String(fd.get("country") || detectedIpInfo.countryName || "Romania").trim(),
+    prefLang: String(fd.get("prefLang") || currentLang),
+    prefCurrency: String(fd.get("prefCurrency") || currentCurrency)
   });
   e.target.reset();
 }
@@ -1889,7 +1984,7 @@ function onQuickDealTypeChange() {
   if (dealSel.value === "sale") {
     wantInput.required = false;
     if (!wantInput.value) wantInput.value = t("dealSaleOnly");
-    if (wantLabel) wantLabel.textContent = `${t("dealSaleOnly")} (Optional notes)`;
+    if (wantLabel) wantLabel.textContent = `${t("dealSaleOnly")}`;
   } else {
     wantInput.required = true;
     if (wantInput.value === t("dealSaleOnly")) wantInput.value = "";
@@ -1897,13 +1992,72 @@ function onQuickDealTypeChange() {
   }
 }
 
+function parseSmartLocationString(rawLoc) {
+  const raw = String(rawLoc || "").trim();
+  if (!raw) {
+    const defCountry = detectedIpInfo?.countryName && COUNTRY_COORDS[detectedIpInfo.countryName] ? detectedIpInfo.countryName : "Romania";
+    const defCity = detectedIpInfo?.city || (defCountry === "Romania" ? "Bucharest" : "Munich");
+    const c = COUNTRY_COORDS[defCountry] || { lat: 44.4268, lng: 26.1025 };
+    return { country: defCountry, city: defCity, lat: c.lat, lng: c.lng };
+  }
+  const lower = raw.toLowerCase();
+  const matchedEuCity = (typeof SMART_EUROPEAN_CITIES !== "undefined" ? SMART_EUROPEAN_CITIES : []).find(c =>
+    lower.includes(c.city.toLowerCase())
+  );
+  if (matchedEuCity) {
+    return {
+      country: matchedEuCity.country,
+      city: matchedEuCity.city,
+      lat: matchedEuCity.lat,
+      lng: matchedEuCity.lng
+    };
+  }
+  const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+  const countryAliases = {
+    "romania": "Romania", "românia": "Romania", "ro": "Romania",
+    "germany": "Germany", "deutschland": "Germany", "germania": "Germany", "de": "Germany",
+    "austria": "Austria", "österreich": "Austria", "at": "Austria",
+    "switzerland": "Switzerland", "schweiz": "Switzerland", "elveția": "Switzerland", "ch": "Switzerland",
+    "france": "France", "franța": "France", "fr": "France",
+    "italy": "Italy", "italia": "Italy", "it": "Italy",
+    "spain": "Spain", "españa": "Spain", "spania": "Spain", "es": "Spain",
+    "united kingdom": "United Kingdom", "uk": "United Kingdom", "marea britanie": "United Kingdom",
+    "moldova": "Moldova", "republica moldova": "Moldova", "md": "Moldova"
+  };
+  let detectedCountry = null;
+  let detectedCity = null;
+  for (const p of parts) {
+    const pLow = p.toLowerCase();
+    if (COUNTRY_COORDS[p]) {
+      detectedCountry = p;
+    } else if (countryAliases[pLow]) {
+      detectedCountry = countryAliases[pLow];
+    } else if (!detectedCity) {
+      detectedCity = p;
+    }
+  }
+  if (!detectedCountry) {
+    for (const [alias, canonical] of Object.entries(countryAliases)) {
+      if (alias.length > 2 && lower.includes(alias)) {
+        detectedCountry = canonical;
+        break;
+      }
+    }
+  }
+  if (!detectedCountry) {
+    detectedCountry = detectedIpInfo?.countryName && COUNTRY_COORDS[detectedIpInfo.countryName] ? detectedIpInfo.countryName : "Romania";
+  }
+  if (!detectedCity) {
+    detectedCity = parts[0] || "Center";
+  }
+  const coords = COUNTRY_COORDS[detectedCountry] || { lat: 46.77, lng: 23.62 };
+  return { country: detectedCountry, city: detectedCity, lat: coords.lat, lng: coords.lng };
+}
+
 function handleInlineQuickPost(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
-  const locParts = String(fd.get("location") || "Germany, Munich").split(",");
-  const country = (locParts[0] || "Germany").trim();
-  const city = (locParts[1] || locParts[0] || "Munich").trim();
-  const coords = COUNTRY_COORDS[country] || { lat: 48.13, lng: 11.58 };
+  const parsedLoc = parseSmartLocationString(fd.get("location"));
 
   const cat = fd.get("category") || "cars";
   const defaultImages = {
@@ -1919,14 +2073,19 @@ function handleInlineQuickPost(e) {
   const enteredCurr = String(fd.get("valueCurrency") || currentCurrency).toUpperCase();
   const normalizedValueEur = convertToEur(enteredVal, enteredCurr);
   const dealType = fd.get("dealType") || "1to1";
+  const titleHave = String(fd.get("titleHave") || "").trim();
+  const titleWant = String(fd.get("titleWant") || "").trim() || (dealType === "sale" ? t("dealSaleOnly") : "Direct 1:1 Swap");
+  const desc = String(fd.get("desc") || "").trim() || "Verified Condition";
 
   const newOffer = {
     id: Date.now(),
+    createdByUser: true,
+    ownerEmail: currentUser?.email || "",
     category: cat,
-    country,
-    city,
-    lat: coords.lat,
-    lng: coords.lng,
+    country: parsedLoc.country,
+    city: parsedLoc.city,
+    lat: parsedLoc.lat,
+    lng: parsedLoc.lng,
     valueEur: normalizedValueEur,
     originalAmount: enteredVal,
     originalCurrency: enteredCurr,
@@ -1935,20 +2094,24 @@ function handleInlineQuickPost(e) {
     verified: true,
     matchScore: 99,
     image: defaultImages[cat] || defaultImages.cars,
-    specs: fd.get("desc") || "Direct Listing",
-    title: fd.get("titleHave"),
-    want: fd.get("titleWant") || (dealType === "sale" ? t("dealSaleOnly") : "Direct 1:1 Swap"),
-    desc: fd.get("desc")
+    specs: desc,
+    title: titleHave,
+    want: titleWant,
+    desc
   };
 
   offers.unshift(newOffer);
-  localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
+  saveOffersToStorage();
   currentCategoryFilter = "all";
+  currentDealModeFilter = "all";
+  const catSearch = document.getElementById("catalogSearchInput");
+  if (catSearch) catSearch.value = "";
   renderOffers();
   renderMapPinsAndPanel();
   e.target.reset();
-  document.getElementById("offers").scrollIntoView({ behavior: "smooth" });
-  showToast("✓ Offer Published Live!");
+  onQuickPostPriceChange();
+  document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
+  showToast(`✓ ${titleHave} — Live!`);
 }
 
 // ============================================================================
@@ -2010,6 +2173,27 @@ function switchAuthTab(mode) {
   }
 }
 
+function renderVerifySentHelper() {
+  const statusEl = document.getElementById("verifySentStatus");
+  if (!statusEl) return;
+  const am = getAuthMsg();
+  const targetEmail = pendingRegistrationUser?.email || "email";
+  statusEl.innerHTML = `
+    <span style="display:block;margin-bottom:8px;">✓ ${t("authCodeSentMsg")} (<strong>${targetEmail}</strong>)</span>
+    <button type="button" onclick="autoFillVerificationCode()" style="background:rgba(169,255,202,0.22);border:1px solid #a9ffca;color:#a9ffca;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;">
+      ${am.codeAutoFill} ${generatedVerifyCode} · ${am.clickToFill}
+    </button>
+  `;
+}
+
+function autoFillVerificationCode() {
+  const codeInput = document.getElementById("verifyCodeInput");
+  if (codeInput) {
+    codeInput.value = generatedVerifyCode;
+    codeInput.focus();
+  }
+}
+
 function startEmailVerification(userData) {
   pendingRegistrationUser = userData;
   generatedVerifyCode = String(Math.floor(100000 + Math.random() * 900000));
@@ -2023,8 +2207,9 @@ function startEmailVerification(userData) {
     setTimeout(() => codeInput.focus(), 80);
   }
 
+  renderVerifySentHelper();
   startVerifyCountdown(60);
-  showToast(`✓ ${t("authCodeSentMsg")} (Demo code: ${generatedVerifyCode})`);
+  showToast(`✓ ${t("authCodeSentMsg")} (${generatedVerifyCode})`);
 }
 
 function startVerifyCountdown(seconds = 60) {
@@ -2055,8 +2240,9 @@ function startVerifyCountdown(seconds = 60) {
 
 function handleResendVerificationCode() {
   generatedVerifyCode = String(Math.floor(100000 + Math.random() * 900000));
+  renderVerifySentHelper();
   startVerifyCountdown(60);
-  showToast(`✓ ${t("authCodeSentMsg")} (Demo code: ${generatedVerifyCode})`);
+  showToast(`✓ ${t("authCodeSentMsg")} (${generatedVerifyCode})`);
 }
 
 function handleVerifyEmailCode(e) {
@@ -2074,7 +2260,8 @@ function handleVerifyEmailCode(e) {
   activateUserAccount(pendingRegistrationUser || {
     name: "Verified Member",
     email: "member@changeit4me.com",
-    prefLang: currentLang
+    prefLang: currentLang,
+    prefCurrency: currentCurrency
   });
   pendingRegistrationUser = null;
   closeAuthModal();
@@ -2109,35 +2296,58 @@ function updatePasswordStrength(val, barsContainerId) {
 }
 
 function handleForgotPassword() {
-  showToast("✓ Password reset link sent! Check your inbox.");
+  showToast(getAuthMsg().resetSent);
 }
 
 function handleModalRegister(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
-  if (fd.get("password") !== fd.get("confirmPassword")) {
-    showToast("! Passwords do not match!");
+  const pass = String(fd.get("password") || "");
+  const confirm = String(fd.get("confirmPassword") || "");
+  if (pass !== confirm) {
+    showToast(getAuthMsg().pwdMismatch);
     return;
   }
   startEmailVerification({
-    name: fd.get("name"),
-    email: fd.get("email"),
-    phone: fd.get("phone"),
-    country: fd.get("country"),
-    prefLang: fd.get("prefLang")
+    name: String(fd.get("name") || "").trim(),
+    email: String(fd.get("email") || "").trim(),
+    password: pass,
+    phone: String(fd.get("phone") || "").trim(),
+    country: String(fd.get("country") || detectedIpInfo.countryName || "Romania").trim(),
+    prefLang: String(fd.get("prefLang") || currentLang),
+    prefCurrency: String(fd.get("prefCurrency") || currentCurrency)
   });
+  e.target.reset();
 }
 
 function handleModalLogin(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
-  const email = String(fd.get("email") || "member@changeit4me.com");
-  const nameFromEmail = email.split("@")[0].replace(/[._]/g, " ");
-  activateUserAccount({
-    name: nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1),
-    email,
-    prefLang: currentLang
-  });
+  const email = String(fd.get("email") || "member@changeit4me.com").trim();
+  const password = String(fd.get("password") || "");
+  const emailKey = email.toLowerCase();
+  const savedAcc = accountsDb[emailKey];
+
+  if (savedAcc) {
+    if (savedAcc.password && password && savedAcc.password !== password) {
+      showToast(getAuthMsg().wrongPwd);
+      return;
+    }
+    activateUserAccount(savedAcc);
+  } else {
+    const rawPrefix = email.split("@")[0].replace(/[._-]+/g, " ").trim();
+    const formattedName = rawPrefix
+      ? rawPrefix.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+      : "Verified Member";
+    activateUserAccount({
+      name: formattedName,
+      email,
+      password,
+      prefLang: currentLang,
+      prefCurrency: currentCurrency
+    });
+  }
+  e.target.reset();
   closeAuthModal();
 }
 
@@ -2145,7 +2355,8 @@ function handleGoogleAuth() {
   activateUserAccount({
     name: "Google Verified Member",
     email: "verified@gmail.com",
-    prefLang: currentLang
+    prefLang: currentLang,
+    prefCurrency: currentCurrency
   });
   closeAuthModal();
 }
@@ -2154,7 +2365,8 @@ function handleAppleAuth() {
   activateUserAccount({
     name: "Apple ID Verified",
     email: "verified@icloud.com",
-    prefLang: currentLang
+    prefLang: currentLang,
+    prefCurrency: currentCurrency
   });
   closeAuthModal();
 }
@@ -2187,8 +2399,192 @@ function closeWizardModal() {
   syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
 
+function getWizValidationCopy() {
+  const map = {
+    en: {
+      needTitle: "! Please enter the title of what you have (or select a 1-click template below).",
+      needValue: "! Please enter the estimated value of your item.",
+      needWant: "! Please specify what you want in exchange (or pick a quick chip below).",
+      needCity: "! Please enter or select the city for your listing.",
+      needOwner: "! Please enter your name so interested partners know who to contact.",
+      needContact: "! Please enter your email or phone number for swap proposals.",
+      quickTemplatesLabel: "1-Click Quick Templates (auto-fills title, specs & value):",
+      pasteUrlPlaceholder: "Or paste an image URL (https://...)",
+      autoDescBtn: "+ Generate Smart Description",
+      quickCitiesLabel: "Quick Cities in",
+      previewHeading: "Live Listing Preview",
+      resetWizBtn: "Reset Wizard",
+      editModeBadge: "Editing Listing",
+      savedToast: "✓ Listing updated successfully!"
+    },
+    de: {
+      needTitle: "! Bitte geben Sie den Titel Ihres Artikels ein (oder wählen Sie eine Vorlage).",
+      needValue: "! Bitte geben Sie den geschätzten Wert ein.",
+      needWant: "! Bitte geben Sie an, was Sie im Tausch suchen.",
+      needCity: "! Bitte geben Sie Ihre Stadt ein oder wählen Sie sie aus.",
+      needOwner: "! Bitte geben Sie Ihren Namen ein.",
+      needContact: "! Bitte geben Sie Ihre E-Mail-Adresse oder Telefonnummer ein.",
+      quickTemplatesLabel: "1-Klick-Schnellvorlagen (füllt Titel, Daten & Preis automatisch):",
+      pasteUrlPlaceholder: "Oder Bild-URL einfügen (https://...)",
+      autoDescBtn: "+ Smart-Beschreibung generieren",
+      quickCitiesLabel: "Schnellauswahl Städte in",
+      previewHeading: "Live-Anzeigenvorschau",
+      resetWizBtn: "Formular zurücksetzen",
+      editModeBadge: "Anzeige bearbeiten",
+      savedToast: "✓ Anzeige erfolgreich aktualisiert!"
+    },
+    fr: {
+      needTitle: "! Veuillez saisir le titre de votre bien (ou choisir un modèle rapide).",
+      needValue: "! Veuillez indiquer la valeur estimée.",
+      needWant: "! Veuillez préciser ce que vous souhaitez en échange.",
+      needCity: "! Veuillez saisir ou sélectionner votre ville.",
+      needOwner: "! Veuillez indiquer votre nom.",
+      needContact: "! Veuillez indiquer votre e-mail ou numéro de téléphone.",
+      quickTemplatesLabel: "Modèles rapides en 1 clic (remplit titre, détails et prix) :",
+      pasteUrlPlaceholder: "Ou collez l'URL d'une image (https://...)",
+      autoDescBtn: "+ Générer une description intelligente",
+      quickCitiesLabel: "Villes rapides en",
+      previewHeading: "Aperçu de votre annonce",
+      resetWizBtn: "Réinitialiser",
+      editModeBadge: "Modification de l'annonce",
+      savedToast: "✓ Annonce mise à jour avec succès !"
+    },
+    it: {
+      needTitle: "! Inserisci il titolo del tuo bene (o scegli un modello rapido).",
+      needValue: "! Inserisci il valore stimato.",
+      needWant: "! Specifica cosa cerchi in cambio.",
+      needCity: "! Inserisci o seleziona la tua città.",
+      needOwner: "! Inserisci il tuo nome.",
+      needContact: "! Inserisci la tua email o numero di telefono.",
+      quickTemplatesLabel: "Modelli rapidi in 1 clic (compila titolo, specifiche e prezzo):",
+      pasteUrlPlaceholder: "Oppure incolla l'URL di un'immagine (https://...)",
+      autoDescBtn: "+ Genera descrizione automatica",
+      quickCitiesLabel: "Città rapide in",
+      previewHeading: "Anteprima dell'annuncio",
+      resetWizBtn: "Reimposta modulo",
+      editModeBadge: "Modifica annuncio",
+      savedToast: "✓ Annuncio aggiornato con successo!"
+    },
+    es: {
+      needTitle: "! Introduce el título de lo que ofreces (o elige una plantilla rápida).",
+      needValue: "! Introduce el valor estimado.",
+      needWant: "! Especifica qué buscas a cambio.",
+      needCity: "! Introduce o selecciona tu ciudad.",
+      needOwner: "! Introduce tu nombre.",
+      needContact: "! Introduce tu correo o teléfono.",
+      quickTemplatesLabel: "Plantillas rápidas en 1 clic (rellena título, detalles y precio):",
+      pasteUrlPlaceholder: "O pega la URL de una imagen (https://...)",
+      autoDescBtn: "+ Generar descripción automática",
+      quickCitiesLabel: "Ciudades rápidas en",
+      previewHeading: "Vista previa del anuncio",
+      resetWizBtn: "Reiniciar formulario",
+      editModeBadge: "Editando anuncio",
+      savedToast: "✓ ¡Anuncio actualizado correctamente!"
+    },
+    ro: {
+      needTitle: "! Te rugăm să introduci titlul bunului oferit (sau alege un șablon rapid cu 1 click).",
+      needValue: "! Te rugăm să introduci valoarea estimată a bunului.",
+      needWant: "! Te rugăm să specifici ce îți dorești la schimb (sau alege o sugestie rapidă).",
+      needCity: "! Te rugăm să introduci sau să selectezi orașul.",
+      needOwner: "! Te rugăm să introduci numele tău de contact.",
+      needContact: "! Te rugăm să introduci adresa de email sau numărul de telefon.",
+      quickTemplatesLabel: "Șabloane rapide 1-Click (completează automat titlul, specificațiile și prețul):",
+      pasteUrlPlaceholder: "Sau lipește link-ul unei fotografii (https://...)",
+      autoDescBtn: "+ Generează descriere automată",
+      quickCitiesLabel: "Orașe rapide în",
+      previewHeading: "Previzualizare Anunț Live",
+      resetWizBtn: "Resetează formularul",
+      editModeBadge: "Editare Anunț",
+      savedToast: "✓ Anunțul a fost actualizat cu succes!"
+    },
+    ru: {
+      needTitle: "! Пожалуйста, введите название того, что вы предлагаете (или выберите шаблон в 1 клик).",
+      needValue: "! Пожалуйста, укажите оценочную стоимость.",
+      needWant: "! Пожалуйста, укажите, что вы ищете взамен.",
+      needCity: "! Пожалуйста, введите или выберите город.",
+      needOwner: "! Пожалуйста, укажите ваше имя.",
+      needContact: "! Пожалуйста, укажите email или телефон для связи.",
+      quickTemplatesLabel: "Быстрые шаблоны в 1 клик (автозаполнение названия, характеристик и цены):",
+      pasteUrlPlaceholder: "Или вставьте ссылку на фото (https://...)",
+      autoDescBtn: "+ Сгенерировать описание автоматически",
+      quickCitiesLabel: "Быстрый выбор города в",
+      previewHeading: "Предпросмотр объявления",
+      resetWizBtn: "Сбросить форму",
+      editModeBadge: "Редактирование объявления",
+      savedToast: "✓ Объявление успешно обновлено!"
+    }
+  };
+  return map[currentLang] || map.en;
+}
+
+function highlightInvalidWizInput(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.focus();
+  el.style.borderColor = "#dc2626";
+  el.style.boxShadow = "0 0 0 3px rgba(220,38,38,0.18)";
+  setTimeout(() => {
+    el.style.borderColor = "";
+    el.style.boxShadow = "";
+  }, 2200);
+}
+
+function validateWizStep(stepNum) {
+  saveCurrentWizStepInputs();
+  const vc = getWizValidationCopy();
+  if (stepNum === 2) {
+    if (!String(wizData.titleHave || "").trim() || String(wizData.titleHave || "").trim().length < 2) {
+      highlightInvalidWizInput("wizTitleHave");
+      showToast(vc.needTitle);
+      return false;
+    }
+    const amt = Number(wizData.originalAmount) || Number(wizData.valueEur) || 0;
+    if (amt <= 0) {
+      highlightInvalidWizInput("wizValueEur");
+      showToast(vc.needValue);
+      return false;
+    }
+  } else if (stepNum === 5) {
+    if (wizData.dealType !== "sale" && !String(wizData.titleWant || "").trim()) {
+      highlightInvalidWizInput("wizTitleWant");
+      showToast(vc.needWant);
+      return false;
+    }
+  } else if (stepNum === 6) {
+    if (!String(wizData.city || "").trim()) {
+      const defCityObj = SMART_EUROPEAN_CITIES.find(c => c.country === wizData.country);
+      if (defCityObj) {
+        wizData.city = defCityObj.city;
+        wizData.lat = defCityObj.lat;
+        wizData.lng = defCityObj.lng;
+      } else {
+        highlightInvalidWizInput("wizCity");
+        showToast(vc.needCity);
+        return false;
+      }
+    }
+  } else if (stepNum === 7) {
+    if (!String(wizData.owner || "").trim()) {
+      highlightInvalidWizInput("wizOwner");
+      showToast(vc.needOwner);
+      return false;
+    }
+    if (!String(wizData.email || "").trim() && !String(wizData.phone || "").trim()) {
+      highlightInvalidWizInput("wizEmail");
+      showToast(vc.needContact);
+      return false;
+    }
+  }
+  return true;
+}
+
 function goToWizStep(stepNum) {
   saveCurrentWizStepInputs();
+  if (stepNum > wizStep) {
+    for (let s = wizStep; s < stepNum; s++) {
+      if (!validateWizStep(s)) return;
+    }
+  }
   wizStep = stepNum;
   renderWizStep();
 }
@@ -2203,12 +2599,93 @@ function prevWizStep() {
 
 function nextWizStep() {
   saveCurrentWizStepInputs();
+  if (!validateWizStep(wizStep)) return;
   if (wizStep < 7) {
     wizStep++;
     renderWizStep();
   } else {
     publishWizardOffer();
   }
+}
+
+function resetWizardDraft() {
+  wizStep = 1;
+  wizData = { ...DEFAULT_WIZ_DATA };
+  if (currentUser) {
+    wizData.owner = currentUser.name || "";
+    wizData.email = currentUser.email || "";
+    wizData.phone = currentUser.phone || "";
+  }
+  persistWizardDraft();
+  renderWizStep();
+}
+
+function generateSmartWizDesc() {
+  const title = wizData.titleHave || getCategoryLabel(wizData.category);
+  const specs = wizData.specs || "Verified condition";
+  const want = wizData.titleWant || getDealTypeLabel(wizData.dealType);
+  const genMap = {
+    en: `${title} (${specs}). Well-maintained, verified owner, ready for inspection and direct ${getDealTypeLabel(wizData.dealType)} (${want}) with 0% platform commission.`,
+    de: `${title} (${specs}). Sehr gepflegter Zustand, verifizierter Eigentümer, bereit für Besichtigung und direkten ${getDealTypeLabel(wizData.dealType)} (${want}) mit 0% Provision.`,
+    fr: `${title} (${specs}). Très bon état, propriétaire vérifié, disponible pour inspection et ${getDealTypeLabel(wizData.dealType)} (${want}) sans commission.`,
+    it: `${title} (${specs}). Condizioni eccellenti, proprietario verificato, disponibile per visione e ${getDealTypeLabel(wizData.dealType)} (${want}) con 0% commissioni.`,
+    es: `${title} (${specs}). Excelente estado, propietario verificado, disponible para revisión y ${getDealTypeLabel(wizData.dealType)} (${want}) con 0% comisión.`,
+    ro: `${title} (${specs}). Stare impecabilă, proprietar verificat, disponibil pentru vizionare/verificare și ${getDealTypeLabel(wizData.dealType)} (${want}) cu 0% comision.`,
+    ru: `${title} (${specs}). Отличное состояние, проверенный владелец, готов к проверке и прямому обмену (${want}) без комиссии.`
+  };
+  const desc = genMap[currentLang] || genMap.en;
+  wizData.desc = desc;
+  const descEl = document.getElementById("wizDesc");
+  if (descEl) descEl.value = desc;
+  persistWizardDraft();
+}
+
+function editListingInWizard(offerId) {
+  const item = offers.find(o => o.id === offerId);
+  if (!item) return;
+  const loc = getOfferLocalized(item);
+  closeDashboardModal();
+  closeOfferModal();
+  wizData = {
+    editingOfferId: item.id,
+    image: item.image || WIZ_CATEGORY_PHOTOS[item.category] || DEFAULT_WIZ_DATA.image,
+    category: item.category || "cars",
+    titleHave: item.title || loc.title || "",
+    valueEur: item.valueEur || 15000,
+    originalAmount: item.originalAmount || getOfferValueInCurrency(item, item.originalCurrency || currentCurrency),
+    originalCurrency: item.originalCurrency || currentCurrency,
+    specs: item.specs || "",
+    desc: item.desc || loc.desc || "",
+    titleWant: item.want || loc.want || "",
+    dealType: item.dealType || "1to1",
+    country: item.country || "Romania",
+    city: item.city || "Bucharest",
+    lat: item.lat,
+    lng: item.lng,
+    owner: item.owner || (currentUser ? currentUser.name : ""),
+    email: item.ownerEmail || (currentUser ? currentUser.email : ""),
+    phone: currentUser ? currentUser.phone : ""
+  };
+  wizStep = 2;
+  persistWizardDraft();
+  openWizardModal(2);
+}
+
+function deleteUserListing(offerId) {
+  const idx = offers.findIndex(o => o.id === offerId);
+  if (idx >= 0) {
+    offers.splice(idx, 1);
+  }
+  if (!deletedOfferIds.includes(offerId)) {
+    deletedOfferIds.push(offerId);
+  }
+  saveOffersToStorage();
+  renderOffers();
+  renderMapPinsAndPanel();
+  if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+    renderDashboardContent();
+  }
+  showToast("✓ Listing removed");
 }
 
 function saveCurrentWizStepInputs() {
@@ -2611,6 +3088,16 @@ function selectWizPresetPhoto(url) {
   renderWizStep();
 }
 
+function handleWizImageUrlInput(val) {
+  const cleanUrl = String(val || "").trim();
+  if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+    wizData.image = cleanUrl;
+    const b = document.getElementById("wizPhotoPreviewBox");
+    if (b) b.style.backgroundImage = `url('${cleanUrl}')`;
+    persistWizardDraft();
+  }
+}
+
 function handleWizFileUpload(e) {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -2642,8 +3129,9 @@ function selectWizCategoryCard(cat) {
 
 function renderWizStep() {
   const uiTop = getSmartUiLabels();
+  const vc = getWizValidationCopy();
   document.getElementById("wizMeterBar").style.width = `${(wizStep / 7) * 100}%`;
-  document.getElementById("wizStepCounter").textContent = `${uiTop.stepWord} ${wizStep} / 7`;
+  document.getElementById("wizStepCounter").textContent = `${uiTop.stepWord} ${wizStep} / 7${wizData.editingOfferId ? ` · ${vc.editModeBadge}` : ""}`;
   document.getElementById("wizPrevBtn").style.visibility = wizStep === 1 ? "hidden" : "visible";
   document.getElementById("wizPrevBtn").textContent = t("mobileBackBtn");
   document.getElementById("wizNextBtn").textContent = wizStep === 7 ? uiTop.publishBtn : uiTop.nextStepBtn;
@@ -2659,7 +3147,10 @@ function renderWizStep() {
   if (wizStep === 1) {
     const cats = ["cars", "real-estate", "electronics", "home-garden", "auto-parts", "clothing"];
     c.innerHTML = `
-      <h3 style="margin:0 0 14px;font-size:24px;">1. ${t("wizStep2")}</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px;flex-wrap:wrap;">
+        <h3 style="margin:0;font-size:24px;">1. ${t("wizStep2")}</h3>
+        ${(wizData.titleHave || wizData.editingOfferId) ? `<button type="button" class="wiz-chip" onclick="resetWizardDraft()">↺ ${vc.resetWizBtn}</button>` : ""}
+      </div>
       <div class="wiz-cat-grid">
         ${cats.map(cat => `
           <div class="wiz-cat-card ${wizData.category === cat ? 'selected' : ''}" onclick="selectWizCategoryCard('${cat}')">
@@ -2672,13 +3163,24 @@ function renderWizStep() {
   } else if (wizStep === 2) {
     const activeWizCurr = wizData.originalCurrency || currentCurrency || "EUR";
     const cObj = getCurrencyObj(activeWizCurr);
-    const valLabel = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${cObj.short || cObj.code})`);
+    const valLabel = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(MDL\)|\(RUB\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${cObj.short || cObj.code})`);
     const displayVal = wizData.originalAmount !== "" && wizData.originalAmount !== undefined
       ? wizData.originalAmount
       : (wizData.valueEur ? convertFromEur(wizData.valueEur, activeWizCurr) : "");
     const ui = getSmartUiLabels();
+    const catCfg = SMART_WIZ_CATALOG[wizData.category] || SMART_WIZ_CATALOG.cars;
+    const quickTemplates = (catCfg.templates || []).slice(0, 4);
     c.innerHTML = `
-      <h3 style="margin:0 0 12px;font-size:22px;">2. ${t("wizStep3")} (${t("haveBadge")})</h3>
+      <h3 style="margin:0 0 10px;font-size:22px;">2. ${t("wizStep3")} (${t("haveBadge")})</h3>
+
+      <div style="margin-bottom:12px;padding:10px 12px;background:var(--mint-soft);border:1px solid rgba(12,44,40,0.12);border-radius:14px;">
+        <span style="display:block;font-size:11.5px;font-weight:800;color:var(--forest);margin-bottom:6px;">${vc.quickTemplatesLabel}</span>
+        <div class="wiz-chip-row">
+          ${quickTemplates.map((tpl, idx) => `
+            <button type="button" class="wiz-chip wiz-chip-tpl" onclick="applyWizSmartTemplate(${idx})">+ ${tpl.title.split("·")[0].trim()}</button>
+          `).join("")}
+        </div>
+      </div>
 
       <div class="field-group" style="position:relative;">
         <label style="color:var(--ink);">${t("quickTitleHave")}</label>
@@ -2705,23 +3207,28 @@ function renderWizStep() {
   } else if (wizStep === 3) {
     const ui = getSmartUiLabels();
     const presets = [
+      WIZ_CATEGORY_PHOTOS[wizData.category] || WIZ_CATEGORY_PHOTOS["cars"],
       WIZ_CATEGORY_PHOTOS["cars"],
       WIZ_CATEGORY_PHOTOS["real-estate"],
       WIZ_CATEGORY_PHOTOS["electronics"],
-      WIZ_CATEGORY_PHOTOS["home-garden"]
-    ];
+      WIZ_CATEGORY_PHOTOS["home-garden"],
+      WIZ_CATEGORY_PHOTOS["clothing"]
+    ].filter((v, i, a) => a.indexOf(v) === i);
     c.innerHTML = `
       <h3 style="margin:0 0 8px;font-size:24px;">3. ${t("wizStep1")}</h3>
-      <p style="color:var(--muted);margin:0 0 18px;">${ui.uploadPhotoDesc}</p>
+      <p style="color:var(--muted);margin:0 0 14px;">${ui.uploadPhotoDesc}</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;">
-        <label style="border:2px dashed var(--forest);background:var(--mint-soft);border-radius:20px;padding:30px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:10px;align-items:center;">
+        <label style="border:2px dashed var(--forest);background:var(--mint-soft);border-radius:20px;padding:26px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:8px;align-items:center;">
           <strong style="color:var(--forest);">${ui.uploadPhotoTitle}</strong>
           <span style="font-size:13px;color:var(--muted);">${ui.uploadPhotoSub}</span>
           <input type="file" accept="image/*" style="display:none;" onchange="handleWizFileUpload(event)" />
         </label>
-        <div style="height:170px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:2px solid var(--forest);"></div>
+        <div id="wizPhotoPreviewBox" style="height:160px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:2px solid var(--forest);"></div>
       </div>
-      <p style="font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--muted);">${ui.samplePhotoLabel}</p>
+      <div class="field-group" style="margin-top:12px;margin-bottom:8px;">
+        <input type="url" id="wizImageUrlInput" class="input-light" placeholder="${vc.pasteUrlPlaceholder}" value="${wizData.image.startsWith('http') ? wizData.image : ''}" oninput="handleWizImageUrlInput(this.value)" />
+      </div>
+      <p style="font-size:13px;font-weight:700;margin:10px 0 8px;color:var(--muted);">${ui.samplePhotoLabel}</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         ${presets.map(u => `
           <img src="${u}" onclick="selectWizPresetPhoto('${u}')" style="width:90px;height:64px;object-fit:cover;border-radius:12px;cursor:pointer;border:3px solid ${wizData.image === u ? 'var(--forest)' : 'transparent'};" alt="Preset" />
@@ -2730,22 +3237,33 @@ function renderWizStep() {
     `;
   } else if (wizStep === 4) {
     const ui = getSmartUiLabels();
+    const specChipsMap = {
+      en: ["Warranty / Invoice", "Original Box", "Full Service History", "Accident-Free", "Verified Owner"],
+      de: ["Garantie / Rechnung", "Originalverpackung", "Scheckheftgepflegt", "Unfallfrei", "Geprüfter Eigentümer"],
+      fr: ["Garantie / Facture", "Boîte d'origine", "Carnet d'entretien complet", "Sans accident", "Propriétaire vérifié"],
+      it: ["Garanzia / Fattura", "Scatola originale", "Cronologia tagliandi", "Mai incidentata", "Proprietario verificato"],
+      es: ["Garantía / Factura", "Caja original", "Historial de mantenimiento", "Sin accidentes", "Propietario verificado"],
+      ro: ["Garanție / Factură", "Cutie originală", "Istoric complet service", "Fără accident", "Proprietar verificat"],
+      ru: ["Гарантия / Чек", "Оригинальная коробка", "Полная сервисная история", "Без ДТП", "Проверенный владелец"]
+    };
+    const specChips = specChipsMap[currentLang] || specChipsMap.en;
     c.innerHTML = `
       <h3 style="margin:0 0 14px;font-size:24px;">4. ${t("wizStep4")}</h3>
       <div class="field-group">
         <label style="color:var(--ink);">${ui.specsLabel}</label>
         <input type="text" id="wizSpecs" class="input-light" value="${wizData.specs}" oninput="wizData.specs = this.value" />
         <div class="wiz-chip-row" style="margin-top:8px;">
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Warranty / Invoice'; wizData.specs = document.getElementById('wizSpecs').value;">+ Warranty / Invoice</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Original Box'; wizData.specs = document.getElementById('wizSpecs').value;">+ Original Box</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Full Service History'; wizData.specs = document.getElementById('wizSpecs').value;">+ Full Service History</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Accident-Free'; wizData.specs = document.getElementById('wizSpecs').value;">+ Accident-Free</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + 'Verified Owner'; wizData.specs = document.getElementById('wizSpecs').value;">+ Verified Owner</button>
+          ${specChips.map(chip => `
+            <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + '${chip.replace(/'/g, "\\'")}'; wizData.specs = document.getElementById('wizSpecs').value; persistWizardDraft();">+ ${chip}</button>
+          `).join("")}
         </div>
       </div>
       <div class="field-group">
-        <label style="color:var(--ink);">${t("quickDescription")}</label>
-        <textarea id="wizDesc" class="input-light" rows="3">${wizData.desc}</textarea>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <label style="color:var(--ink);margin:0;">${t("quickDescription")}</label>
+          <button type="button" class="wiz-chip wiz-chip-tpl" onclick="generateSmartWizDesc()">${vc.autoDescBtn}</button>
+        </div>
+        <textarea id="wizDesc" class="input-light" rows="3" oninput="wizData.desc = this.value">${wizData.desc}</textarea>
       </div>
     `;
   } else if (wizStep === 5) {
@@ -2764,17 +3282,19 @@ function renderWizStep() {
       </div>
       <div class="field-group">
         <label style="color:var(--ink);">${isSaleOnly ? `${t("dealSaleOnly")}` : t("quickTitleWant")}</label>
-        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" placeholder="${ui.titlePlaceholder}" />
+        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" placeholder="${ui.titlePlaceholder}" oninput="wizData.titleWant = this.value" />
         <div class="wiz-chip-row" style="margin-top:8px;">
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='iPhone 16 Pro Max / iPad Pro M4 / MacBook Pro'; wizData.titleWant=document.getElementById('wizTitleWant').value;">iPhone / iPad / MacBook</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='SUV 2020+ (BMW X5, Mercedes GLE, Audi Q7)'; wizData.titleWant=document.getElementById('wizTitleWant').value;">${t("qtagCar")}</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='${t("qtagApartment")} / ${t("qtagHouse")}'; wizData.titleWant=document.getElementById('wizTitleWant').value;">${t("qtagApartment")} / ${t("qtagHouse")}</button>
-          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='${t("dealSwapOrSale")}'; wizData.titleWant=document.getElementById('wizTitleWant').value;">${t("dealSwapOrSale")}</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='iPhone 16 Pro Max / iPad Pro M4 / MacBook Pro'; wizData.titleWant=document.getElementById('wizTitleWant').value; persistWizardDraft();">iPhone / iPad / MacBook</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='SUV 2020+ (BMW X5, Mercedes GLE, Audi Q7)'; wizData.titleWant=document.getElementById('wizTitleWant').value; persistWizardDraft();">${t("qtagCar")}</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='${t("qtagApartment")} / ${t("qtagHouse")}'; wizData.titleWant=document.getElementById('wizTitleWant').value; persistWizardDraft();">${t("qtagApartment")} / ${t("qtagHouse")}</button>
+          <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='${t("dealSwapOrSale")}'; wizData.titleWant=document.getElementById('wizTitleWant').value; persistWizardDraft();">${t("dealSwapOrSale")}</button>
         </div>
       </div>
     `;
   } else if (wizStep === 6) {
     const ui = getSmartUiLabels();
+    const countryCities = SMART_EUROPEAN_CITIES.filter(cObj => cObj.country === wizData.country);
+    const citiesToRender = countryCities.length > 0 ? countryCities : SMART_EUROPEAN_CITIES.slice(0, 6);
     c.innerHTML = `
       <h3 style="margin:0 0 10px;font-size:22px;">6. ${t("wizStep6")} · GPS & Map</h3>
       <div class="wiz-smart-box" style="margin-bottom:14px;">
@@ -2793,31 +3313,53 @@ function renderWizStep() {
       <div class="form-grid-2">
         <div class="field-group">
           <label style="color:var(--ink);">${ui.countryLabel}</label>
-          <select id="wizCountry" class="input-light" onchange="wizData.country=this.value">
+          <select id="wizCountry" class="input-light" onchange="wizData.country=this.value; renderWizStep();">
             ${Object.keys(COUNTRY_COORDS).map(cnt => `<option value="${cnt}" ${wizData.country === cnt ? 'selected' : ''}>${cnt}</option>`).join("")}
           </select>
         </div>
         <div class="field-group">
           <label style="color:var(--ink);">${ui.cityLabel}</label>
-          <input type="text" id="wizCity" class="input-light" value="${wizData.city}" placeholder="Vienna / Munich / Bucharest / Paris" oninput="wizData.city=this.value" />
+          <input type="text" id="wizCity" class="input-light" value="${wizData.city}" placeholder="Bucharest / Cluj-Napoca / Munich / Vienna" oninput="wizData.city=this.value" />
+        </div>
+      </div>
+      <div style="margin-top:4px;">
+        <span style="display:block;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:6px;">${vc.quickCitiesLabel} ${wizData.country}:</span>
+        <div class="wiz-chip-row">
+          ${citiesToRender.map(ct => `
+            <button type="button" class="wiz-chip" onclick="selectWizGeoPlace('${ct.country.replace(/'/g, "\\'")}', '${ct.city.replace(/'/g, "\\'")}', ${ct.lat}, ${ct.lng})">${PREMIUM_ICONS.pin}${ct.city}</button>
+          `).join("")}
         </div>
       </div>
     `;
   } else if (wizStep === 7) {
+    const activeCurr = wizData.originalCurrency || currentCurrency;
+    const rawAmt = Number(wizData.originalAmount) || convertFromEur(wizData.valueEur || 15000, activeCurr);
+    const previewPrice = formatAmountInCurrentCurrency(rawAmt, activeCurr);
     c.innerHTML = `
-      <h3 style="margin:0 0 14px;font-size:24px;">7. ${t("wizStep7")}</h3>
+      <h3 style="margin:0 0 12px;font-size:22px;">7. ${t("wizStep7")}</h3>
       <div class="field-group">
         <label style="color:var(--ink);">${t("formFullName")}</label>
-        <input type="text" id="wizOwner" class="input-light" value="${wizData.owner}" />
+        <input type="text" id="wizOwner" class="input-light" value="${wizData.owner || (currentUser ? currentUser.name : '')}" oninput="wizData.owner = this.value" />
       </div>
       <div class="form-grid-2">
         <div class="field-group">
           <label style="color:var(--ink);">${t("formEmail")}</label>
-          <input type="email" id="wizEmail" class="input-light" value="${wizData.email}" />
+          <input type="email" id="wizEmail" class="input-light" value="${wizData.email || (currentUser ? currentUser.email : '')}" oninput="wizData.email = this.value" />
         </div>
         <div class="field-group">
           <label style="color:var(--ink);">${t("formPhone")}</label>
-          <input type="tel" id="wizPhone" class="input-light" value="${wizData.phone}" />
+          <input type="tel" id="wizPhone" class="input-light" value="${wizData.phone || (currentUser ? currentUser.phone : '')}" placeholder="+40 / +49 / +43..." oninput="wizData.phone = this.value" />
+        </div>
+      </div>
+
+      <div style="margin-top:12px;padding:12px 14px;background:var(--mint-soft);border:1.5px solid var(--forest);border-radius:16px;display:flex;align-items:center;gap:14px;">
+        <img src="${wizData.image}" style="width:84px;height:64px;object-fit:cover;border-radius:12px;border:1px solid rgba(12,44,40,0.2);flex-shrink:0;" alt="" />
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--forest);">${vc.previewHeading} · ${getCategoryLabel(wizData.category)} · ~${previewPrice}</div>
+          <strong style="display:block;font-size:15px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${wizData.titleHave || "—"}</strong>
+          <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${PREMIUM_ICONS.pin}${wizData.city || "—"}, ${wizData.country} · ${t("wantBadge")}: ${wizData.titleWant || getDealTypeLabel(wizData.dealType)}
+          </div>
         </div>
       </div>
     `;
@@ -2837,17 +3379,21 @@ function renderWizStep() {
 
 function publishWizardOffer() {
   saveCurrentWizStepInputs();
+  if (!validateWizStep(7)) return;
   const fallbackCoords = COUNTRY_COORDS[wizData.country] || { lat: 48.13, lng: 11.58 };
   const finalLat = wizData.lat || fallbackCoords.lat;
   const finalLng = wizData.lng || fallbackCoords.lng;
   const chosenCurr = wizData.originalCurrency || currentCurrency;
   const chosenAmt = Number(wizData.originalAmount) || convertFromEur(20000, chosenCurr);
   const exactEur = convertToEur(chosenAmt, chosenCurr);
-  const newOffer = {
-    id: Date.now(),
+  const isEditing = Boolean(wizData.editingOfferId);
+  const offerPayload = {
+    id: isEditing ? wizData.editingOfferId : Date.now(),
+    createdByUser: true,
+    ownerEmail: wizData.email || currentUser?.email || "",
     category: wizData.category,
     country: wizData.country,
-    city: wizData.city || "Center",
+    city: wizData.city || "Bucharest",
     lat: finalLat,
     lng: finalLng,
     valueEur: exactEur,
@@ -2860,22 +3406,35 @@ function publishWizardOffer() {
     image: wizData.image,
     specs: wizData.specs || "Verified Condition",
     title: wizData.titleHave || "New Swap Listing",
-    want: wizData.titleWant || "Direct 1:1 Swap",
-    desc: wizData.desc || "Ready for direct key-for-key exchange."
+    want: wizData.titleWant || (wizData.dealType === "sale" ? t("dealSaleOnly") : "Direct 1:1 Swap"),
+    desc: wizData.desc || `${wizData.titleHave} (${wizData.specs || "Verified"}).`
   };
 
-  offers.unshift(newOffer);
-  localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
+  if (isEditing) {
+    const idx = offers.findIndex(o => o.id === wizData.editingOfferId);
+    if (idx >= 0) {
+      offers[idx] = { ...offers[idx], ...offerPayload, i18n: undefined };
+    } else {
+      offers.unshift(offerPayload);
+    }
+  } else {
+    offers.unshift(offerPayload);
+  }
+
+  saveOffersToStorage();
   wizStep = 1;
   wizData = { ...DEFAULT_WIZ_DATA };
   persistWizardDraft();
   closeWizardModal();
   currentCategoryFilter = "all";
+  currentDealModeFilter = "all";
+  const catSearch = document.getElementById("catalogSearchInput");
+  if (catSearch) catSearch.value = "";
   renderOffers();
   renderMapPinsAndPanel();
   syncUrlWithRoute("/offers");
-  document.getElementById("offers").scrollIntoView({ behavior: "smooth" });
-  showToast("✓ Your 7-Step Swap Offer is now LIVE!");
+  document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
+  showToast(isEditing ? getWizValidationCopy().savedToast : `✓ ${offerPayload.title} — Live!`);
 }
 
 // ============================================================================
@@ -2974,9 +3533,104 @@ function openOfferModal(offerId, mode = "details") {
   const content = document.getElementById("offerModalContent");
   content.classList.add("offer-detail-modal");
 
+  const modalUiMap = {
+    ro: {
+      ownerVerified: "Proprietar",
+      verifiedWord: "Verificat ✓",
+      zeroFeeDirect: "0% Comision · Mesaj Direct",
+      sendSwapTo: "Trimite Propunere de Schimb 1:1 către",
+      zeroCommission: "0% Comision",
+      yourCashOffer: "Oferta ta de Preț / Cumpărare Directă",
+      paymentPref: "Preferință Plată & Predare",
+      payOpt1: "Transfer Bancar / Numerar la Predare Sigură",
+      payOpt2: "Cumpără Imediat la Prețul Afișat",
+      payOpt3: "Contract Notarial / Tranzacție Verificată",
+      sendBuyTo: "Trimite Ofertă de Cumpărare către"
+    },
+    en: {
+      ownerVerified: "Owner",
+      verifiedWord: "Verified ✓",
+      zeroFeeDirect: "0% Fee Direct Message",
+      sendSwapTo: "Send 1:1 Swap Proposal to",
+      zeroCommission: "0% Commission",
+      yourCashOffer: "Your Cash Offer / Purchase Price",
+      paymentPref: "Payment & Handover Preference",
+      payOpt1: "Bank Transfer / Cash on Safe Handover",
+      payOpt2: "Buy Immediately at Full Asking Price",
+      payOpt3: "Notary / Verified Sale Contract",
+      sendBuyTo: "Send Cash Purchase Offer to"
+    },
+    de: {
+      ownerVerified: "Eigentümer",
+      verifiedWord: "Verifiziert ✓",
+      zeroFeeDirect: "0% Gebühr · Direktnachricht",
+      sendSwapTo: "1:1-Tauschvorschlag senden an",
+      zeroCommission: "0% Provision",
+      yourCashOffer: "Ihr Kaufpreis-Angebot",
+      paymentPref: "Zahlung & Übergabe",
+      payOpt1: "Banküberweisung / Bar bei Übergabe",
+      payOpt2: "Sofortkauf zum vollen Angebotspreis",
+      payOpt3: "Notar / Verifizierter Kaufvertrag",
+      sendBuyTo: "Kaufangebot senden an"
+    },
+    fr: {
+      ownerVerified: "Propriétaire",
+      verifiedWord: "Vérifié ✓",
+      zeroFeeDirect: "0% Commission · Message Direct",
+      sendSwapTo: "Envoyer la proposition d'échange 1:1 à",
+      zeroCommission: "0% Commission",
+      yourCashOffer: "Votre offre d'achat comptant",
+      paymentPref: "Mode de paiement et remise",
+      payOpt1: "Virement bancaire / Espèces à la remise",
+      payOpt2: "Achat immédiat au prix affiché",
+      payOpt3: "Notaire / Contrat de vente vérifié",
+      sendBuyTo: "Envoyer l'offre d'achat à"
+    },
+    it: {
+      ownerVerified: "Proprietario",
+      verifiedWord: "Verificato ✓",
+      zeroFeeDirect: "0% Commissione · Messaggio Diretto",
+      sendSwapTo: "Invia proposta di scambio 1:1 a",
+      zeroCommission: "0% Commissione",
+      yourCashOffer: "La tua offerta d'acquisto",
+      paymentPref: "Preferenza di pagamento e consegna",
+      payOpt1: "Bonifico bancario / Contanti alla consegna",
+      payOpt2: "Acquista subito al prezzo richiesto",
+      payOpt3: "Notaio / Contratto di vendita verificato",
+      sendBuyTo: "Invia offerta d'acquisto a"
+    },
+    es: {
+      ownerVerified: "Propietario",
+      verifiedWord: "Verificado ✓",
+      zeroFeeDirect: "0% Comisión · Mensaje Directo",
+      sendSwapTo: "Enviar propuesta de intercambio 1:1 a",
+      zeroCommission: "0% Comisión",
+      yourCashOffer: "Tu oferta de compra",
+      paymentPref: "Preferencia de pago y entrega",
+      payOpt1: "Transferencia bancaria / Efectivo en entrega",
+      payOpt2: "Comprar ahora al precio anunciado",
+      payOpt3: "Notario / Contrato de compraventa verificado",
+      sendBuyTo: "Enviar oferta de compra a"
+    },
+    ru: {
+      ownerVerified: "Владелец",
+      verifiedWord: "Проверен ✓",
+      zeroFeeDirect: "0% комиссия · Прямое сообщение",
+      sendSwapTo: "Отправить предложение обмена 1:1 для",
+      zeroCommission: "0% комиссия",
+      yourCashOffer: "Ваше предложение цены / Покупка",
+      paymentPref: "Способ оплаты и передачи",
+      payOpt1: "Банковский перевод / Наличные при встрече",
+      payOpt2: "Купить сразу по указанной цене",
+      payOpt3: "Нотариус / Проверенный договор купли-продажи",
+      sendBuyTo: "Отправить предложение о покупке"
+    }
+  };
+  const mUi = modalUiMap[currentLang] || modalUiMap.en;
+
   content.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line);">
-      <span style="margin:0;font-size:13.5px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · Owner: ${item.owner} (Verified ✓) · ${getDealTypeLabel(item.dealType)}</span>
+      <span style="margin:0;font-size:13.5px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ${mUi.ownerVerified}: ${item.owner} (${mUi.verifiedWord}) · ${getDealTypeLabel(item.dealType)}</span>
       <button type="button" class="modal-close" style="position:static;color:var(--ink);background:var(--bg);flex-shrink:0;" onclick="closeOfferModal()" aria-label="Close">✕</button>
     </div>
 
@@ -3038,7 +3692,7 @@ function openOfferModal(offerId, mode = "details") {
           </div>
 
           <form onsubmit="submitDirectSwapProposal(event, ${item.id})" style="background:var(--mint-soft);padding:18px;border-radius:20px;border:1.5px solid var(--forest);">
-            <strong style="display:block;margin-bottom:10px;color:var(--forest);font-size:15px;">⇄ ${t("proposeSwapBtn")} (0% Fee Direct Message)</strong>
+            <strong style="display:block;margin-bottom:10px;color:var(--forest);font-size:15px;">⇄ ${t("proposeSwapBtn")} (${mUi.zeroFeeDirect})</strong>
             <div class="field-group">
               <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("quickTitleHave")}</label>
               <input type="text" name="offeredItem" class="input-light" required />
@@ -3054,7 +3708,7 @@ function openOfferModal(offerId, mode = "details") {
               </div>
             </div>
             <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
-              Send 1:1 Swap Proposal to ${item.owner} →
+              ${mUi.sendSwapTo} ${item.owner} →
             </button>
           </form>
         </div>
@@ -3063,11 +3717,11 @@ function openOfferModal(offerId, mode = "details") {
         <div id="offerActionBuyPanel" style="display:${startInBuyMode ? 'block' : 'none'};">
           <form onsubmit="submitDirectBuyOffer(event, ${item.id})" style="background:var(--mint-soft);padding:18px;border-radius:20px;border:1.5px solid var(--forest);">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <strong style="color:var(--forest);font-size:15px;">${t("buyOfferBtn")} · 0% Commission</strong>
+              <strong style="color:var(--forest);font-size:15px;">${t("buyOfferBtn")} · ${mUi.zeroCommission}</strong>
               <span style="background:var(--forest);color:var(--mint);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;">~ ${valFormatted}</span>
             </div>
             <div class="field-group">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">Your Cash Offer / Purchase Price</label>
+              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${mUi.yourCashOffer}</label>
               <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;">
                 <input type="number" id="buyOfferAmountInput" name="buyAmount" class="input-light" value="${theirValConverted}" required min="1" oninput="onBuyOfferPriceChange(${item.id})" />
                 <select id="buyOfferCurrencySelect" name="buyCurrency" class="input-light" style="font-weight:700;" onchange="onBuyOfferPriceChange(${item.id})">
@@ -3077,11 +3731,11 @@ function openOfferModal(offerId, mode = "details") {
               <div id="buyOfferParityPreview">${buildParityPreviewHtml(theirValConverted, currentCurrency)}</div>
             </div>
             <div class="field-group">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">Payment & Handover Preference</label>
+              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${mUi.paymentPref}</label>
               <select name="paymentMethod" class="input-light">
-                <option value="Bank Transfer / Cash on Handover">Bank Transfer / Cash on Safe Handover</option>
-                <option value="Buy Now at Asking Price">Buy Immediately at Full Asking Price (~${valFormatted})</option>
-                <option value="Notary / Verified Escrow Contract">Notary / Verified Sale Contract</option>
+                <option value="Bank Transfer / Cash on Handover">${mUi.payOpt1}</option>
+                <option value="Buy Now at Asking Price">${mUi.payOpt2} (~${valFormatted})</option>
+                <option value="Notary / Verified Escrow Contract">${mUi.payOpt3}</option>
               </select>
             </div>
             <div class="form-grid-2">
@@ -3095,7 +3749,7 @@ function openOfferModal(offerId, mode = "details") {
               </div>
             </div>
             <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
-              Send Cash Purchase Offer to ${item.owner} →
+              ${mUi.sendBuyTo} ${item.owner} →
             </button>
           </form>
         </div>
@@ -3115,12 +3769,26 @@ function closeOfferModal() {
   syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
 
+function consumeFreeSwapIfLogged() {
+  if (currentUser && typeof currentUser.freeSwaps === "number" && currentUser.freeSwaps > 0) {
+    currentUser.freeSwaps = Math.max(0, currentUser.freeSwaps - 1);
+    localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
+    const emailKey = String(currentUser.email || "").trim().toLowerCase();
+    if (emailKey && accountsDb[emailKey]) {
+      accountsDb[emailKey].freeSwaps = currentUser.freeSwaps;
+      saveAccountsDb();
+    }
+    renderUserHeaderState();
+  }
+}
+
 function submitDirectSwapProposal(e, offerId) {
   e.preventDefault();
   const fd = new FormData(e.target);
   const item = offers.find(o => o.id === offerId);
   const loc = item ? getOfferLocalized(item) : { title: "Swap Offer" };
-  const calcBanner = document.getElementById("calcResultBanner")?.innerText.replace(/\n/g, " ") || "1:1 Key-for-Key";
+  const bannerEl = document.getElementById("calcResultBanner");
+  const calcBanner = String(bannerEl?.innerText || bannerEl?.textContent || "").replace(/\n/g, " ").trim() || "1:1 Key-for-Key";
 
   swapProposals.unshift({
     id: Date.now(),
@@ -3133,9 +3801,27 @@ function submitDirectSwapProposal(e, offerId) {
     status: "Sent · Awaiting Owner Response"
   });
   localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  consumeFreeSwapIfLogged();
   updateFavCountUI();
   closeOfferModal();
   showToast("✓ Swap Proposal sent & saved to your Dashboard!");
+}
+
+function acceptSwapProposal(propId) {
+  const p = swapProposals.find(x => x.id === propId);
+  if (!p) return;
+  p.status = "Accepted · Direct Contact Unlocked";
+  p.accepted = true;
+  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  renderDashboardContent();
+  showToast(`✓ Swap with ${p.partner} accepted!`);
+}
+
+function deleteSwapProposal(propId) {
+  swapProposals = swapProposals.filter(x => x.id !== propId);
+  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  updateFavCountUI();
+  renderDashboardContent();
 }
 
 // ============================================================================
@@ -3150,6 +3836,7 @@ function openDashboardModal(tab = "proposals") {
   document.body.classList.add("mobile-started");
   document.getElementById("dashboardModal").classList.add("open");
   document.body.classList.add("modal-open");
+  renderUserHeaderState();
   switchDashboardTab(tab);
   syncUrlWithRoute("/dashboard");
 }
@@ -3172,57 +3859,92 @@ function renderDashboardContent() {
   const container = document.getElementById("dashboardBodyContent");
   if (!container) return;
 
+  const dashLabelsMap = {
+    en: { partner: "Partner", view: "View", edit: "Edit", del: "Delete", accept: "Accept", emptyFav: "No saved favorites yet. Click the heart icon on any swap offer card to save it here.", emptyProps: "No active swap proposals yet. Open any listing and click Propose Swap.", incoming: "Incoming", outgoing: "Outgoing", yourAd: "Your Ad" },
+    de: { partner: "Partner", view: "Ansehen", edit: "Bearbeiten", del: "Löschen", accept: "Annehmen", emptyFav: "Noch keine Favoriten gespeichert. Klicken Sie auf das Herz-Symbol bei einem Angebot.", emptyProps: "Noch keine aktiven Tauschvorschläge.", incoming: "Eingehend", outgoing: "Ausgehend", yourAd: "Ihr Inserat" },
+    fr: { partner: "Partenaire", view: "Voir", edit: "Modifier", del: "Supprimer", accept: "Accepter", emptyFav: "Aucun favori enregistré. Cliquez sur l'icône cœur sur une annonce pour la sauvegarder.", emptyProps: "Aucune proposition d'échange active.", incoming: "Reçue", outgoing: "Envoyée", yourAd: "Votre annonce" },
+    it: { partner: "Partner", view: "Vedi", edit: "Modifica", del: "Elimina", accept: "Accetta", emptyFav: "Nessun preferito salvato. Clicca sull'icona del cuore su un annuncio per salvarlo qui.", emptyProps: "Nessuna proposta di scambio attiva.", incoming: "In entrata", outgoing: "In uscita", yourAd: "Tuo annuncio" },
+    es: { partner: "Socio", view: "Ver", edit: "Editar", del: "Eliminar", accept: "Aceptar", emptyFav: "Aún no tienes favoritos guardados. Haz clic en el icono de corazón en cualquier oferta.", emptyProps: "Aún no hay propuestas de intercambio activas.", incoming: "Recibida", outgoing: "Enviada", yourAd: "Tu anuncio" },
+    ro: { partner: "Partener", view: "Vezi", edit: "Editează", del: "Șterge", accept: "Acceptă", emptyFav: "Nu ai încă favorite salvate. Apasă pe iconița inimă de pe orice anunț pentru a-l salva aici.", emptyProps: "Nu ai propuneri active. Deschide orice ofertă și apasă pe Propune schimb.", incoming: "Primită", outgoing: "Trimisă", yourAd: "Anunțul tău" },
+    ru: { partner: "Партнёр", view: "Открыть", edit: "Изменить", del: "Удалить", accept: "Принять", emptyFav: "Пока нет сохранённых избранных. Нажмите на сердечко на любой карточке объявления.", emptyProps: "Пока нет активных предложений обмена.", incoming: "Входящее", outgoing: "Исходящее", yourAd: "Ваше объявление" }
+  };
+  const dl = dashLabelsMap[currentLang] || dashLabelsMap.en;
+
   if (currentDashTab === "proposals") {
+    if (swapProposals.length === 0) {
+      container.innerHTML = `<p style="color:var(--muted);">${dl.emptyProps}</p>`;
+      return;
+    }
     container.innerHTML = swapProposals.map(p => `
-      <div class="dash-list-item">
-        <div>
+      <div class="dash-list-item" style="gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;">
           <span style="font-size:11.5px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:${p.direction === 'Incoming' ? 'var(--mint)' : 'var(--forest)'};color:${p.direction === 'Incoming' ? 'var(--forest)' : '#fff'};">
-            ${p.direction}
+            ${p.direction === 'Incoming' ? dl.incoming : dl.outgoing}
           </span>
-          <strong style="display:block;font-size:16px;margin-top:6px;">${p.offeredItem} ⇄ ${p.targetTitle}</strong>
-          <span style="font-size:13px;color:var(--muted);">Partner: ${p.partner} · ${p.cashBalance}</span>
+          <strong style="display:block;font-size:15.5px;margin-top:6px;cursor:pointer;color:var(--forest);" onclick="closeDashboardModal(); if(${Number(p.offerId) || 0}) openOfferModal(${Number(p.offerId)}, 'details');">${p.offeredItem} ⇄ ${p.targetTitle}</strong>
+          <span style="font-size:13px;color:var(--muted);">${dl.partner}: ${p.partner} · ${p.cashBalance}</span>
         </div>
-        <span style="font-size:12.5px;font-weight:700;color:var(--forest);white-space:nowrap;">✓ ${p.status}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:12.5px;font-weight:700;color:var(--forest);white-space:nowrap;">✓ ${p.status}</span>
+          ${p.direction === "Incoming" && !p.accepted ? `<button type="button" class="btn btn-mint" style="padding:6px 12px;font-size:12px;" onclick="acceptSwapProposal(${p.id})">${dl.accept}</button>` : ""}
+          ${p.offerId ? `<button type="button" class="btn btn-login" style="padding:6px 12px;font-size:12px;" onclick="closeDashboardModal(); openOfferModal(${p.offerId}, 'details')">${dl.view}</button>` : ""}
+          <button type="button" class="btn btn-login" style="padding:6px 10px;font-size:12px;color:#b91c1c;" onclick="deleteSwapProposal(${p.id})" title="${dl.del}">✕</button>
+        </div>
       </div>
     `).join("");
   } else if (currentDashTab === "mylistings") {
-    const myItems = offers.slice(0, 3);
+    const userCreated = offers.filter(o => o.createdByUser || o.id > 100000);
+    const myItems = userCreated.length > 0 ? userCreated : offers.slice(0, 3);
     container.innerHTML = `
       ${myItems.map(item => {
         const loc = getOfferLocalized(item);
+        const isCustom = Boolean(item.createdByUser || item.id > 100000);
         return `
-          <div class="dash-list-item">
-            <div style="display:flex;align-items:center;gap:12px;">
-              <img src="${item.image}" style="width:64px;height:48px;object-fit:cover;border-radius:10px;" alt="" />
+          <div class="dash-list-item" style="gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:210px;">
+              <img src="${item.image}" style="width:64px;height:48px;object-fit:cover;border-radius:10px;flex-shrink:0;" alt="" />
               <div>
-                <strong>${loc.title}</strong>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <strong>${loc.title}</strong>
+                  ${isCustom ? `<span style="background:var(--mint);color:var(--forest);font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;">${dl.yourAd}</span>` : ""}
+                </div>
                 <span style="display:flex;align-items:center;font-size:12.5px;color:var(--muted);">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ~${formatOfferPrice(item, currentCurrency)}</span>
               </div>
             </div>
-            <button type="button" class="btn btn-login" style="padding:7px 14px;font-size:12.5px;" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'details')">View</button>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <button type="button" class="btn btn-login" style="padding:6px 12px;font-size:12px;" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'details')">${dl.view}</button>
+              <button type="button" class="btn btn-mint" style="padding:6px 12px;font-size:12px;" onclick="editListingInWizard(${item.id})">${dl.edit}</button>
+              <button type="button" class="btn btn-login" style="padding:6px 10px;font-size:12px;color:#b91c1c;" onclick="deleteUserListing(${item.id})" title="${dl.del}">✕</button>
+            </div>
           </div>
         `;
       }).join("")}
-      <button type="button" class="btn btn-mint btn-block" style="margin-top:12px;" onclick="closeDashboardModal(); openWizardModal();">
+      <button type="button" class="btn btn-mint btn-block" style="margin-top:12px;" onclick="closeDashboardModal(); resetWizardDraft(); openWizardModal(1);">
         ${t("navPostSwap")} →
       </button>
     `;
   } else if (currentDashTab === "favorites") {
     const favOffers = offers.filter(o => favoriteIds.includes(o.id));
     if (favOffers.length === 0) {
-      container.innerHTML = `<p style="color:var(--muted);">No saved favorites yet. Click the heart icon on any swap offer card to save it here.</p>`;
+      container.innerHTML = `<p style="color:var(--muted);">${dl.emptyFav}</p>`;
     } else {
       container.innerHTML = favOffers.map(item => {
         const loc = getOfferLocalized(item);
         return `
-          <div class="dash-list-item">
-            <div>
-              <strong>${loc.title}</strong>
-              <span style="display:flex;align-items:center;font-size:13px;color:var(--muted);">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ${t("wantBadge")}: ${loc.want}</span>
+          <div class="dash-list-item" style="gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:210px;">
+              <img src="${item.image}" style="width:60px;height:44px;object-fit:cover;border-radius:10px;flex-shrink:0;" alt="" />
+              <div>
+                <strong>${loc.title}</strong>
+                <span style="display:flex;align-items:center;font-size:12.5px;color:var(--muted);">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ~${formatOfferPrice(item, currentCurrency)} · ${t("wantBadge")}: ${loc.want}</span>
+              </div>
             </div>
-            <button type="button" class="btn btn-mint" style="padding:8px 14px;font-size:13px;" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'propose')">
-              ⇄ ${t("proposeSwapBtn")}
-            </button>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button type="button" class="btn btn-mint" style="padding:7px 13px;font-size:12.5px;" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'propose')">
+                ⇄ ${t("proposeSwapBtn")}
+              </button>
+              <button type="button" class="btn btn-login" style="padding:7px 10px;font-size:12.5px;color:#b91c1c;" onclick="toggleFavorite(${item.id}); renderDashboardContent();" title="${dl.del}">✕</button>
+            </div>
           </div>
         `;
       }).join("");
@@ -3289,15 +4011,53 @@ function handleChatSubmit(e) {
   const box = document.getElementById("chatMessages");
   box.innerHTML += `<div class="chat-bubble user">${text}</div>`;
   input.value = "";
+  box.scrollTop = box.scrollHeight;
 
   setTimeout(() => {
-    box.innerHTML += `
-      <div class="chat-bubble bot">
-        ✓ We found matching owners in our live catalog! You can propose a 1:1 swap directly on any card or <a href="#enroll" onclick="toggleChatDock()" style="text-decoration:underline;font-weight:700;color:var(--forest);">register for 10 free swaps</a>.
-      </div>
-    `;
+    const directHits = offers.filter(o => matchesSmartSearchQuery(o, text));
+    const aiSmart = buildAiSmartRecommendations(text, directHits, offers);
+    const aiItems = (aiSmart && Array.isArray(aiSmart.items)) ? aiSmart.items : [];
+    const chatReplyCopy = {
+      en: { found: "Direct & AI Smart Matches found:", aiTag: "AI Alternative", none: "Tell me what you have or want (e.g. iPhone, Villa, Porsche, BMW) and I'll match you with verified owners:", postCta: "Post your swap offer" },
+      de: { found: "Direkte & KI-Smart-Matches gefunden:", aiTag: "KI-Alternative", none: "Sagen Sie mir, was Sie haben oder suchen (z. B. iPhone, Villa, Porsche, BMW):", postCta: "Tauschangebot inserieren" },
+      fr: { found: "Résultats directs & suggestions IA trouvés :", aiTag: "Alternative IA", none: "Dites-moi ce que vous avez ou cherchez (ex. iPhone, Villa, Porsche, BMW) :", postCta: "Publier votre annonce" },
+      it: { found: "Risultati diretti e alternative AI trovati:", aiTag: "Alternativa AI", none: "Dimmi cosa offri o cerchi (es. iPhone, Villa, Porsche, BMW):", postCta: "Pubblica il tuo annuncio" },
+      es: { found: "Resultados directos y sugerencias IA encontrados:", aiTag: "Alternativa IA", none: "Dime qué tienes o buscas (ej. iPhone, Villa, Porsche, BMW):", postCta: "Publicar tu oferta" },
+      ro: { found: "Rezultate directe & recomandări AI găsite:", aiTag: "Alternativă AI", none: "Spune-mi ce oferi sau ce cauți (ex: iPhone, Vilă, Apartament, Porsche, BMW) și îți găsesc proprietari verificați:", postCta: "Publică oferta ta de schimb" },
+      ru: { found: "Найдены прямые совпадения и AI-рекомендации:", aiTag: "AI-альтернатива", none: "Напишите, что вы предлагаете или ищете (например: iPhone, Вилла, Porsche, BMW):", postCta: "Разместить предложение обмена" }
+    };
+    const cr = chatReplyCopy[currentLang] || chatReplyCopy.en;
+    const combined = [
+      ...directHits.slice(0, 2).map(item => ({ item, isAi: false, reason: "" })),
+      ...aiItems.slice(0, 2).map(entry => ({ item: entry.item, isAi: true, reason: entry.badgeLabel }))
+    ].slice(0, 3);
+
+    if (combined.length > 0) {
+      const linksHtml = combined.map(({ item, isAi, reason }) => {
+        const loc = getOfferLocalized(item);
+        return `
+          <div style="margin-top:6px;padding:7px 9px;background:#fff;border:1px solid rgba(12,44,40,0.12);border-radius:10px;cursor:pointer;" onclick="toggleChatDock(); openOfferModal(${item.id}, 'details')">
+            <div style="font-weight:700;font-size:12.5px;color:var(--forest);">${loc.title}</div>
+            <div style="font-size:11.5px;color:var(--muted);">${item.city} · ~${formatOfferPrice(item, currentCurrency)} ${isAi ? `· <span style="color:#0a5c46;font-weight:700;">${reason || cr.aiTag}</span>` : ""}</div>
+          </div>
+        `;
+      }).join("");
+      box.innerHTML += `
+        <div class="chat-bubble bot">
+          <strong>✓ ${cr.found}</strong>
+          ${linksHtml}
+        </div>
+      `;
+    } else {
+      box.innerHTML += `
+        <div class="chat-bubble bot">
+          ${cr.none}<br/>
+          <button type="button" class="btn btn-mint" style="margin-top:8px;padding:6px 12px;font-size:12px;" onclick="toggleChatDock(); openWizardModal();">${cr.postCta} →</button>
+        </div>
+      `;
+    }
     box.scrollTop = box.scrollHeight;
-  }, 400);
+  }, 300);
 }
 
 // ============================================================================
