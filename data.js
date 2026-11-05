@@ -1648,13 +1648,57 @@ window.GUIDES_DATA = {
       es: "Qué incluir en una oferta de intercambio de coche",
       ru: "Что указать в предложении обмена автомобиля"
     },
-    items: [
-      "1. Exact Year, Make, Model, Engine, Transmission, and Current Mileage (km).",
-      "2. VIN / Chassis number availability and full service history (invoices or digital log).",
-      "3. Clear daylight photos: exterior corners, interior seats, dashboard, and tires.",
-      "4. Honest condition notes (any repainted panels, upcoming maintenance, or wear).",
-      "5. Specific WANT criteria: Which vehicle models, years, fuel types, or cash difference (± EUR) you accept."
-    ]
+    items: {
+      en: [
+        "1. Exact Year, Make, Model, Engine, Transmission, and Current Mileage (km).",
+        "2. VIN / Chassis number availability and full service history (invoices or digital log).",
+        "3. Clear daylight photos: exterior corners, interior seats, dashboard, and tires.",
+        "4. Honest condition notes (any repainted panels, upcoming maintenance, or wear).",
+        "5. Specific WANT criteria: Which vehicle models, years, fuel types, or cash difference (± EUR) you accept."
+      ],
+      ro: [
+        "1. Anul exact de fabricație, marca, modelul, motorizarea, transmisia și rulajul actual (km).",
+        "2. Disponibilitatea seriei de șasiu (VIN) și istoricul complet de service (facturi sau carte digitală).",
+        "3. Fotografii clare la lumină naturală: exterior din toate unghiurile, interior, bord și anvelope.",
+        "4. Mențiuni oneste despre stare (elemente revopsite, revizii viitoare sau urme de uzură).",
+        "5. Criterii clare pentru CE CAUȚI LA SCHIMB: modelele acceptate, anul minim, motorizarea și eventuala diferență (± EUR/LEI)."
+      ],
+      de: [
+        "1. Exaktes Baujahr, Marke, Modell, Motorisierung, Getriebe und aktueller Kilometerstand (km).",
+        "2. Fahrgestellnummer (FIN/VIN) zur Prüfung sowie lückenlose Servicehistorie (Rechnungen oder digitales Scheckheft).",
+        "3. Klare Tageslichtfotos: Außenansichten, Innenraum, Cockpit und Reifenprofil.",
+        "4. Ehrliche Zustandsbeschreibung (Nachlackierungen, anstehende Wartungen oder Gebrauchsspuren).",
+        "5. Klare Tauschkriterien (GESUCHT): Welche Fahrzeugmodelle, Baujahre oder Wertausgleich (± EUR) Sie akzeptieren."
+      ],
+      fr: [
+        "1. Année exacte, marque, modèle, motorisation, boîte de vitesses et kilométrage actuel (km).",
+        "2. Numéro de châssis (VIN) disponible et historique d'entretien complet (factures ou carnet numérique).",
+        "3. Photos nettes à la lumière du jour : extérieur sous tous les angles, habitacle, tableau de bord et pneus.",
+        "4. Description honnête de l'état (éléments repeints, entretien à prévoir ou usure normale).",
+        "5. Critères précis d'échange : modèles souhaités, années, motorisations et soulte éventuelle (± EUR)."
+      ],
+      it: [
+        "1. Anno esatto, marca, modello, motorizzazione, cambio e chilometraggio attuale (km).",
+        "2. Disponibilità del numero di telaio (VIN) e storico tagliandi completo (fatture o libretto digitale).",
+        "3. Foto nitide alla luce del giorno: esterni da ogni angolazione, interni, cruscotto e pneumatici.",
+        "4. Note trasparenti sulle condizioni (eventuali riverniciature, manutenzione imminente o usura).",
+        "5. Criteri chiari di permuta: quali modelli, anni, alimentazione o conguaglio (± EUR) accetti."
+      ],
+      es: [
+        "1. Año exacto, marca, modelo, motor, transmisión y kilometraje actual (km).",
+        "2. Disponibilidad del número de bastidor (VIN) e historial de mantenimiento completo.",
+        "3. Fotos claras con luz natural: exterior desde todos los ángulos, interior, cuadro y neumáticos.",
+        "4. Notas honestas sobre el estado (piezas repintadas, revisiones próximas o desgaste).",
+        "5. Criterios claros de intercambio: modelos aceptados, años, combustible o diferencia en efectivo (± EUR)."
+      ],
+      ru: [
+        "1. Точный год выпуска, марка, модель, двигатель, КПП и актуальный пробег (км).",
+        "2. Наличие VIN-номера для проверки и полная история обслуживания (чеки или сервисная книжка).",
+        "3. Чёткие дневные фотографии: кузов со всех сторон, салон, приборная панель и шины.",
+        "4. Честное описание состояния (окрашенные элементы, ближайшее ТО или следы эксплуатации).",
+        "5. Чёткие условия обмена: какие модели, годы выпуска, тип двигателя или доплату (± EUR) вы рассматриваете."
+      ]
+    }
   },
   "home-swap": {
     title: {
@@ -1666,13 +1710,57 @@ window.GUIDES_DATA = {
       es: "Permutar una vivienda — Llave por Llave",
       ru: "Обмен недвижимости — Ключ на ключ"
     },
-    items: [
-      "1. State whether you want a permanent ownership swap (notary deed exchange) or a long-term residential swap.",
-      "2. Specify exact usable floor area (m²), floor level, heating type, parking, and monthly maintenance costs.",
-      "3. Clearly name the target cities, neighborhoods, and minimum size you need in return.",
-      "4. Indicate if the property is free of mortgage/encumbrances and ready for notary verification.",
-      "5. Remember: ChangeIt4Me charges 0% brokerage fee — you only pay standard legal/notary registration costs."
-    ]
+    items: {
+      en: [
+        "1. State whether you want a permanent ownership swap (notary deed exchange) or a long-term residential swap.",
+        "2. Specify exact usable floor area (m²), floor level, heating type, parking, and monthly maintenance costs.",
+        "3. Clearly name the target cities, neighborhoods, and minimum size you need in return.",
+        "4. Indicate if the property is free of mortgage/encumbrances and ready for notary verification.",
+        "5. Remember: ChangeIt4Me charges 0% brokerage fee — you only pay standard legal/notary registration costs."
+      ],
+      ro: [
+        "1. Precizează dacă dorești schimb definitiv de proprietate (contract notarial de schimb) sau schimb rezidențial pe termen lung.",
+        "2. Specifică suprafața utilă exactă (m²), etajul, tipul de încălzire, parcarea și costurile lunare de întreținere.",
+        "3. Menționează clar orașele, cartierele și suprafața minimă pe care le cauți în schimb.",
+        "4. Indică dacă imobilul este liber de sarcini/ipotecă și are cadastrul și intabularea pregătite pentru notar.",
+        "5. Important: ChangeIt4Me percepe 0% comision imobiliar — achiți doar taxele notariale legale."
+      ],
+      de: [
+        "1. Geben Sie an, ob Sie einen dauerhaften Eigentumstausch (Notarvertrag) oder einen langfristigen Wohntausch wünschen.",
+        "2. Nennen Sie die exakte Wohnfläche (m²), Etage, Heizungsart, Stellplatz und monatliche Nebenkosten.",
+        "3. Beschreiben Sie klar die Zielstädte, Stadtteile und Mindestgröße, die Sie im Gegenzug suchen.",
+        "4. Geben Sie an, ob die Immobilie lastenfrei im Grundbuch eingetragen und bereit für die notarielle Prüfung ist.",
+        "5. Wichtig: ChangeIt4Me erhebt 0% Maklerprovision — es fallen nur die regulären Notar- und Grundbuchkosten an."
+      ],
+      fr: [
+        "1. Précisez s'il s'agit d'un échange définitif de propriété (acte notarié) ou d'un échange résidentiel longue durée.",
+        "2. Indiquez la surface habitable exacte (m²), l'étage, le chauffage, le parking et les charges mensuelles.",
+        "3. Mentionnez clairement les villes, quartiers et la surface minimale recherchés en contrepartie.",
+        "4. Confirmez que le bien est libre d'hypothèque et prêt pour la vérification notariale.",
+        "5. Rappel : ChangeIt4Me applique 0% de frais d'agence — seuls les frais de notaire légaux s'appliquent."
+      ],
+      it: [
+        "1. Specifica se desideri una permuta definitiva di proprietà (rogito notarile) o uno scambio abitativo a lungo termine.",
+        "2. Indica la superficie calpestabile esatta (m²), il piano, il riscaldamento, il parcheggio e le spese condominiali.",
+        "3. Indica chiaramente le città, i quartieri e la metratura minima che cerchi in cambio.",
+        "4. Specifica se l'immobile è libero da ipoteche/vincoli e pronto per la verifica notarile.",
+        "5. Nota: ChangeIt4Me applica lo 0% di commissioni di agenzia — paghi solo le normali spese notarili."
+      ],
+      es: [
+        "1. Indica si buscas una permuta definitiva de propiedad (escritura notarial) o un intercambio residencial.",
+        "2. Especifica los metros cuadrados útiles (m²), planta, calefacción, garaje y gastos de comunidad.",
+        "3. Nombra claramente las ciudades, zonas y superficie mínima que necesitas a cambio.",
+        "4. Confirma si la propiedad está libre de cargas/hipotecas y lista para revisión notarial.",
+        "5. Recuerda: ChangeIt4Me cobra 0% de comisión inmobiliaria — solo abonas los gastos notariales estándar."
+      ],
+      ru: [
+        "1. Укажите, интересует ли вас постоянный обмен собственностью (через нотариуса) или долгосрочный жилой обмен.",
+        "2. Укажите точную жилую площадь (м²), этаж, тип отопления, наличие парковки и коммунальные платежи.",
+        "3. Чётко перечислите города, районы и минимальную площадь, которые вы ищете взамен.",
+        "4. Подтвердите отсутствие обременений/ипотеки и готовность документов к нотариальной проверке.",
+        "5. Важно: ChangeIt4Me берёт 0% риелторской комиссии — оплачиваются только стандартные услуги нотариуса."
+      ]
+    }
   },
   "meet-and-check": {
     title: {
@@ -1684,12 +1772,235 @@ window.GUIDES_DATA = {
       es: "Quedar, revisar e intercambiar con seguridad",
       ru: "Безопасная встреча, проверка и обмен"
     },
-    items: [
-      "1. Keep initial communication and photo sharing inside the platform before meeting.",
-      "2. For Cars: Meet at an authorized service center or inspection station so both owners can inspect each other's vehicles simultaneously.",
-      "3. For Real Estate: Schedule mutual viewings (video tour first, then in-person visit) and use a licensed notary for simultaneous title transfer.",
-      "4. For Electronics & Luxury Goods: Test serial numbers, original receipts, and functionality on the spot.",
-      "5. Sign a simple bilateral Key-for-Key Exchange Agreement stating any agreed cash balance."
-    ]
+    items: {
+      en: [
+        "1. Keep initial communication and photo sharing inside the platform before meeting.",
+        "2. For Cars: Meet at an authorized service center or inspection station so both owners can inspect each other's vehicles simultaneously.",
+        "3. For Real Estate: Schedule mutual viewings (video tour first, then in-person visit) and use a licensed notary for simultaneous title transfer.",
+        "4. For Electronics & Luxury Goods: Test serial numbers, original receipts, and functionality on the spot.",
+        "5. Sign a simple bilateral Key-for-Key Exchange Agreement stating any agreed cash balance."
+      ],
+      ro: [
+        "1. Păstrează conversația inițială și schimbul de fotografii în platformă înainte de întâlnire.",
+        "2. Pentru Auto: Întâlniți-vă la un service autorizat sau stație ITP pentru ca ambii proprietari să verifice simultan mașinile.",
+        "3. Pentru Imobiliare: Programați vizionări reciproce (tur video inițial, apoi vizită la fața locului) și folosiți un notar public pentru contractul de schimb.",
+        "4. Pentru Electronice & Bunuri de Lux: Verificați pe loc seriile (IMEI/Serial), facturile originale și funcționalitatea completă.",
+        "5. Generați și semnați din Dashboard Acordul Oficial de Schimb 1:1 cu menționarea eventualei diferențe."
+      ],
+      de: [
+        "1. Führen Sie die erste Kommunikation und den Fotoaustausch vor dem Treffen über die Plattform.",
+        "2. Für Autos: Treffen Sie sich in einer Vertragswerkstatt oder Prüfstelle (TÜV/DEKRA), um beide Fahrzeuge gleichzeitig zu prüfen.",
+        "3. Für Immobilien: Vereinbaren Sie gegenseitige Besichtigungen und nutzen Sie einen Notar für die gleichzeitige Eigentumsübertragung.",
+        "4. Für Elektronik & Luxusgüter: Prüfen Sie Seriennummern (IMEI), Originalrechnungen und Funktion direkt vor Ort.",
+        "5. Unterzeichnen Sie den 1:1-Tauschvertrag aus Ihrem Dashboard inklusive etwaigem Wertausgleich."
+      ],
+      fr: [
+        "1. Gardez les premiers échanges et l'envoi de photos sur la plateforme avant la rencontre.",
+        "2. Pour les Voitures : Rendez-vous dans un garage agréé ou centre de contrôle technique pour inspecter les deux véhicules simultanément.",
+        "3. Pour l'Immobilier : Organisez des visites mutuelles et passez par un notaire pour l'acte d'échange simultané.",
+        "4. Pour l'Électronique & le Luxe : Vérifiez sur place les numéros de série, factures d'origine et le bon fonctionnement.",
+        "5. Signez l'Accord d'Échange 1:1 généré depuis votre tableau de bord en précisant toute soulte convenue."
+      ],
+      it: [
+        "1. Mantieni le comunicazioni iniziali e lo scambio di foto sulla piattaforma prima dell'incontro.",
+        "2. Per le Auto: Incontratevi presso un'officina autorizzata per far controllare entrambi i veicoli contemporaneamente.",
+        "3. Per gli Immobili: Organizzate visite reciproche e affidatevi a un notaio per l'atto di permuta simultaneo.",
+        "4. Per Elettronica e Lusso: Verifica sul posto numeri di serie, ricevute originali e funzionamento.",
+        "5. Firma l'Accordo di Scambio 1:1 disponibile nella tua Dashboard indicando l'eventuale conguaglio."
+      ],
+      es: [
+        "1. Mantén la comunicación inicial y el intercambio de fotos dentro de la plataforma antes de quedar.",
+        "2. Para Coches: Quedad en un taller oficial o estación ITV para revisar ambos vehículos simultáneamente.",
+        "3. Para Inmobiliaria: Organizad visitas mutuas y acudid a un notario colegiado para la escritura de permuta.",
+        "4. Para Electrónica y Lujo: Comprobad números de serie, facturas originales y funcionamiento en el acto.",
+        "5. Firmad el Acuerdo de Intercambio 1:1 desde el Panel de Control indicando cualquier diferencia acordada."
+      ],
+      ru: [
+        "1. Ведите первичное общение и обмен фото внутри платформы до личной встречи.",
+        "2. Для Авто: Встречайтесь в официальном сервисе или на СТО для одновременной диагностики обоих автомобилей.",
+        "3. Для Недвижимости: Проведите взаимные просмотры и оформляйте договор мены у лицензированного нотариуса.",
+        "4. Для Электроники и Люкса: Проверяйте серийные номера (IMEI), чеки и работоспособность при встрече.",
+        "5. Подпишите Договор обмена 1:1 из личного кабинета с указанием согласованной доплаты."
+      ]
+    }
+  },
+  "terms-of-use": {
+    title: {
+      en: "Terms of Use & 0% Fee Direct Exchange Rules",
+      ro: "Termeni de Utilizare & Regulamentul Schimbului Direct 0% Comision",
+      de: "Nutzungsbedingungen & Regeln für den direkten 1:1-Tausch (0% Gebühr)",
+      fr: "Conditions d'Utilisation & Règles d'Échange Direct (0% Commission)",
+      it: "Termini di Utilizzo & Regole di Scambio Diretto (0% Commissioni)",
+      es: "Términos de Uso y Reglas de Intercambio Directo (0% Comisión)",
+      ru: "Условия использования и правила прямого обмена (0% комиссии)"
+    },
+    items: {
+      en: [
+        "1. Direct Peer-to-Peer Platform: ChangeIt4Me connects verified owners for 1:1 swaps, swaps with cash adjustment, or direct sales with 0% platform commission.",
+        "2. 10 Free Swaps, Then Paid Packs or PRO Subscription: Every new account receives 10 free swaps on registration. After using the 10 free swaps, additional proposals/listings require a +15 Swap Credit Pack or an Unlimited PRO Subscription (with full 14-day EU consumer withdrawal rights for unused credits under Directive 2011/83/EU).",
+        "3. Accurate Listings: Members must provide real photos, accurate technical specifications, and honest condition descriptions.",
+        "4. Mutual Inspection & Handover: Both parties inspect the assets in person (or via authorized service/notary) prior to key-for-key handover.",
+        "5. Zero Middleman Markup: Prices and parity values are set directly by owners in their chosen currency with live FX parity."
+      ],
+      ro: [
+        "1. Platformă Directă Proprietar-la-Proprietar: ChangeIt4Me conectează proprietari verificați pentru schimburi 1:1, schimburi cu diferență sau vânzare directă cu 0% comision.",
+        "2. Primele 10 Schimburi Gratuite, apoi Pachet sau Abonament PRO: Fiecare cont nou primește automat 10 schimburi gratuite la înregistrare. După epuizarea celor 10 schimburi gratuite, utilizatorii pot achiziționa un Pachet de +15 Schimburi sau un Abonament PRO Nelimitat (cu drept legal de retragere 14 zile conform OUG 34/2014 și Directivei UE 2011/83/UE pentru creditele neutilizate).",
+        "3. Anunțuri Reale și Verificate: Membrii se obligă să publice informații reale, specificații corecte și fotografii autentice ale bunurilor.",
+        "4. Verificare Reciprocă înainte de Predare: Ambele părți verifică tehnic și juridic bunurile (la service sau notar) înainte de schimbul cheie-pe-cheie.",
+        "5. Fără Adaosuri sau Intermediari: Valoarea și paritatea valutară sunt stabilite direct de proprietari, fără comisioane ascunse."
+      ],
+      de: [
+        "1. Direkte Peer-to-Peer-Plattform: ChangeIt4Me verbindet verifizierte Eigentümer für 1:1-Tausch, Tausch mit Wertausgleich oder Direktverkauf mit 0% Provision.",
+        "2. Erste 10 Swaps gratis, danach Paket oder PRO-Abo: Jedes neue Konto erhält 10 kostenlose Swaps bei der Registrierung. Danach können +15 Swap-Pakete oder ein unbegrenztes PRO-Abonnement gebucht werden (inkl. 14-tägigem EU-Widerrufsrecht).",
+        "3. Wahrheitsgemäße Angaben: Mitglieder verpflichten sich zu echten Fotos, korrekten technischen Daten und ehrlichen Zustandsangaben.",
+        "4. Gemeinsame Prüfung vor Übergabe: Beide Parteien prüfen die Güter vor der Schlüssel-gegen-Schlüssel-Übergabe persönlich.",
+        "5. Keine Maklergebühren: Preise und Währungsparitäten werden direkt zwischen den Eigentümern vereinbart."
+      ],
+      fr: [
+        "1. Plateforme Directe entre Particuliers : ChangeIt4Me connecte les propriétaires vérifiés pour des échanges 1:1 ou ventes directes avec 0% de commission.",
+        "2. 10 Échanges Gratuits, puis Pack ou Abonnement PRO : Chaque nouveau compte reçoit 10 échanges gratuits à l'inscription. Au-delà, l'utilisateur peut acheter un Pack +15 Échanges ou un Abonnement PRO Illimité (avec droit de rétractation UE de 14 jours).",
+        "3. Annonces Authentiques : Les membres s'engagent à fournir des photos réelles et des caractéristiques exactes.",
+        "4. Vérification Mutuelle : Les deux parties inspectent les biens avant la remise clé contre clé.",
+        "5. Aucun Frais d'Intermédiaire : Les valeurs et soultes sont convenues librement entre les propriétaires."
+      ],
+      it: [
+        "1. Piattaforma Diretta tra Proprietari: ChangeIt4Me connette proprietari verificati per scambi 1:1 o vendita diretta con 0% commissioni.",
+        "2. Primi 10 Scambi Gratis, poi Pacchetto o Abbonamento PRO: Ogni nuovo account riceve 10 scambi gratuiti alla registrazione. Successivamente è possibile acquistare un Pacchetto +15 Scambi o un Abbonamento PRO Illimitato (con diritto di recesso UE di 14 giorni).",
+        "3. Annunci Veritieri: Gli utenti devono inserire foto reali, specifiche corrette e descrizioni trasparenti.",
+        "4. Verifica Reciproca: Entrambe le parti ispezionano i beni prima della consegna chiavi in mano.",
+        "5. Zero Costi di Agenzia: I valori e gli eventuali conguagli sono concordati direttamente tra le parti."
+      ],
+      es: [
+        "1. Plataforma Directa entre Propietarios: ChangeIt4Me conecta propietarios verificados para intercambios 1:1 o venta directa con 0% de comisión.",
+        "2. Primeros 10 Intercambios Gratis, luego Paquete o Suscripción PRO: Cada cuenta nueva recibe 10 intercambios gratuitos al registrarse. Después, se puede adquirir un Paquete +15 Intercambios o una Suscripción PRO Ilimitada (con derecho de desistimiento UE de 14 días).",
+        "3. Anuncios Veraces: Los miembros deben publicar fotos reales, especificaciones exactas y estado real.",
+        "4. Revisión Mutua: Ambas partes inspeccionan los bienes antes de la entrega llave por llave.",
+        "5. Sin Intermediarios: Los precios y diferencias en efectivo se acuerdan directamente entre propietarios."
+      ],
+      ru: [
+        "1. Прямая платформа без посредников: ChangeIt4Me соединяет проверенных владельцев для обмена 1:1 или прямой продажи с комиссией 0%.",
+        "2. Первые 10 обменов бесплатно, затем Пакет или PRO-подписка: Каждый новый аккаунт получает 10 бесплатных обменов при регистрации. После их исчерпания можно приобрести Пакет +15 обменов или Безлимитную подписку PRO.",
+        "3. Достоверность объявлений: Участники обязуются указывать реальные фото, точные характеристики и честное состояние.",
+        "4. Взаимная проверка: Обе стороны проверяют имущество лично перед передачей ключ на ключ.",
+        "5. Никаких скрытых наценок: Стоимость и условия доплаты согласовываются напрямую между владельцами."
+      ]
+    }
+  },
+  "privacy-policy": {
+    title: {
+      en: "Privacy Policy & GDPR Data Protection",
+      ro: "Politica de Confidențialitate & Protecția Datelor (GDPR)",
+      de: "Datenschutzerklärung & DSGVO-Schutz",
+      fr: "Politique de Confidentialité & Protection RGPD",
+      it: "Informativa sulla Privacy & Protezione Dati GDPR",
+      es: "Política de Privacidad y Protección de Datos RGPD",
+      ru: "Политика конфиденциальности и защита данных (GDPR)"
+    },
+    items: {
+      en: [
+        "1. Minimal Data Collection: We only store your name, contact email/phone, preferred language/currency, and the swap listings you publish.",
+        "2. Contact Control: Your phone number and email are only shared with swap partners when you send or accept a swap/buy proposal.",
+        "3. Local & Encrypted Persistence: Your session, favorites, watchlist alerts, and draft listings are stored securely and can be edited or deleted anytime from your Dashboard.",
+        "4. Zero Third-Party Selling: ChangeIt4Me never sells or rents member contact data to brokers or advertising networks.",
+        "5. Instant Deletion Right: You can delete any listing, proposal, or watchlist alert with one click in your Personal Swap Dashboard."
+      ],
+      ro: [
+        "1. Colectare Minimă de Date: Stocăm exclusiv numele, emailul/telefonul de contact, limba/moneda preferată și anunțurile pe care le publici.",
+        "2. Controlul Datelor de Contact: Telefonul și emailul tău sunt vizibile doar partenerilor cărora le trimiți sau le accepți o propunere de schimb/cumpărare.",
+        "3. Gestionare Completă din Dashboard: Îți poți modifica profilul, șterge anunțurile, propunerile sau alertele Watchlist oricând cu un singur click.",
+        "4. Zero Spam sau Intermediari: ChangeIt4Me nu vinde și nu transmite niciodată datele membrilor către agenții sau brokeri.",
+        "5. Conformitate Europeană GDPR: Toate datele sunt protejate conform standardelor europene de confidențialitate."
+      ],
+      de: [
+        "1. Minimale Datenerfassung: Wir speichern nur Ihren Namen, Ihre Kontaktdaten, Sprach-/Währungseinstellungen und Ihre veröffentlichten Inserate.",
+        "2. Volle Kontaktkontrolle: Ihre Telefonnummer und E-Mail-Adresse werden nur mit Tauschpartnern geteilt, wenn Sie einen Vorschlag senden oder annehmen.",
+        "3. Jederzeit löschbar: Sie können Ihr Profil, Ihre Inserate, Vorschläge und Suchaufträge jederzeit mit einem Klick im Dashboard bearbeiten oder löschen.",
+        "4. Keine Weitergabe an Dritte: ChangeIt4Me verkauft niemals Nutzerdaten an Makler oder Werbenetzwerke.",
+        "5. Europäischer DSGVO-Standard: Volle Transparenz und Kontrolle über Ihre persönlichen Daten."
+      ],
+      fr: [
+        "1. Collecte Minimale : Nous enregistrons uniquement votre nom, vos coordonnées, votre langue/devise et vos annonces publiées.",
+        "2. Contrôle des Coordonnées : Votre téléphone et votre e-mail ne sont partagés qu'avec les partenaires d'échange choisis.",
+        "3. Gestion depuis le Tableau de Bord : Modifiez ou supprimez vos annonces, propositions et alertes à tout moment en un clic.",
+        "4. Aucune Revente de Données : ChangeIt4Me ne partage jamais vos informations avec des courtiers ou régies publicitaires.",
+        "5. Conformité RGPD Européenne : Protection stricte de la vie privée des membres."
+      ],
+      it: [
+        "1. Raccolta Dati Minima: Memorizziamo solo nome, contatti, lingua/valuta preferita e gli annunci che pubblichi.",
+        "2. Controllo dei Contatti: Telefono ed email vengono condivisi solo con i partner di scambio con cui avvii una trattativa.",
+        "3. Gestione Totale dalla Dashboard: Puoi modificare il profilo o eliminare annunci, proposte e avvisi Watchlist in qualsiasi momento.",
+        "4. Zero Cessione a Terzi: ChangeIt4Me non cede mai i dati degli utenti a intermediari o agenzie.",
+        "5. Conformità Europea GDPR: Massima tutela della privacy e sicurezza dei dati."
+      ],
+      es: [
+        "1. Recopilación Mínima de Datos: Solo guardamos tu nombre, contacto, idioma/moneda preferida y los anuncios que publicas.",
+        "2. Control de Contacto: Tu teléfono y correo solo se comparten con los socios de intercambio cuando envías o aceptas una propuesta.",
+        "3. Gestión Total en tu Panel: Puedes editar tu perfil o eliminar anuncios, propuestas y alertas en cualquier momento con un clic.",
+        "4. Cero Venta de Datos: ChangeIt4Me nunca vende ni cede datos personales a intermediarios.",
+        "5. Cumplimiento Europeo RGPD: Protección total de tu privacidad."
+      ],
+      ru: [
+        "1. Минимальный сбор данных: Мы сохраняем только ваше имя, контактный email/телефон, выбранный язык/валюту и опубликованные вами объявления.",
+        "2. Защита контактов: Ваш телефон и email передаются партнёрам только при отправке или принятии предложения обмена.",
+        "3. Полный контроль в личном кабинете: Вы можете изменить профиль или удалить любое объявление, предложение и уведомление в один клик.",
+        "4. Никакой передачи третьим лицам: ChangeIt4Me никогда не передаёт данные участников посредникам или рекламным сетям.",
+        "5. Соответствие европейским стандартам GDPR: Полная прозрачность и безопасность данных."
+      ]
+    }
+  },
+  "cookies-policy": {
+    title: {
+      en: "Cookies & Local Storage Policy",
+      ro: "Politica de Cookies & Stocare Locală",
+      de: "Cookie- & Lokale Speicher-Richtlinie",
+      fr: "Politique relative aux Cookies & Stockage Local",
+      it: "Politica su Cookie & Archiviazione Locale",
+      es: "Política de Cookies y Almacenamiento Local",
+      ru: "Политика использования файлов Cookie и локального хранилища"
+    },
+    items: {
+      en: [
+        "1. Strictly Functional Storage: ChangeIt4Me uses browser localStorage exclusively to keep your session, language, currency, and draft wizard steps active.",
+        "2. Saved Favorites & Proposals: Your hearted offers (ci4m_favs), swap proposals (ci4m_proposals), and custom listings stay saved across page refreshes.",
+        "3. Automatic European Geo-IP Language Routing: We detect your country IP once to set your default language and currency, which you can override anytime.",
+        "4. Zero Tracking Cookies: We do not use invasive cross-site advertising cookies or third-party behavioral trackers."
+      ],
+      ro: [
+        "1. Stocare Strict Funcțională: ChangeIt4Me folosește stocarea locală a browserului (localStorage) exclusiv pentru a păstra contul activ, limba, moneda și ciorna din Wizard.",
+        "2. Favorite, Anunțuri și Propuneri Salvate: Ofertele salvate la favorite, propunerile de schimb și anunțurile tale rămân salvate chiar și după reîncărcarea paginii.",
+        "3. Detectare Automată Limbă & Monedă: Adaptăm automat limba și moneda după țara europeană, dar alegerea ta manuală are întotdeauna prioritate.",
+        "4. Zero Cookie-uri de Urmărire Publicitară: Nu folosim trackere invazive sau cookie-uri publicitare terțe."
+      ],
+      de: [
+        "1. Rein funktionale Speicherung: ChangeIt4Me nutzt den lokalen Browser-Speicher ausschließlich für Ihre Sitzung, Sprache, Währung und Entwürfe im Assistenten.",
+        "2. Gespeicherte Favoriten & Vorschläge: Ihre Favoriten, Tauschvorschläge und eigenen Inserate bleiben beim Neuladen der Seite erhalten.",
+        "3. Automatische EU-Spracherkennung: Sprache und Währung passen sich Ihrem Land an und können jederzeit manuell geändert werden.",
+        "4. Keine Werbe-Tracker: Wir verwenden keine invasiven Drittanbieter-Tracking-Cookies."
+      ],
+      fr: [
+        "1. Stockage Strictement Fonctionnel : ChangeIt4Me utilise le stockage local du navigateur uniquement pour votre session, votre langue, votre devise et vos brouillons.",
+        "2. Favoris & Propositions Sauvegardés : Vos favoris, propositions d'échange et annonces restent enregistrés après actualisation.",
+        "3. Détection Automatique Langue & Devise : Adaptation automatique selon votre pays européen, modifiable manuellement à tout moment.",
+        "4. Aucun Cookie Publicitaire : Nous n'utilisons aucun traceur publicitaire tiers."
+      ],
+      it: [
+        "1. Archiviazione Strettamente Funzionale: ChangeIt4Me utilizza il localStorage del browser solo per mantenere attiva la sessione, la lingua, la valuta e le bozze del Wizard.",
+        "2. Preferiti e Proposte Salvate: I tuoi preferiti, le proposte di scambio e i tuoi annunci restano salvati anche ricaricando la pagina.",
+        "3. Rilevamento Automatico Lingua e Valuta: Adattiamo lingua e valuta al tuo Paese europeo, sempre modificabili manualmente.",
+        "4. Zero Cookie di Profilazione: Non utilizziamo tracker pubblicitari di terze parti."
+      ],
+      es: [
+        "1. Almacenamiento Estrictamente Funcional: ChangeIt4Me utiliza el almacenamiento local del navegador solo para mantener tu sesión, idioma, moneda y borradores.",
+        "2. Favoritos y Propuestas Guardadas: Tus favoritos, propuestas de intercambio y anuncios publicados se conservan al recargar la página.",
+        "3. Detección Automática de Idioma y Moneda: Adaptamos el idioma y la moneda a tu país europeo, pudiendo cambiarlos manualmente siempre.",
+        "4. Cero Cookies Publicitarias: No utilizamos rastreadores invasivos de terceros."
+      ],
+      ru: [
+        "1. Строго функциональное хранение: ChangeIt4Me использует локальное хранилище браузера только для сохранения вашей сессии, языка, валюты и черновиков.",
+        "2. Сохранение избранного и предложений: Ваши избранные объявления, предложения обмена и созданные анкеты сохраняются при обновлении страницы.",
+        "3. Автоопределение языка и валюты: Мы подбираем язык и валюту по вашей стране с возможностью ручного переключения в любой момент.",
+        "4. Никаких рекламных трекеров: Мы не используем сторонние рекламные cookie для отслеживания."
+      ]
+    }
   }
 };

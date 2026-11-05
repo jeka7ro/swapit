@@ -7,13 +7,20 @@
   <title>Change It 4 Me — Don't buy it. Swap it. | Global 1:1 Exchange</title>
   <meta name="description"
     content="A modern platform for key-for-key exchange. Swap cars, real estate, electronics, and goods directly — without fees or middlemen. Available in EN, DE, FR, IT, ES, RO, RU with automatic European IP language detection." />
+  <meta name="theme-color" content="#0c2c28" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Change It 4 Me — Don't buy it. Swap it. | Global 1:1 Exchange" />
+  <meta property="og:description" content="Direct 1:1 key-for-key exchange for cars, real estate, and electronics across Europe with 0% commission." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23a9ffca'/%3E%3Cpath d='M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2' stroke='%230c2c28' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="/styles.css?v=30" />
+  <link rel="stylesheet" href="/styles.css?v=35" />
   <style id="core-ui-fixes">
     button { appearance: none; -webkit-appearance: none; border-radius: 999px; }
     .header { z-index: 1200 !important; }
@@ -663,7 +670,7 @@
         <article class="service"
           style="background-image:url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80')"
           onclick="filterByCategory('cars')">
-          <span class="service-count-badge">1:1 Auto Swap</span>
+          <span class="service-count-badge" data-i18n="badgeAutoSwap">1:1 Auto Swap</span>
           <div class="service-body">
             <h3 data-i18n="catCars">Cars</h3>
             <p data-i18n="catCarsDesc">Swap your vehicle for another car, SUV, EV, or van.</p>
@@ -675,7 +682,7 @@
         <article class="service"
           style="background-image:url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80')"
           onclick="filterByCategory('real-estate')">
-          <span class="service-count-badge">0% Broker Fee</span>
+          <span class="service-count-badge" data-i18n="badgeZeroBroker">0% Broker Fee</span>
           <div class="service-body">
             <h3 data-i18n="catRealEstate">Real Estate</h3>
             <p data-i18n="catRealEstateDesc">Apartments, houses, vacation villas, or land plots.</p>
@@ -747,7 +754,7 @@
       </div>
 
       <div class="slider" id="storySlider">
-        <article class="feature">
+        <article class="feature" style="cursor:pointer;" onclick="openWizardModal()">
           <div class="ico">↔</div>
           <div>
             <h3 data-i18n="story1Title">Say what you want back</h3>
@@ -756,9 +763,10 @@
           </div>
         </article>
         <article class="shot"
-          style="background-image:url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=900&q=80')"
+          style="background-image:url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=900&q=80');cursor:pointer;"
+          onclick="filterByCategory('cars')"
           role="img" aria-label="Car swap"></article>
-        <article class="feature">
+        <article class="feature" style="cursor:pointer;" onclick="filterByCategory('real-estate')">
           <div class="ico">◷</div>
           <div>
             <h3 data-i18n="story2Title">Move without the markup</h3>
@@ -767,9 +775,10 @@
           </div>
         </article>
         <article class="shot"
-          style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80')"
+          style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80');cursor:pointer;"
+          onclick="filterByCategory('real-estate')"
           role="img" aria-label="Apartment swap"></article>
-        <article class="feature">
+        <article class="feature" style="cursor:pointer;" onclick="openGuideModal('meet-and-check')">
           <div class="ico">✓</div>
           <div>
             <h3 data-i18n="story3Title">You set the terms</h3>
@@ -887,22 +896,22 @@
     <div class="wrap">
       <h2 data-i18n-html="processHeadingHtml">How a swap <em>actually happens</em></h2>
       <div class="steps">
-        <article class="step">
+        <article class="step" style="cursor:pointer;" onclick="openWizardModal(1)">
           <div class="num">01</div>
           <h3 data-i18n="step1Title">Post your offer</h3>
           <p data-i18n="step1Desc">List your car, property or item — and describe what you want in return.</p>
         </article>
-        <article class="step">
+        <article class="step" style="cursor:pointer;" onclick="document.getElementById('offers').scrollIntoView({behavior:'smooth'})">
           <div class="num">02</div>
           <h3 data-i18n="step2Title">Find a match</h3>
           <p data-i18n="step2Desc">Browse matching offers and connect with owners looking for your item.</p>
         </article>
-        <article class="step">
+        <article class="step" style="cursor:pointer;" onclick="openOfferModal(101, 'propose')">
           <div class="num">03</div>
           <h3 data-i18n="step3Title">Make the deal</h3>
           <p data-i18n="step3Desc">Agree the terms (1:1 or cash balance) and exchange directly. No fees.</p>
         </article>
-        <article class="step">
+        <article class="step" style="cursor:pointer;" onclick="openGuideModal('meet-and-check')">
           <div class="num">04</div>
           <h3 data-i18n="step4Title">Meet safely</h3>
           <p data-i18n="step4Desc">Verify documents, meet in a safe place, and complete the key-for-key swap.</p>
@@ -917,60 +926,63 @@
     </div>
   </section>
 
-  <!-- CLEAR EXCHANGES, NO PLATFORM FEE (PLANS) -->
-  <section>
+  <!-- PRICING: FIRST 10 SWAPS FREE, THEN CREDIT PACKS OR PRO SUBSCRIPTION -->
+  <section id="pricing">
     <div class="wrap">
       <div class="section-head">
         <div>
-          <h2 data-i18n-html="plansHeadingHtml">Clear exchanges,<br /><em>no platform fee</em></h2>
+          <h2 data-i18n-html="plansHeadingHtml">First 10 swaps free,<br /><em>then pay per pack or subscribe</em></h2>
         </div>
-        <p data-i18n="plansSub">Pick the kind of trade you have in mind. Listing is free. You and the other person
-          decide the terms.</p>
+        <p data-i18n="plansSub">Start with 10 free swaps included on registration. After using your free swaps, unlock a +15 Swap Pack or an Unlimited PRO Subscription.</p>
       </div>
 
       <div class="plans">
         <article class="plan">
-          <h3 data-i18n="catCars">Cars</h3>
-          <div class="price"><span data-i18n="planFreeLabel">Free</span> <small data-i18n="planPerList">/ to
-              list</small></div>
-          <p class="sub" data-i18n="plan1Desc">A vehicle for another vehicle, with or without cash difference.</p>
+          <h3 id="plan1Heading">Starter · 10 Free Swaps</h3>
+          <div class="price"><span data-i18n="planFreeLabel">Free</span> <small data-i18n="planPerList">/ first 10 swaps</small></div>
+          <p class="sub" data-i18n="plan1Desc">Included automatically when you create your account — test the platform with zero risk.</p>
           <ul>
-            <li data-i18n="plan1Item1">Year, mileage, VIN check and condition</li>
-            <li data-i18n="plan1Item2">Exact vehicle you would take in return</li>
-            <li data-i18n="plan1Item3">City and country on the interactive map</li>
-            <li data-i18n="plan1Item4">Direct chat & swap proposals with owners</li>
+            <li data-i18n="plan1Item1">First 10 swap proposals & listings 100% free</li>
+            <li data-i18n="plan1Item2">1:1 Parity & cash difference calculator in 7 currencies</li>
+            <li data-i18n="plan1Item3">Direct 1-on-1 chat & interactive European map</li>
+            <li data-i18n="plan1Item4">Printable 1:1 Swap Handover Agreement (PDF)</li>
           </ul>
-          <button type="button" class="btn btn-dark btn-block" onclick="filterByCategory('cars')"
-            data-i18n="seeListings">See listings</button>
+          <button type="button" class="btn btn-dark btn-block" id="plan1ActionBtn" onclick="openAuthModal('register')"
+            data-i18n="heroCtaPrimary">Register · 10 free swaps</button>
         </article>
 
         <article class="plan">
-          <span class="tag" data-i18n="plan2Tag">Most wanted</span>
-          <h3 data-i18n="plan2Title">Homes & Real Estate</h3>
-          <div class="price"><span data-i18n="planFreeLabel">Free</span> <small data-i18n="planPerList">/ to
-              list</small></div>
-          <p class="sub" data-i18n="plan2Desc">Apartment, house or land — including relocating to another city or
-            country.</p>
+          <span class="tag" data-i18n="plan2Tag">Pay-As-You-Go</span>
+          <h3 data-i18n="plan2Title">Swap Pack (+15 Swaps)</h3>
+          <div class="price"><span id="planPricePack">€9</span> <small id="planPerPack">/ +15 swaps</small></div>
+          <p class="sub" data-i18n="plan2Desc">Used up your 10 free swaps? Top up +15 extra swap & listing credits anytime without a monthly commitment.</p>
           <ul>
-            <li data-i18n="plan2Item1">High-res photos, floor area & rooms</li>
-            <li data-i18n="plan2Item2">Permanent swap, temporary swap, or sale</li>
-            <li data-i18n="plan2Item3">Target city and property type you need next</li>
-            <li data-i18n="plan2Item4">0% real estate brokerage fee from platform</li>
+            <li data-i18n="plan2Item1">+15 additional swap proposals & active listings</li>
+            <li data-i18n="plan2Item2">Credits never expire — use them at your own pace</li>
+            <li data-i18n="plan2Item3">Boosted visibility in AI Smart Match results</li>
+            <li data-i18n="plan2Item4">Instant direct owner contact & multi-photo gallery</li>
           </ul>
-          <button type="button" class="btn btn-dark btn-block" onclick="filterByCategory('real-estate')"
-            data-i18n="seeListings">See listings</button>
+          <button type="button" class="btn btn-dark btn-block" id="plan2ActionBtn" onclick="openSubscriptionModal('pack15')">
+            +15 Swaps Pack →
+          </button>
         </article>
 
         <article class="plan dark">
           <div>
-            <h3 data-i18n="plan3Title">Something more specific</h3>
-            <p style="color:rgba(255,255,255,0.82);margin-top:12px;" data-i18n="plan3Desc">
-              Electronics, furniture, auto parts, watches or clothes. If it is useful to someone else, it can be an
-              offer. Register now and get 10 free swaps.
+            <span class="tag" id="plan3Tag" style="background:var(--mint);color:var(--forest);display:inline-block;margin-bottom:8px;">PRO Unlimited ∞</span>
+            <h3 data-i18n="plan3Title">PRO Unlimited Subscription</h3>
+            <div class="price" style="color:var(--mint);margin:8px 0 4px;"><span id="planPricePro">€19</span> <small id="planPerMonth" style="color:rgba(255,255,255,0.75);">/ month</small></div>
+            <p style="color:rgba(255,255,255,0.84);margin-top:8px;" data-i18n="plan3Desc">
+              For active traders, real estate owners & auto dealers. Unlimited swaps and listings across all categories, priority map badge, and VIP Watchlist alerts.
             </p>
+            <ul id="plan3List" style="margin:12px 0 16px;padding-left:18px;color:rgba(255,255,255,0.9);font-size:13.5px;display:grid;gap:6px;">
+              <li>Unlimited (∞) swap proposals, buy offers & listings</li>
+              <li>PRO Verified badge & top placement in catalog</li>
+              <li>0% commission on all direct 1:1 deals</li>
+            </ul>
           </div>
-          <button type="button" class="btn btn-mint btn-block ani1" onclick="openAuthModal('register')">
-            <span data-i18n="heroCtaPrimary">Register · 10 free swaps</span>
+          <button type="button" class="btn btn-mint btn-block ani1" onclick="openSubscriptionModal('pro')">
+            <span id="plan3ActionBtn">Activate PRO Subscription</span>
             <span class="arrow">→</span>
           </button>
         </article>
@@ -1122,10 +1134,13 @@
                 <span data-i18n="formAppleBtn">Continue with Apple</span>
               </button>
 
-              <p class="glass-legal-line" data-i18n-html="authLegalHtml">
-                I agree to the <a href="#before-trade" onclick="openGuideModal('meet-and-check')">Terms of Use</a> and
-                <a href="#enroll">Privacy Policy</a>
-              </p>
+              <label class="glass-remember-row" style="margin-top:6px;align-items:flex-start;gap:8px;">
+                <input type="checkbox" name="gdprConsent" required style="margin-top:3px;flex-shrink:0;" />
+                <span class="glass-legal-line" style="margin:0;text-align:left;" data-i18n-html="authLegalHtml">
+                  I agree to the <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;">Terms of Use</a> and
+                  <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;">Privacy Policy</a>
+                </span>
+              </label>
 
               <p class="glass-bottom-switch">
                 <span data-i18n="authHaveAccount">Do you have an account?</span>
@@ -1196,13 +1211,18 @@
             </form>
           </div>
 
-          <!-- FORM 2: QUICK SWAP LISTING FORM -->
+          <!-- FORM 3: QUICK SWAP LISTING FORM -->
           <div class="enroll-form-card" id="enrollQuickPostPanel" style="display:none;">
-            <form onsubmit="handleInlineQuickPost(event)" autocomplete="off">
+            <form id="inlineQuickPostForm" onsubmit="handleInlineQuickPost(event)" autocomplete="off">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+                <button type="button" id="quickSampleChipCars" class="wiz-chip" style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);" onclick="fillQuickPostSample('cars')">+ Auto (Porsche / BMW)</button>
+                <button type="button" id="quickSampleChipRealEstate" class="wiz-chip" style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);" onclick="fillQuickPostSample('real-estate')">+ Imobiliare (Apartament / Vilă)</button>
+                <button type="button" id="quickSampleChipElectronics" class="wiz-chip" style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);" onclick="fillQuickPostSample('electronics')">+ Tech (iPhone 16 / MacBook)</button>
+              </div>
               <div class="form-grid-2">
                 <div class="field-group">
                   <label data-i18n="navCategories">Categories</label>
-                  <select class="input-glass" name="category" required>
+                  <select class="input-glass" id="quickPostCategorySelect" name="category" required>
                     <option value="cars" data-i18n="catCars">Cars</option>
                     <option value="real-estate" data-i18n="catRealEstate">Real Estate</option>
                     <option value="electronics" data-i18n="catElectronics">Electronics</option>
@@ -1231,7 +1251,7 @@
 
               <div class="field-group">
                 <label data-i18n="quickTitleHave">What you HAVE</label>
-                <input type="text" class="input-glass" name="titleHave" required data-i18n-placeholder="quickHavePlaceholder" placeholder="e.g. 2022 BMW X5 / 3-Room Apartment / iPhone 16 Pro Max" />
+                <input type="text" class="input-glass" id="quickHaveInput" name="titleHave" required data-i18n-placeholder="quickHavePlaceholder" placeholder="e.g. 2022 BMW X5 / 3-Room Apartment / iPhone 16 Pro Max" />
               </div>
 
               <div class="field-group" id="quickWantGroup">
@@ -1251,14 +1271,25 @@
                 </div>
                 <div class="field-group">
                   <label data-i18n="formCountry">Country & City</label>
-                  <input type="text" class="input-glass" name="location" required data-i18n-placeholder="quickLocPlaceholder" placeholder="e.g. Bucharest, Romania / Munich, Germany" />
+                  <input type="text" class="input-glass" id="quickLocationInput" name="location" required data-i18n-placeholder="quickLocPlaceholder" placeholder="e.g. Bucharest, Romania / Munich, Germany" />
                 </div>
               </div>
 
-              <div class="field-group">
-                <label data-i18n="quickDescription">Condition & swap notes</label>
-                <input type="text" class="input-glass" name="desc" required data-i18n-placeholder="quickDescPlaceholder" placeholder="e.g. First owner, full service history, mint condition" />
+              <div class="form-grid-2">
+                <div class="field-group">
+                  <label data-i18n="quickDescription">Condition & swap notes</label>
+                  <input type="text" class="input-glass" id="quickDescInput" name="desc" required data-i18n-placeholder="quickDescPlaceholder" placeholder="e.g. First owner, full service history, mint condition" />
+                </div>
+                <div class="field-group">
+                  <label data-i18n="wizStep1">Photos</label>
+                  <input type="url" class="input-glass" id="quickPhotoUrlInput" name="imageUrl" placeholder="https://... (optional photo URL)" />
+                </div>
               </div>
+
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(255,255,255,0.84);margin:6px 0 12px;cursor:pointer;line-height:1.45;">
+                <input type="checkbox" name="gdprConsent" required style="width:16px;height:16px;margin-top:2px;accent-color:#a9ffca;flex-shrink:0;" />
+                <span data-i18n-html="authLegalHtml">I agree to the <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;">Terms of Use</a> and <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;">Privacy Policy</a></span>
+              </label>
 
               <button type="submit" class="btn btn-mint btn-block" data-i18n="quickSubmitBtn">
                 Publish Swap Offer Now →
@@ -1330,6 +1361,10 @@
           placeholder="Country" />
         <input type="email" required name="email" data-i18n-placeholder="ctaEmailPlaceholder"
           placeholder="Email for notifications" />
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:#d5e2e4;margin:2px 0 4px;cursor:pointer;text-align:left;line-height:1.45;">
+          <input type="checkbox" name="gdprConsent" required style="width:16px;height:16px;padding:0;margin-top:2px;accent-color:#a9ffca;flex-shrink:0;" />
+          <span data-i18n-html="authLegalHtml">I agree to the <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;" style="color:#a9ffca;text-decoration:underline;">Terms of Use</a> and <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;" style="color:#a9ffca;text-decoration:underline;">Privacy Policy</a></span>
+        </label>
         <button class="btn btn-mint btn-block" type="submit">
           <span data-i18n="ctaSubmitBtn">Notify me</span>
           <span class="arrow">→</span>
@@ -1361,7 +1396,7 @@
       <div>
         <nav class="foot-nav" aria-label="Footer">
           <a href="#offers" data-i18n="navOffers">Live Offers</a>
-          <a href="#about">About</a>
+          <a href="#about" data-i18n="footerAboutLink">About</a>
           <a href="#process" data-i18n="navHow">How it works</a>
           <a href="#enroll" data-i18n="navEnroll">Quick Enroll</a>
           <a href="mailto:info@changeit4me.com">info@changeit4me.com</a>
@@ -1381,9 +1416,10 @@
     <div class="legal">
       <span>© 2026 Change It 4 Me · Global 1:1 Exchange Platform</span>
       <nav>
-        <a href="#before-trade" onclick="openGuideModal('meet-and-check')">Terms & Safety</a>
-        <a href="#enroll">Privacy</a>
-        <a href="#enroll">Cookies</a>
+        <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;" data-i18n="footerTermsLink">Terms & Safety</a>
+        <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;" data-i18n="footerPrivacyLink">Privacy</a>
+        <a href="#before-trade" onclick="openGuideModal('cookies-policy'); return false;" data-i18n="footerCookiesLink">Cookies</a>
+        <a href="#before-trade" onclick="openGdprPreferencesModal(); return false;" id="footerGdprLink">GDPR & Consent</a>
       </nav>
     </div>
   </footer>
@@ -1488,10 +1524,13 @@
           <span data-i18n="formAppleBtn">Continue with Apple</span>
         </button>
 
-        <p class="glass-legal-line" data-i18n-html="authLegalHtml">
-          I agree to the <a href="#before-trade" onclick="closeAuthModal(); openGuideModal('meet-and-check')">Terms of
-            Use</a> and <a href="#enroll" onclick="closeAuthModal()">Privacy Policy</a>
-        </p>
+        <label class="glass-remember-row" style="margin-top:6px;align-items:flex-start;gap:8px;">
+          <input type="checkbox" name="gdprConsent" required style="margin-top:3px;flex-shrink:0;" />
+          <span class="glass-legal-line" style="margin:0;text-align:left;" data-i18n-html="authLegalHtml">
+            I agree to the <a href="#before-trade" onclick="closeAuthModal(); openGuideModal('terms-of-use'); return false;">Terms of
+              Use</a> and <a href="#before-trade" onclick="closeAuthModal(); openGuideModal('privacy-policy'); return false;">Privacy Policy</a>
+          </span>
+        </label>
 
         <p class="glass-bottom-switch">
           <span data-i18n="authHaveAccount">Do you have an account?</span>
@@ -1579,6 +1618,35 @@
           Verification code has been sent to your email.
         </p>
       </form>
+
+      <!-- PASSWORD RECOVERY / RESET FORM -->
+      <form id="modalResetForm" style="display:none;" onsubmit="handleResetPasswordSubmit(event)" autocomplete="off"
+        class="glass-pill-form">
+        <p class="glass-verify-prompt" id="resetPromptText">Enter your account email and choose a new password.</p>
+
+        <div class="pill-input-group">
+          <input type="email" id="resetEmailInput" name="email" class="pill-input" required
+            data-i18n-placeholder="formEmailShort" placeholder="Email" />
+        </div>
+
+        <div class="pill-input-group">
+          <input type="password" id="resetNewPwdInput" name="newPassword" class="pill-input" required minlength="6"
+            data-i18n-placeholder="formPassword" placeholder="New password" />
+          <button type="button" class="pill-pwd-eye" onclick="togglePasswordVisibility('resetNewPwdInput', this)"
+            aria-label="Show password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+
+        <button type="submit" class="pill-btn-mint" id="resetSubmitBtn">Reset Password →</button>
+
+        <p class="glass-bottom-switch">
+          <button type="button" onclick="switchAuthTab('login')" data-i18n="navLogin">Log in</button>
+        </p>
+      </form>
     </div>
   </div>
 
@@ -1654,10 +1722,15 @@
         <h2 style="font-size:26px;margin:0;" data-i18n="dashTitle">Personal Swap Dashboard</h2>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span
-            style="background:var(--mint);color:var(--forest);padding:6px 14px;border-radius:999px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:5px;">
+            onclick="openSubscriptionModal('pro')"
+            style="background:var(--mint);color:var(--forest);padding:6px 14px;border-radius:999px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;"
+            title="Upgrade / Top-up Swaps">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            <span id="dashFreeSwapsCount">10</span> / 10 Free Swaps Available
+            <span id="dashFreeSwapsCount">10</span> <span id="dashFreeSwapsSuffix">/ 10 Free Swaps</span>
           </span>
+          <button type="button" id="dashUpgradeBtn" class="btn btn-mint" style="padding:6px 13px;font-size:12px;font-weight:800;" onclick="openSubscriptionModal('pro')">
+            + PRO / Credite
+          </button>
           <button type="button" id="dashLogoutBtn" class="btn btn-login" style="display:none;padding:6px 14px;font-size:12.5px;gap:6px;" onclick="handleUserLogout()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             <span data-i18n="dashLogout">Log out</span>
@@ -1672,6 +1745,8 @@
           data-i18n="dashTabMyListings">My Listings</button>
         <button type="button" class="cat-pill" data-tab="favorites" onclick="switchDashboardTab('favorites')"
           data-i18n="dashTabFavorites">Saved Favorites</button>
+        <button type="button" class="cat-pill" data-tab="profile" onclick="switchDashboardTab('profile')"
+          id="dashTabProfileBtn">Profil & Setări</button>
       </div>
 
       <div id="dashboardBodyContent"></div>
@@ -1709,13 +1784,33 @@
     </button>
   </div>
 
+  <!-- GDPR & E-PRIVACY CONSENT BANNER -->
+  <div id="gdprConsentBanner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:760px;margin:0 auto;background:#0a2520;color:#fff;border:1px solid rgba(169,255,202,0.32);border-radius:18px;padding:16px 20px;z-index:1180;box-shadow:0 18px 42px rgba(0,0,0,0.42);">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:250px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">GDPR & ePrivacy</span>
+          <strong id="gdprBannerTitle" style="font-size:14px;color:#fff;">Privacy & Local Storage Consent</strong>
+        </div>
+        <p id="gdprBannerDesc" style="margin:0;font-size:12.5px;color:#c9dfdb;line-height:1.45;">
+          We use strictly necessary local storage for your session and optional functional preferences (language, currency, Geo-IP region). Zero third-party ad trackers.
+        </p>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;align-self:center;">
+        <button type="button" id="gdprBtnSettings" class="btn btn-login" style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:8px 13px;font-size:12px;" onclick="openGdprPreferencesModal()">GDPR Settings</button>
+        <button type="button" id="gdprBtnEssential" class="btn btn-login" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.24);padding:8px 13px;font-size:12px;" onclick="acceptGdprConsent('essential')">Essential Only</button>
+        <button type="button" id="gdprBtnAcceptAll" class="btn btn-mint" style="padding:8px 16px;font-size:12.5px;font-weight:800;" onclick="acceptGdprConsent('all')">Accept All</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST CONTAINER -->
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/i18n.js?v=30"></script>
-  <script src="/data.js?v=30"></script>
-  <script src="/app.js?v=30"></script>
+  <script src="/i18n.js?v=35"></script>
+  <script src="/data.js?v=35"></script>
+  <script src="/app.js?v=35"></script>
 </body>
 
 </html>

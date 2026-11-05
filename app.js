@@ -46,7 +46,7 @@ let swapProposals = (() => {
   try {
     const saved = localStorage.getItem("ci4m_proposals");
     if (saved) return JSON.parse(saved);
-  } catch (e) {}
+  } catch (e) { }
   return [
     {
       id: 901,
@@ -102,7 +102,7 @@ let offers = (() => {
         return [...customFromOld, ...baseOffers];
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return [...baseOffers];
 })();
 
@@ -112,7 +112,7 @@ function saveOffersToStorage() {
     const customOrEdited = offers.filter(o => o.createdByUser || o.id > 100000);
     localStorage.setItem("ci4m_user_offers_v1", JSON.stringify(customOrEdited));
     localStorage.setItem("ci4m_deleted_offers_v1", JSON.stringify(deletedOfferIds));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 let currentDealModeFilter = "all";
@@ -130,7 +130,7 @@ let accountsDb = (() => {
 function saveAccountsDb() {
   try {
     localStorage.setItem("ci4m_accounts_db", JSON.stringify(accountsDb));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // Current logged-in user state
@@ -143,10 +143,905 @@ let currentUser = (() => {
   }
 })();
 
+// Watchlist Alerts persisted in localStorage
+let watchlistAlerts = (() => {
+  try {
+    const saved = localStorage.getItem("ci4m_watchlist_alerts");
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+})();
+
+function saveWatchlistAlerts() {
+  try {
+    localStorage.setItem("ci4m_watchlist_alerts", JSON.stringify(watchlistAlerts));
+  } catch (e) { }
+}
+
+// GDPR & ePrivacy Consent State (Reg. EU 2016/679)
+let gdprConsent = (() => {
+  try {
+    const saved = localStorage.getItem("ci4m_gdpr_consent_v1");
+    if (saved) return JSON.parse(saved);
+  } catch (e) { }
+  return { essential: true, functional: true, decided: false, timestamp: null };
+})();
+
+function saveGdprConsentState() {
+  try {
+    localStorage.setItem("ci4m_gdpr_consent_v1", JSON.stringify(gdprConsent));
+  } catch (e) { }
+}
+
+function getGdprUiCopy() {
+  const map = {
+    ro: {
+      bannerTitle: "Protecția Datelor (GDPR) & Preferințe Stocare Locală",
+      bannerDesc: "Folosim stocare locală strict necesară pentru sesiune și opțional preferințe funcționale (limbă, monedă, detecție regiune Geo-IP). Fără cookie-uri de tracking sau reclame terțe.",
+      btnSettings: "Setări GDPR",
+      btnEssential: "Doar Esențiale",
+      btnAcceptAll: "Acceptă Tot",
+      footerLink: "GDPR & Consimțământ",
+      modalBadge: "Conformitate UE · GDPR (Reg. 2016/679) & ePrivacy",
+      modalTitle: "Centrul de Confidențialitate, GDPR & Cookies",
+      modalSub: "Controlează transparent ce date sunt stocate local în browserul tău conform Art. 6 și Art. 7 din GDPR.",
+      catEssentialTitle: "1. Stocare Strict Necesară (Esențială)",
+      catEssentialDesc: "Necesară pentru autentificare, securitatea contului, favorite și propunerile tale de schimb 1:1. Nu poate fi dezactivată.",
+      alwaysActive: "Mereu Activ",
+      catFuncTitle: "2. Preferințe Funcționale & Rutare Geo-IP Europeană",
+      catFuncDesc: "Permite memorarea limbii/monedei alese, salvarea ciornei în Wizard-ul de 7 pași și detecția automată a țării prin Geo-IP la prima vizită.",
+      savePrefsBtn: "Salvează Preferințele GDPR",
+      acceptAllBtn: "Acceptă Toate",
+      savedToast: "✓ Preferințele GDPR & ePrivacy au fost salvate!",
+      rightsTitle: "Drepturile Tale GDPR (Art. 15, 17, 20)",
+      rightsSub: "Conform Regulamentului (UE) 2016/679, ai dreptul de acces, portabilitate (export JSON) și ștergere completă a datelor („Dreptul de a fi uitat”).",
+      exportBtn: "Exportă Datele Mele (JSON)",
+      deleteAccBtn: "Șterge Contul & Toate Datele",
+      consentPrefsBtn: "Preferințe GDPR & Cookies",
+      exportedToast: "✓ Arhiva cu datele tale personale (GDPR Art. 20) a fost generată și descărcată!",
+      deletedToast: "✓ Contul și toate datele asociate au fost șterse definitiv conform GDPR Art. 17.",
+      dsaReportBtn: "Raportează (DSA)",
+      dsaReportedToast: "✓ Raport înregistrat conform EU Digital Services Act (DSA). Anunțul va fi verificat.",
+      gdprContactNote: "Protecție GDPR: Datele tale de contact sunt transmise exclusiv proprietarului verificat pentru acest schimb direct.",
+      wizConsentLabel: "Confirm că sunt proprietarul de drept al bunului și accept Termenii de Utilizare și Politica de Confidențialitate GDPR."
+    },
+    en: {
+      bannerTitle: "Data Privacy (GDPR) & Local Storage Consent",
+      bannerDesc: "We use strictly necessary local storage for your session and optional functional preferences (language, currency, Geo-IP region). Zero third-party ad trackers.",
+      btnSettings: "GDPR Settings",
+      btnEssential: "Essential Only",
+      btnAcceptAll: "Accept All",
+      footerLink: "GDPR & Consent",
+      modalBadge: "EU Compliance · GDPR (Reg. 2016/679) & ePrivacy",
+      modalTitle: "Privacy, GDPR & Cookie Preferences Center",
+      modalSub: "Control what data is stored locally in your browser in full compliance with GDPR Art. 6 and Art. 7.",
+      catEssentialTitle: "1. Strictly Necessary Storage (Essential)",
+      catEssentialDesc: "Required for account login, session security, saved favorites, and your 1:1 swap proposals. Cannot be disabled.",
+      alwaysActive: "Always Active",
+      catFuncTitle: "2. Functional Preferences & European Geo-IP Routing",
+      catFuncDesc: "Remembers your chosen language/currency, saves 7-Step Wizard drafts, and enables automatic European country Geo-IP detection.",
+      savePrefsBtn: "Save GDPR Preferences",
+      acceptAllBtn: "Accept All",
+      savedToast: "✓ Your GDPR & ePrivacy preferences have been saved!",
+      rightsTitle: "Your GDPR Data Rights (Art. 15, 17, 20)",
+      rightsSub: "Under EU Regulation 2016/679, you have the right to access, export (JSON portability), and permanently erase your personal data ('Right to be Forgotten').",
+      exportBtn: "Export My Data (JSON)",
+      deleteAccBtn: "Delete Account & Erase Data",
+      consentPrefsBtn: "GDPR & Cookie Settings",
+      exportedToast: "✓ Your personal data archive (GDPR Art. 20) has been generated and downloaded!",
+      deletedToast: "✓ Your account and all associated data have been permanently erased (GDPR Art. 17).",
+      dsaReportBtn: "Report Ad (DSA)",
+      dsaReportedToast: "✓ Listing reported under the EU Digital Services Act (DSA). Our team will review it.",
+      gdprContactNote: "GDPR Privacy: Your contact details are shared strictly peer-to-peer with the verified owner.",
+      wizConsentLabel: "I confirm rightful ownership of this item and agree to the Terms of Use and GDPR Privacy Policy."
+    },
+    de: {
+      bannerTitle: "Datenschutz (DSGVO) & Lokale Speicherung",
+      bannerDesc: "Wir nutzen technisch notwendigen lokalen Speicher für Ihre Sitzung sowie optionale Komfort-Einstellungen (Sprache, Währung, Geo-IP). Keine Werbe-Tracker.",
+      btnSettings: "DSGVO-Optionen",
+      btnEssential: "Nur Notwendige",
+      btnAcceptAll: "Alle akzeptieren",
+      footerLink: "DSGVO & Cookies",
+      modalBadge: "EU-Konformität · DSGVO (VO 2016/679) & ePrivacy",
+      modalTitle: "Datenschutz-, DSGVO- & Cookie-Zentrum",
+      modalSub: "Steuern Sie transparent, welche Daten gemäß Art. 6 und Art. 7 DSGVO lokal gespeichert werden.",
+      catEssentialTitle: "1. Technisch notwendige Speicherung (Essenziell)",
+      catEssentialDesc: "Erforderlich für Login, Sitzungssicherheit, Favoriten und Ihre 1:1-Tauschvorschläge.",
+      alwaysActive: "Immer aktiv",
+      catFuncTitle: "2. Funktionale Präferenzen & Europäische Geo-IP-Erkennung",
+      catFuncDesc: "Speichert Ihre Sprach-/Währungsauswahl, Entwürfe im 7-Schritte-Assistenten und erkennt automatisch Ihr Land per Geo-IP.",
+      savePrefsBtn: "DSGVO-Auswahl speichern",
+      acceptAllBtn: "Alle akzeptieren",
+      savedToast: "✓ Ihre DSGVO- & Datenschutz-Einstellungen wurden gespeichert!",
+      rightsTitle: "Ihre DSGVO-Betroffenenrechte (Art. 15, 17, 20)",
+      rightsSub: "Gemäß EU-DSGVO haben Sie das Recht auf Auskunft, Datenübertragbarkeit (JSON-Export) und vollständige Löschung („Recht auf Vergessenwerden“).",
+      exportBtn: "Meine Daten exportieren (JSON)",
+      deleteAccBtn: "Konto & alle Daten löschen",
+      consentPrefsBtn: "DSGVO- & Cookie-Einstellungen",
+      exportedToast: "✓ Ihr persönliches Datenarchiv (Art. 20 DSGVO) wurde heruntergeladen!",
+      deletedToast: "✓ Ihr Konto und alle zugehörigen Daten wurden gemäß Art. 17 DSGVO endgültig gelöscht.",
+      dsaReportBtn: "Melden (DSA)",
+      dsaReportedToast: "✓ Inserat gemäß EU Digital Services Act (DSA) gemeldet.",
+      gdprContactNote: "DSGVO-Schutz: Ihre Kontaktdaten werden ausschließlich direkt an den geprüften Eigentümer übermittelt.",
+      wizConsentLabel: "Ich bestätige das rechtmäßige Eigentum und stimme den Nutzungsbedingungen sowie der DSGVO-Datenschutzerklärung zu."
+    },
+    fr: {
+      bannerTitle: "Protection des Données (RGPD) & Stockage Local",
+      bannerDesc: "Nous utilisons un stockage local strictement nécessaire pour votre session et des préférences fonctionnelles optionnelles (langue, devise, Géo-IP). Aucun traceur publicitaire.",
+      btnSettings: "Paramètres RGPD",
+      btnEssential: "Essentiels seuls",
+      btnAcceptAll: "Tout accepter",
+      footerLink: "RGPD & Consentement",
+      modalBadge: "Conformité UE · RGPD (Règl. 2016/679) & ePrivacy",
+      modalTitle: "Centre de Confidentialité, RGPD & Cookies",
+      modalSub: "Contrôlez les données stockées localement conformément aux articles 6 et 7 du RGPD.",
+      catEssentialTitle: "1. Stockage Strictement Nécessaire (Essentiel)",
+      catEssentialDesc: "Indispensable pour la connexion, la sécurité, les favoris et vos propositions d'échange 1:1.",
+      alwaysActive: "Toujours actif",
+      catFuncTitle: "2. Préférences Fonctionnelles & Routage Géo-IP Européen",
+      catFuncDesc: "Mémorise votre langue/devise, vos brouillons d'annonce et active la détection automatique du pays par Géo-IP.",
+      savePrefsBtn: "Enregistrer mes choix RGPD",
+      acceptAllBtn: "Tout accepter",
+      savedToast: "✓ Vos préférences RGPD & ePrivacy ont été enregistrées !",
+      rightsTitle: "Vos Droits RGPD (Art. 15, 17, 20)",
+      rightsSub: "Conformément au RGPD, vous disposez d'un droit d'accès, de portabilité (export JSON) et d'effacement complet (« Droit à l'oubli »).",
+      exportBtn: "Exporter mes données (JSON)",
+      deleteAccBtn: "Supprimer le compte et les données",
+      consentPrefsBtn: "Préférences RGPD & Cookies",
+      exportedToast: "✓ Votre archive de données personnelles (RGPD Art. 20) a été téléchargée !",
+      deletedToast: "✓ Votre compte et toutes vos données ont été définitivement supprimés (RGPD Art. 17).",
+      dsaReportBtn: "Signaler (DSA)",
+      dsaReportedToast: "✓ Annonce signalée conformément au Digital Services Act (DSA) de l'UE.",
+      gdprContactNote: "Protection RGPD : Vos coordonnées sont transmises uniquement au propriétaire vérifié.",
+      wizConsentLabel: "Je confirme être le propriétaire légitime du bien et j'accepte les Conditions d'utilisation et la Politique RGPD."
+    },
+    it: {
+      bannerTitle: "Protezione Dati (GDPR) & Consenso Archiviazione",
+      bannerDesc: "Utilizziamo archiviazione locale strettamente necessaria per la sessione e preferenze funzionali opzionali (lingua, valuta, Geo-IP). Zero tracker pubblicitari.",
+      btnSettings: "Impostazioni GDPR",
+      btnEssential: "Solo Essenziali",
+      btnAcceptAll: "Accetta Tutto",
+      footerLink: "GDPR & Consenso",
+      modalBadge: "Conformità UE · GDPR (Reg. 2016/679) & ePrivacy",
+      modalTitle: "Centro Privacy, GDPR e Preferenze Cookie",
+      modalSub: "Controlla in modo trasparente quali dati vengono salvati localmente ai sensi degli artt. 6 e 7 del GDPR.",
+      catEssentialTitle: "1. Archiviazione Strettamente Necessaria (Essenziale)",
+      catEssentialDesc: "Necessaria per accesso, sicurezza, preferiti e proposte di scambio 1:1. Non disattivabile.",
+      alwaysActive: "Sempre attivo",
+      catFuncTitle: "2. Preferenze Funzionali & Rilevamento Geo-IP Europeo",
+      catFuncDesc: "Ricorda lingua/valuta, salva le bozze del Wizard in 7 passi e abilita il rilevamento automatico del paese via Geo-IP.",
+      savePrefsBtn: "Salva Preferenze GDPR",
+      acceptAllBtn: "Accetta Tutto",
+      savedToast: "✓ Preferenze GDPR ed ePrivacy salvate!",
+      rightsTitle: "I Tuoi Diritti GDPR (Artt. 15, 17, 20)",
+      rightsSub: "Ai sensi del Regolamento UE 2016/679, hai diritto di accesso, portabilità (esportazione JSON) e cancellazione totale («Diritto all'oblio»).",
+      exportBtn: "Esporta i miei dati (JSON)",
+      deleteAccBtn: "Elimina account e tutti i dati",
+      consentPrefsBtn: "Impostazioni GDPR & Cookie",
+      exportedToast: "✓ L'archivio dei tuoi dati personali (GDPR Art. 20) è stato scaricato!",
+      deletedToast: "✓ Account e dati personali cancellati definitivamente ai sensi dell'Art. 17 GDPR.",
+      dsaReportBtn: "Segnala (DSA)",
+      dsaReportedToast: "✓ Annuncio segnalato ai sensi del Digital Services Act (DSA) dell'UE.",
+      gdprContactNote: "Tutela GDPR: I tuoi recapiti sono condivisi esclusivamente con il proprietario verificato.",
+      wizConsentLabel: "Confermo la legittima proprietà del bene e accetto i Termini di utilizzo e l'Informativa GDPR."
+    },
+    es: {
+      bannerTitle: "Protección de Datos (RGPD) y Almacenamiento Local",
+      bannerDesc: "Usamos almacenamiento local estrictamente necesario para tu sesión y preferencias funcionales opcionales (idioma, moneda, Geo-IP). Sin rastreadores publicitarios.",
+      btnSettings: "Ajustes RGPD",
+      btnEssential: "Solo Esenciales",
+      btnAcceptAll: "Aceptar Todo",
+      footerLink: "RGPD y Consentimiento",
+      modalBadge: "Cumplimiento UE · RGPD (Reg. 2016/679) y ePrivacy",
+      modalTitle: "Centro de Privacidad, RGPD y Cookies",
+      modalSub: "Controla qué datos se almacenan localmente en tu navegador conforme a los arts. 6 y 7 del RGPD.",
+      catEssentialTitle: "1. Almacenamiento Estrictamente Necesario (Esencial)",
+      catEssentialDesc: "Necesario para iniciar sesión, seguridad, favoritos y tus propuestas de intercambio 1:1.",
+      alwaysActive: "Siempre activo",
+      catFuncTitle: "2. Preferencias Funcionales y Detección Geo-IP Europea",
+      catFuncDesc: "Recuerda tu idioma/moneda, guarda borradores del asistente de 7 pasos y detecta el país por Geo-IP.",
+      savePrefsBtn: "Guardar Preferencias RGPD",
+      acceptAllBtn: "Aceptar Todo",
+      savedToast: "✓ ¡Tus preferencias de RGPD y privacidad han sido guardadas!",
+      rightsTitle: "Tus Derechos RGPD (Arts. 15, 17, 20)",
+      rightsSub: "Bajo el Reglamento UE 2016/679, tienes derecho de acceso, portabilidad (exportar JSON) y supresión total («Derecho al olvido»).",
+      exportBtn: "Exportar mis datos (JSON)",
+      deleteAccBtn: "Eliminar cuenta y borrar datos",
+      consentPrefsBtn: "Preferencias RGPD y Cookies",
+      exportedToast: "✓ ¡Tu archivo de datos personales (RGPD Art. 20) ha sido descargado!",
+      deletedToast: "✓ Tu cuenta y todos los datos asociados han sido eliminados definitivamente (RGPD Art. 17).",
+      dsaReportBtn: "Reportar (DSA)",
+      dsaReportedToast: "✓ Anuncio reportado conforme a la Ley de Servicios Digitales (DSA) de la UE.",
+      gdprContactNote: "Privacidad RGPD: Tus datos de contacto se envían únicamente al propietario verificado.",
+      wizConsentLabel: "Confirmo la propiedad legítima del artículo y acepto los Términos de uso y la Política de privacidad RGPD."
+    },
+    ru: {
+      bannerTitle: "Защита данных (GDPR) и локальное хранилище",
+      bannerDesc: "Мы используем строго необходимое локальное хранилище для вашей сессии и опциональные функциональные настройки (язык, валюта, Geo-IP). Без рекламных трекеров.",
+      btnSettings: "Настройки GDPR",
+      btnEssential: "Только необходимые",
+      btnAcceptAll: "Принять все",
+      footerLink: "GDPR и согласие",
+      modalBadge: "Соответствие ЕС · GDPR (Регл. 2016/679) и ePrivacy",
+      modalTitle: "Центр конфиденциальности, GDPR и файлов Cookie",
+      modalSub: "Управляйте данными, сохраняемыми локально в вашем браузере согласно ст. 6 и ст. 7 GDPR.",
+      catEssentialTitle: "1. Строго необходимое хранилище (Обязательное)",
+      catEssentialDesc: "Необходимо для входа в аккаунт, безопасности, избранного и ваших предложений обмена 1:1.",
+      alwaysActive: "Всегда активно",
+      catFuncTitle: "2. Функциональные настройки и европейский Geo-IP",
+      catFuncDesc: "Сохраняет выбранный язык/валюту, черновики в мастере из 7 шагов и определяет страну через Geo-IP.",
+      savePrefsBtn: "Сохранить настройки GDPR",
+      acceptAllBtn: "Принять все",
+      savedToast: "✓ Ваши настройки GDPR и конфиденциальности сохранены!",
+      rightsTitle: "Ваши права по GDPR (ст. 15, 17, 20)",
+      rightsSub: "Согласно Регламенту ЕС 2016/679, вы имеете право на доступ, переносимость (экспорт JSON) и полное удаление данных («Право на забвение»).",
+      exportBtn: "Экспорт моих данных (JSON)",
+      deleteAccBtn: "Удалить аккаунт и все данные",
+      consentPrefsBtn: "Настройки GDPR и Cookie",
+      exportedToast: "✓ Архив ваших персональных данных (ст. 20 GDPR) сформирован и скачан!",
+      deletedToast: "✓ Ваш аккаунт и все связанные данные безвозвратно удалены (ст. 17 GDPR).",
+      dsaReportBtn: "Пожаловаться (DSA)",
+      dsaReportedToast: "✓ Жалоба отправлена согласно Закону ЕС о цифровых услугах (DSA).",
+      gdprContactNote: "Защита GDPR: Ваши контактные данные передаются напрямую только проверенному владельцу.",
+      wizConsentLabel: "Я подтверждаю право собственности и принимаю Условия использования и Политику конфиденциальности GDPR."
+    }
+  };
+  return map[currentLang] || map.en;
+}
+
+function renderGdprBannerText() {
+  const g = getGdprUiCopy();
+  const titleEl = document.getElementById("gdprBannerTitle");
+  const descEl = document.getElementById("gdprBannerDesc");
+  const btnSet = document.getElementById("gdprBtnSettings");
+  const btnEss = document.getElementById("gdprBtnEssential");
+  const btnAll = document.getElementById("gdprBtnAcceptAll");
+  const footLink = document.getElementById("footerGdprLink");
+  if (titleEl) titleEl.textContent = g.bannerTitle;
+  if (descEl) descEl.textContent = g.bannerDesc;
+  if (btnSet) btnSet.textContent = g.btnSettings;
+  if (btnEss) btnEss.textContent = g.btnEssential;
+  if (btnAll) btnAll.textContent = g.btnAcceptAll;
+  if (footLink) footLink.textContent = g.footerLink;
+
+  const sampleChipCopy = {
+    ro: { cars: "+ Auto (Porsche / BMW)", re: "+ Imobiliare (Apartament / Vilă)", tech: "+ Tech (iPhone 16 / MacBook)" },
+    en: { cars: "+ Cars (Porsche / BMW)", re: "+ Real Estate (Apartment / Villa)", tech: "+ Tech (iPhone 16 / MacBook)" },
+    de: { cars: "+ Autos (Porsche / BMW)", re: "+ Immobilien (Wohnung / Villa)", tech: "+ Tech (iPhone 16 / MacBook)" },
+    fr: { cars: "+ Auto (Porsche / BMW)", re: "+ Immobilier (Appartement / Villa)", tech: "+ Tech (iPhone 16 / MacBook)" },
+    it: { cars: "+ Auto (Porsche / BMW)", re: "+ Immobili (Appartamento / Villa)", tech: "+ Tech (iPhone 16 / MacBook)" },
+    es: { cars: "+ Autos (Porsche / BMW)", re: "+ Inmobiliaria (Piso / Villa)", tech: "+ Tech (iPhone 16 / MacBook)" },
+    ru: { cars: "+ Авто (Porsche / BMW)", re: "+ Недвижимость (Квартира / Вилла)", tech: "+ Техника (iPhone 16 / MacBook)" }
+  }[currentLang] || { cars: "+ Cars (Porsche / BMW)", re: "+ Real Estate (Apartment / Villa)", tech: "+ Tech (iPhone 16 / MacBook)" };
+  const cCars = document.getElementById("quickSampleChipCars");
+  const cRe = document.getElementById("quickSampleChipRealEstate");
+  const cTech = document.getElementById("quickSampleChipElectronics");
+  if (cCars) cCars.textContent = sampleChipCopy.cars;
+  if (cRe) cRe.textContent = sampleChipCopy.re;
+  if (cTech) cTech.textContent = sampleChipCopy.tech;
+}
+
+function initGdprBanner() {
+  renderGdprBannerText();
+  const banner = document.getElementById("gdprConsentBanner");
+  if (!banner) return;
+  if (!gdprConsent || !gdprConsent.decided) {
+    banner.style.display = "block";
+  } else {
+    banner.style.display = "none";
+  }
+}
+
+function acceptGdprConsent(mode = "all") {
+  gdprConsent = {
+    essential: true,
+    functional: mode === "all",
+    decided: true,
+    timestamp: new Date().toISOString()
+  };
+  saveGdprConsentState();
+  const banner = document.getElementById("gdprConsentBanner");
+  if (banner) banner.style.display = "none";
+  if (!gdprConsent.functional) {
+    localStorage.removeItem("ci4m_wiz_draft_v1");
+  }
+  closeGuideModal();
+  if (document.getElementById("dashboardModal")?.classList.contains("open") && currentDashTab === "profile") {
+    renderDashboardContent();
+  }
+  showToast(getGdprUiCopy().savedToast);
+}
+
+function openGdprPreferencesModal() {
+  const g = getGdprUiCopy();
+  const content = document.getElementById("guideModalContent");
+  if (!content) return;
+  const funcChecked = gdprConsent.functional !== false ? "checked" : "";
+
+  content.innerHTML = `
+    <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
+    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;">${g.modalBadge}</span>
+    <h2 style="font-size:24px;margin:10px 0 6px;">${g.modalTitle}</h2>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">${g.modalSub}</p>
+
+    <form onsubmit="saveGdprPreferences(event)" style="display:grid;gap:12px;">
+      <div style="padding:14px 16px;background:var(--mint-soft);border:1.5px solid var(--forest);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <strong style="font-size:14px;color:var(--forest);display:block;margin-bottom:4px;">${g.catEssentialTitle}</strong>
+          <span style="font-size:12.5px;color:var(--ink-soft);line-height:1.45;display:block;">${g.catEssentialDesc}</span>
+        </div>
+        <span style="background:var(--forest);color:var(--mint);padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;">✓ ${g.alwaysActive}</span>
+      </div>
+
+      <label style="padding:14px 16px;background:#fff;border:1.5px solid rgba(12,44,40,0.18);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
+        <div>
+          <strong style="font-size:14px;color:var(--ink);display:block;margin-bottom:4px;">${g.catFuncTitle}</strong>
+          <span style="font-size:12.5px;color:var(--muted);line-height:1.45;display:block;">${g.catFuncDesc}</span>
+        </div>
+        <input type="checkbox" id="gdprFuncToggle" ${funcChecked} style="width:20px;height:20px;accent-color:var(--forest);margin-top:2px;flex-shrink:0;" />
+      </label>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+        <button type="submit" class="btn btn-dark" style="flex:1;">✓ ${g.savePrefsBtn}</button>
+        <button type="button" class="btn btn-mint" style="flex:1;" onclick="acceptGdprConsent('all')">${g.acceptAllBtn}</button>
+      </div>
+    </form>
+
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;">
+      <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;" style="color:var(--forest);font-weight:700;text-decoration:underline;">${t("footerPrivacyLink")}</a>
+      <a href="#before-trade" onclick="openGuideModal('cookies-policy'); return false;" style="color:var(--forest);font-weight:700;text-decoration:underline;">${t("footerCookiesLink")}</a>
+      <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;" style="color:var(--forest);font-weight:700;text-decoration:underline;">${t("footerTermsLink")}</a>
+    </div>
+  `;
+  document.getElementById("guideModal")?.classList.add("open");
+  document.body.classList.add("modal-open");
+}
+
+function saveGdprPreferences(e) {
+  if (e) e.preventDefault();
+  const funcToggle = document.getElementById("gdprFuncToggle");
+  const allowFunc = funcToggle ? Boolean(funcToggle.checked) : true;
+  acceptGdprConsent(allowFunc ? "all" : "essential");
+}
+
+function exportUserGdprData() {
+  const userListings = offers.filter(o => o.createdByUser || o.id > 100000);
+  const payload = {
+    platform: "ChangeIt4Me Global 1:1 Exchange",
+    gdprArticle: "Article 15 (Right of Access) & Article 20 (Right to Data Portability)",
+    exportedAt: new Date().toISOString(),
+    userProfile: currentUser || null,
+    gdprConsentPreferences: gdprConsent,
+    myListings: userListings,
+    swapProposals,
+    savedFavoriteOfferIds: favoriteIds,
+    watchlistAlerts
+  };
+  try {
+    const jsonStr = JSON.stringify(payload, null, 2);
+    if (typeof Blob !== "undefined" && typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      if (a && typeof a.click === "function") {
+        a.href = url;
+        a.download = "changeit4me-gdpr-data.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(() => URL.revokeObjectURL && URL.revokeObjectURL(url), 1000);
+    }
+  } catch (err) { }
+  showToast(getGdprUiCopy().exportedToast);
+  return payload;
+}
+
+function deleteUserGdprAccount() {
+  const emailKey = String(currentUser?.email || "").trim().toLowerCase();
+  if (emailKey && accountsDb[emailKey]) {
+    delete accountsDb[emailKey];
+    saveAccountsDb();
+  }
+  currentUser = null;
+  offers = offers.filter(o => !(o.createdByUser || o.id > 100000));
+  saveOffersToStorage();
+  watchlistAlerts = [];
+  saveWatchlistAlerts();
+  favoriteIds = [];
+  localStorage.removeItem("ci4m_user");
+  localStorage.removeItem("ci4m_favs");
+  localStorage.removeItem("ci4m_proposals");
+  localStorage.removeItem("ci4m_wiz_draft_v1");
+  renderUserHeaderState();
+  renderOffers();
+  renderMapPinsAndPanel();
+  closeDashboardModal();
+  showToast(getGdprUiCopy().deletedToast);
+}
+
+function reportOfferListing(offerId) {
+  const item = offers.find(o => o.id === offerId);
+  const g = getGdprUiCopy();
+  showToast(`${g.dsaReportedToast} (#${offerId}${item ? " · " + item.title : ""})`);
+}
+
+// ============================================================================
+// MONETIZATION: FIRST 10 SWAPS FREE, THEN CREDIT PACKS OR PRO SUBSCRIPTION
+// ============================================================================
+let guestFreeSwaps = (() => {
+  try {
+    const saved = localStorage.getItem("ci4m_guest_free_swaps");
+    return saved !== null ? Number(saved) : 10;
+  } catch (e) {
+    return 10;
+  }
+})();
+
+function getSubscriptionUiCopy() {
+  const map = {
+    ro: {
+      plan1Heading: "Starter · Primele 10 Schimburi",
+      perPack: "/ +15 schimburi",
+      packBtn: "Cumpără Pachet +15 Schimburi →",
+      plan3Tag: "PRO Nelimitat ∞",
+      perMonth: "/ lună",
+      plan3B1: "Schimburi, oferte și anunțuri NELIMITATE (∞)",
+      plan3B2: "Insignă PRO Verificat & afișare prioritară în catalog și pe hartă",
+      plan3B3: "Alerte Watchlist VIP instant & suport dedicat în 7 limbi",
+      proBtn: "Activează Abonament PRO →",
+      dashUpgradeBtn: "+ PRO / Credite",
+      proBadgeText: "PRO ∞ Nelimitat",
+      swapsWord: "Schimburi",
+      exhaustedToast: "! Ai epuizat cele 10 schimburi gratuite! Alege un Pachet de +15 Schimburi sau Abonamentul PRO Nelimitat.",
+      modalBadge: "Credite de Schimb & Abonament PRO · ChangeIt4Me",
+      modalTitle: "Alege Pachetul de Schimburi sau Abonamentul PRO",
+      modalSub: "Primele 10 schimburi sunt gratuite la înregistrare. Pentru a continua să publici anunțuri și să trimiți propuneri de schimb, alege opțiunea potrivită:",
+      statusLabel: "Statusul contului tău:",
+      statusPro: "Abonament PRO Activ — Schimburi & Anunțuri Nelimitate (∞)",
+      statusCredits: "Credite disponibile:",
+      optPackTitle: "Pachet +15 Schimburi (Pay-As-You-Go)",
+      optPackDesc: "Adaugă instant +15 schimburi și anunțuri în cont. Fără abonament lunar, creditele nu expiră.",
+      optProMonthlyTitle: "Abonament PRO Lunar (Nelimitat ∞)",
+      optProMonthlyDesc: "Schimburi și anunțuri nelimitate în toate categoriile + Insignă PRO Verificat + Promovare pe hartă.",
+      optProYearlyTitle: "Abonament PRO Anual (-35% Reducere · Nelimitat ∞)",
+      optProYearlyDesc: "12 luni de schimburi și anunțuri nelimitate (∞), prioritate maximă în AI Smart Match și asistență VIP.",
+      payMethodLabel: "Metodă de plată securizată:",
+      payCard: "Card Bancar (Visa / Mastercard / Maestro)",
+      payWallet: "Apple Pay / Google Pay (1-Click)",
+      payBank: "Transfer Bancar Instant (SEPA / Revolut)",
+      activateBtn: "Activează Acum & Deblochează Schimburile →",
+      packActivatedToast: "✓ +15 Credite de Schimb au fost adăugate în contul tău!",
+      proActivatedToast: "✓ Abonamentul PRO Nelimitat (∞) a fost activat cu succes!",
+      zeroSimulatedToast: "! Simulare activată: Contul are acum 0 schimburi gratuite rămase. Încearcă să trimiți o propunere sau să postezi un anunț!",
+      dashCardTitle: "Abonament & Credite de Schimb (Primele 10 Gratuite)",
+      dashSimulateZeroBtn: "Simulează 0 schimburi (Test Paywall)"
+    },
+    en: {
+      plan1Heading: "Starter · 10 Free Swaps",
+      perPack: "/ +15 swaps",
+      packBtn: "Buy +15 Swaps Pack →",
+      plan3Tag: "PRO Unlimited ∞",
+      perMonth: "/ month",
+      plan3B1: "UNLIMITED (∞) swap proposals, buy offers & listings",
+      plan3B2: "PRO Verified badge & priority placement on map and catalog",
+      plan3B3: "Instant VIP Watchlist alerts & priority 7-language support",
+      proBtn: "Activate PRO Subscription →",
+      dashUpgradeBtn: "+ PRO / Credits",
+      proBadgeText: "PRO ∞ Unlimited",
+      swapsWord: "Swaps",
+      exhaustedToast: "! You have used all 10 free swaps! Please unlock a +15 Swap Pack or an Unlimited PRO Subscription.",
+      modalBadge: "Swap Credits & PRO Subscription · ChangeIt4Me",
+      modalTitle: "Top Up Swap Credits or Upgrade to PRO",
+      modalSub: "Your first 10 swaps are free on registration. To continue posting listings and sending swap proposals, pick a plan below:",
+      statusLabel: "Your current account status:",
+      statusPro: "Active PRO Subscription — Unlimited Swaps & Listings (∞)",
+      statusCredits: "Available swap credits:",
+      optPackTitle: "Swap Pack (+15 Credits · Pay-As-You-Go)",
+      optPackDesc: "Instantly adds +15 swap & listing credits to your account. No monthly commitment, credits never expire.",
+      optProMonthlyTitle: "PRO Monthly Subscription (Unlimited ∞)",
+      optProMonthlyDesc: "Unlimited swaps & listings across all categories + PRO Verified badge + priority map placement.",
+      optProYearlyTitle: "PRO Annual Subscription (Save 35% · Unlimited ∞)",
+      optProYearlyDesc: "12 months of unlimited swaps & listings (∞), top AI Smart Match ranking, and VIP support.",
+      payMethodLabel: "Secure payment method:",
+      payCard: "Credit / Debit Card (Visa / Mastercard)",
+      payWallet: "Apple Pay / Google Pay (1-Click)",
+      payBank: "Instant Bank Transfer (SEPA / Revolut)",
+      activateBtn: "Activate Now & Unlock Swaps →",
+      packActivatedToast: "✓ +15 Swap Credits added to your account!",
+      proActivatedToast: "✓ PRO Unlimited Subscription (∞) activated!",
+      zeroSimulatedToast: "! Simulation active: Free swaps set to 0. Try sending a swap proposal or posting an ad to test the paywall!",
+      dashCardTitle: "Subscription & Swap Credits (First 10 Free)",
+      dashSimulateZeroBtn: "Simulate 0 swaps left (Test Paywall)"
+    },
+    de: {
+      plan1Heading: "Starter · 10 Gratis-Swaps",
+      perPack: "/ +15 Swaps",
+      packBtn: "+15 Swaps-Paket kaufen →",
+      plan3Tag: "PRO Unbegrenzt ∞",
+      perMonth: "/ Monat",
+      plan3B1: "UNBEGRENZTE (∞) Tauschvorschläge, Kaufangebote & Inserate",
+      plan3B2: "PRO-Verifizierungsabzeichen & Top-Platzierung im Katalog",
+      plan3B3: "VIP-Watchlist-Alarme & Prioritäts-Support in 7 Sprachen",
+      proBtn: "PRO-Abo aktivieren →",
+      dashUpgradeBtn: "+ PRO / Credits",
+      proBadgeText: "PRO ∞ Unbegrenzt",
+      swapsWord: "Swaps",
+      exhaustedToast: "! Sie haben Ihre 10 kostenlosen Swaps verbraucht! Bitte wählen Sie ein +15 Swap-Paket oder das PRO-Abonnement.",
+      modalBadge: "Swap-Credits & PRO-Abonnement · ChangeIt4Me",
+      modalTitle: "Swap-Credits aufladen oder PRO-Abo aktivieren",
+      modalSub: "Die ersten 10 Swaps sind bei der Registrierung kostenlos. Wählen Sie Ihr gewünschtes Paket für weitere Tauschgeschäfte:",
+      statusLabel: "Aktueller Kontostatus:",
+      statusPro: "PRO-Abo Aktiv — Unbegrenzte Swaps & Inserate (∞)",
+      statusCredits: "Verfügbare Swap-Credits:",
+      optPackTitle: "Swap-Paket (+15 Credits · Ohne Abo)",
+      optPackDesc: "Fügt sofort +15 Tausch- & Inserats-Credits hinzu. Kein Monatsabo, Credits verfallen nie.",
+      optProMonthlyTitle: "PRO Monatsabo (Unbegrenzt ∞)",
+      optProMonthlyDesc: "Unbegrenzte Swaps & Inserate in allen Kategorien + PRO-Abzeichen + Karten-Hervorhebung.",
+      optProYearlyTitle: "PRO Jahresabo (35% sparen · Unbegrenzt ∞)",
+      optProYearlyDesc: "12 Monate unbegrenzte Swaps & Inserate (∞) und höchste KI-Priorität.",
+      payMethodLabel: "Sichere Zahlungsmethode:",
+      payCard: "Kredit-/Debitkarte (Visa / Mastercard)",
+      payWallet: "Apple Pay / Google Pay (1-Klick)",
+      payBank: "SEPA-Sofortüberweisung / Revolut",
+      activateBtn: "Jetzt aktivieren & Swaps freischalten →",
+      packActivatedToast: "✓ +15 Swap-Credits wurden Ihrem Konto gutgeschrieben!",
+      proActivatedToast: "✓ PRO Unlimited Abonnement (∞) erfolgreich aktiviert!",
+      zeroSimulatedToast: "! Simulation aktiv: Gratis-Swaps auf 0 gesetzt.",
+      dashCardTitle: "Abonnement & Swap-Credits (Erste 10 Gratis)",
+      dashSimulateZeroBtn: "0 Swaps simulieren (Paywall testen)"
+    },
+    fr: {
+      plan1Heading: "Starter · 10 Échanges Gratuits",
+      perPack: "/ +15 échanges",
+      packBtn: "Acheter Pack +15 Échanges →",
+      plan3Tag: "PRO Illimité ∞",
+      perMonth: "/ mois",
+      plan3B1: "Propositions d'échange et annonces ILLIMITÉES (∞)",
+      plan3B2: "Badge PRO Vérifié & mise en avant sur la carte et le catalogue",
+      plan3B3: "Alertes Watchlist VIP & support prioritaire en 7 langues",
+      proBtn: "Activer l'Abonnement PRO →",
+      dashUpgradeBtn: "+ PRO / Crédits",
+      proBadgeText: "PRO ∞ Illimité",
+      swapsWord: "Échanges",
+      exhaustedToast: "! Vous avez utilisé vos 10 échanges gratuits ! Choisissez un Pack +15 Échanges ou l'Abonnement PRO Illimité.",
+      modalBadge: "Crédits d'Échange & Abonnement PRO · ChangeIt4Me",
+      modalTitle: "Recharger vos Crédits ou Passer à PRO",
+      modalSub: "Les 10 premiers échanges sont offerts à l'inscription. Pour continuer à publier et proposer des échanges :",
+      statusLabel: "Statut actuel de votre compte :",
+      statusPro: "Abonnement PRO Actif — Échanges & Annonces Illimités (∞)",
+      statusCredits: "Crédits d'échange disponibles :",
+      optPackTitle: "Pack +15 Échanges (Sans abonnement)",
+      optPackDesc: "Ajoute immédiatement +15 crédits d'échange et d'annonce. Les crédits n'expirent jamais.",
+      optProMonthlyTitle: "Abonnement PRO Mensuel (Illimité ∞)",
+      optProMonthlyDesc: "Échanges et annonces illimités + Badge PRO Vérifié + priorité sur la carte.",
+      optProYearlyTitle: "Abonnement PRO Annuel (-35% · Illimité ∞)",
+      optProYearlyDesc: "12 mois d'échanges et d'annonces illimités (∞) et visibilité maximale.",
+      payMethodLabel: "Moyen de paiement sécurisé :",
+      payCard: "Carte Bancaire (Visa / Mastercard)",
+      payWallet: "Apple Pay / Google Pay (1-Clic)",
+      payBank: "Virement SEPA Instantané / Revolut",
+      activateBtn: "Activer maintenant & débloquer →",
+      packActivatedToast: "✓ +15 Crédits d'échange ajoutés à votre compte !",
+      proActivatedToast: "✓ Abonnement PRO Illimité (∞) activé avec succès !",
+      zeroSimulatedToast: "! Simulation : 0 échange gratuit restant.",
+      dashCardTitle: "Abonnement & Crédits d'Échange (10 premiers gratuits)",
+      dashSimulateZeroBtn: "Simuler 0 crédit (Tester Paywall)"
+    },
+    it: {
+      plan1Heading: "Starter · 10 Scambi Gratis",
+      perPack: "/ +15 scambi",
+      packBtn: "Acquista Pacchetto +15 Scambi →",
+      plan3Tag: "PRO Illimitato ∞",
+      perMonth: "/ mese",
+      plan3B1: "Proposte di scambio e annunci ILLIMITATI (∞)",
+      plan3B2: "Badge PRO Verificato e priorità in catalogo e mappa",
+      plan3B3: "Avvisi Watchlist VIP e supporto prioritario in 7 lingue",
+      proBtn: "Attiva Abbonamento PRO →",
+      dashUpgradeBtn: "+ PRO / Crediti",
+      proBadgeText: "PRO ∞ Illimitato",
+      swapsWord: "Scambi",
+      exhaustedToast: "! Hai esaurito i 10 scambi gratuiti! Scegli un Pacchetto +15 Scambi o l'Abbonamento PRO Illimitato.",
+      modalBadge: "Crediti di Scambio & Abbonamento PRO · ChangeIt4Me",
+      modalTitle: "Ricarica Crediti o Passa a PRO Illimitato",
+      modalSub: "I primi 10 scambi sono gratuiti alla registrazione. Scegli un piano per continuare:",
+      statusLabel: "Stato attuale del tuo account:",
+      statusPro: "Abbonamento PRO Attivo — Scambi e Annunci Illimitati (∞)",
+      statusCredits: "Crediti di scambio disponibili:",
+      optPackTitle: "Pacchetto +15 Scambi (Ricarica senza vincoli)",
+      optPackDesc: "Aggiunge subito +15 crediti per scambi e annunci. Nessun canone mensile, i crediti non scadono.",
+      optProMonthlyTitle: "Abbonamento PRO Mensile (Illimitato ∞)",
+      optProMonthlyDesc: "Scambi e annunci illimitati in tutte le categorie + Badge PRO Verificato.",
+      optProYearlyTitle: "Abbonamento PRO Annuale (-35% · Illimitato ∞)",
+      optProYearlyDesc: "12 mesi di scambi e annunci illimitati (∞) e massima priorità.",
+      payMethodLabel: "Metodo di pagamento sicuro:",
+      payCard: "Carta di Credito / Debito (Visa / Mastercard)",
+      payWallet: "Apple Pay / Google Pay (1-Click)",
+      payBank: "Bonifico Istantaneo SEPA / Revolut",
+      activateBtn: "Attiva Ora e Sblocca gli Scambi →",
+      packActivatedToast: "✓ +15 Crediti di Scambio aggiunti al tuo account!",
+      proActivatedToast: "✓ Abbonamento PRO Illimitato (∞) attivato con successo!",
+      zeroSimulatedToast: "! Simulazione: 0 scambi gratuiti rimasti.",
+      dashCardTitle: "Abbonamento & Crediti di Scambio (Primi 10 Gratis)",
+      dashSimulateZeroBtn: "Simula 0 scambi (Test Paywall)"
+    },
+    es: {
+      plan1Heading: "Starter · 10 Cambios Gratis",
+      perPack: "/ +15 cambios",
+      packBtn: "Comprar Paquete +15 Cambios →",
+      plan3Tag: "PRO Ilimitado ∞",
+      perMonth: "/ mes",
+      plan3B1: "Propuestas de intercambio y anuncios ILIMITADOS (∞)",
+      plan3B2: "Insignia PRO Verificado y prioridad en mapa y catálogo",
+      plan3B3: "Alertas Watchlist VIP y soporte prioritario en 7 idiomas",
+      proBtn: "Activar Suscripción PRO →",
+      dashUpgradeBtn: "+ PRO / Créditos",
+      proBadgeText: "PRO ∞ Ilimitado",
+      swapsWord: "Cambios",
+      exhaustedToast: "! ¡Has agotado tus 10 intercambios gratis! Elige un Paquete +15 Intercambios o la Suscripción PRO Ilimitada.",
+      modalBadge: "Créditos de Intercambio y Suscripción PRO · ChangeIt4Me",
+      modalTitle: "Recargar Créditos o Activar Suscripción PRO",
+      modalSub: "Los primeros 10 intercambios son gratis al registrarte. Elige una opción para continuar:",
+      statusLabel: "Estado actual de tu cuenta:",
+      statusPro: "Suscripción PRO Activa — Intercambios y Anuncios Ilimitados (∞)",
+      statusCredits: "Créditos de intercambio disponibles:",
+      optPackTitle: "Paquete +15 Intercambios (Pago por uso)",
+      optPackDesc: "Añade al instante +15 créditos de intercambio y anuncios. Sin cuota mensual.",
+      optProMonthlyTitle: "Suscripción PRO Mensual (Ilimitado ∞)",
+      optProMonthlyDesc: "Intercambios y anuncios ilimitados + Insignia PRO Verificado.",
+      optProYearlyTitle: "Suscripción PRO Anual (-35% · Ilimitado ∞)",
+      optProYearlyDesc: "12 meses de intercambios y anuncios ilimitados (∞) y máxima visibilidad.",
+      payMethodLabel: "Método de pago seguro:",
+      payCard: "Tarjeta Bancaria (Visa / Mastercard)",
+      payWallet: "Apple Pay / Google Pay (1-Clic)",
+      payBank: "Transferencia Instantánea SEPA / Revolut",
+      activateBtn: "Activar Ahora y Desbloquear →",
+      packActivatedToast: "✓ ¡+15 Créditos de Intercambio añadidos a tu cuenta!",
+      proActivatedToast: "✓ ¡Suscripción PRO Ilimitada (∞) activada con éxito!",
+      zeroSimulatedToast: "! Simulación: 0 intercambios gratuitos restantes.",
+      dashCardTitle: "Suscripción y Créditos de Intercambio (Primeros 10 Gratis)",
+      dashSimulateZeroBtn: "Simular 0 cambios (Probar Paywall)"
+    },
+    ru: {
+      plan1Heading: "Starter · Первые 10 обменов",
+      perPack: "/ +15 обменов",
+      packBtn: "Купить пакет +15 обменов →",
+      plan3Tag: "PRO Безлимит ∞",
+      perMonth: "/ месяц",
+      plan3B1: "БЕЗЛИМИТНЫЕ (∞) предложения обмена и объявления",
+      plan3B2: "Значок PRO Verified и приоритет в каталоге и на карте",
+      plan3B3: "VIP-уведомления Watchlist и поддержка на 7 языках",
+      proBtn: "Активировать подписку PRO →",
+      dashUpgradeBtn: "+ PRO / Кредиты",
+      proBadgeText: "PRO ∞ Безлимит",
+      swapsWord: "Обменов",
+      exhaustedToast: "! Вы использовали все 10 бесплатных обменов! Выберите Пакет +15 обменов или Безлимитную подписку PRO.",
+      modalBadge: "Кредиты обмена и подписка PRO · ChangeIt4Me",
+      modalTitle: "Пополнить кредиты или подключить PRO",
+      modalSub: "Первые 10 обменов предоставляются бесплатно при регистрации. Для продолжения выберите тариф:",
+      statusLabel: "Текущий статус аккаунта:",
+      statusPro: "Подписка PRO активна — Безлимитные обмены и объявления (∞)",
+      statusCredits: "Доступно кредитов обмена:",
+      optPackTitle: "Пакет +15 обменов (Без абонентской платы)",
+      optPackDesc: "Мгновенно добавляет +15 кредитов на обмены и объявления. Кредиты не сгорают.",
+      optProMonthlyTitle: "Подписка PRO на месяц (Безлимит ∞)",
+      optProMonthlyDesc: "Неограниченные обмены и объявления во всех категориях + значок PRO Verified.",
+      optProYearlyTitle: "Подписка PRO на год (-35% · Безлимит ∞)",
+      optProYearlyDesc: "12 месяцев безлимитных обменов и объявлений (∞) и максимальный приоритет.",
+      payMethodLabel: "Безопасный способ оплаты:",
+      payCard: "Банковская карта (Visa / Mastercard)",
+      payWallet: "Apple Pay / Google Pay (1-клик)",
+      payBank: "Мгновенный банковский перевод (SEPA / Revolut)",
+      activateBtn: "Активировать сейчас и разблокировать →",
+      packActivatedToast: "✓ +15 кредитов обмена зачислены на ваш аккаунт!",
+      proActivatedToast: "✓ Безлимитная подписка PRO (∞) успешно активирована!",
+      zeroSimulatedToast: "! Симуляция: осталось 0 бесплатных обменов.",
+      dashCardTitle: "Подписка и кредиты обмена (Первые 10 бесплатно)",
+      dashSimulateZeroBtn: "Симулировать 0 обменов (Тест Paywall)"
+    }
+  };
+  return map[currentLang] || map.en;
+}
+
+function updatePricingCardsUI() {
+  const s = getSubscriptionUiCopy();
+  const p1Head = document.getElementById("plan1Heading");
+  const pPackPrice = document.getElementById("planPricePack");
+  const pPerPack = document.getElementById("planPerPack");
+  const p2Btn = document.getElementById("plan2ActionBtn");
+  const p3Tag = document.getElementById("plan3Tag");
+  const pProPrice = document.getElementById("planPricePro");
+  const pPerMonth = document.getElementById("planPerMonth");
+  const p3List = document.getElementById("plan3List");
+  const p3Btn = document.getElementById("plan3ActionBtn");
+  const dashUpBtn = document.getElementById("dashUpgradeBtn");
+
+  if (p1Head) p1Head.textContent = s.plan1Heading;
+  if (pPackPrice) pPackPrice.textContent = formatCurrency(9, currentCurrency);
+  if (pPerPack) pPerPack.textContent = s.perPack;
+  if (p2Btn) p2Btn.textContent = s.packBtn;
+  if (p3Tag) p3Tag.textContent = s.plan3Tag;
+  if (pProPrice) pProPrice.textContent = formatCurrency(19, currentCurrency);
+  if (pPerMonth) pPerMonth.textContent = s.perMonth;
+  if (p3List) {
+    p3List.innerHTML = `
+      <li>${s.plan3B1}</li>
+      <li>${s.plan3B2}</li>
+      <li>${s.plan3B3}</li>
+    `;
+  }
+  if (p3Btn) p3Btn.textContent = s.proBtn;
+  if (dashUpBtn) dashUpBtn.textContent = s.dashUpgradeBtn;
+}
+
+function canPerformSwapOrPost() {
+  if (currentUser) {
+    if (currentUser.plan === "pro") return true;
+    const rem = typeof currentUser.freeSwaps === "number" ? currentUser.freeSwaps : 10;
+    if (rem <= 0) {
+      showToast(getSubscriptionUiCopy().exhaustedToast);
+      closeAllModalsSilently();
+      openSubscriptionModal("pro");
+      return false;
+    }
+    return true;
+  } else {
+    if (guestFreeSwaps <= 0) {
+      showToast(getSubscriptionUiCopy().exhaustedToast);
+      closeAllModalsSilently();
+      openSubscriptionModal("pro");
+      return false;
+    }
+    return true;
+  }
+}
+
+function openSubscriptionModal(preselectedTier = "pro") {
+  const s = getSubscriptionUiCopy();
+  const content = document.getElementById("guideModalContent");
+  if (!content) return;
+
+  const pricePack = formatCurrency(9, currentCurrency);
+  const priceProM = formatCurrency(19, currentCurrency);
+  const priceProY = formatCurrency(149, currentCurrency);
+  const isPro = Boolean(currentUser && currentUser.plan === "pro");
+  const remSwaps = currentUser ? (currentUser.freeSwaps ?? 10) : guestFreeSwaps;
+  const selPack = preselectedTier === "pack15";
+
+  content.innerHTML = `
+    <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
+    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;">${s.modalBadge}</span>
+    <h2 style="font-size:24px;margin:10px 0 6px;">${s.modalTitle}</h2>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">${s.modalSub}</p>
+
+    <div style="padding:12px 15px;background:${isPro ? '#ecfdf5' : (remSwaps <= 0 ? '#fef2f2' : 'var(--mint-soft)')};border:1.5px solid ${isPro ? '#10b981' : (remSwaps <= 0 ? '#ef4444' : 'var(--forest)')};border-radius:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <strong style="font-size:13px;color:var(--ink);">${s.statusLabel}</strong>
+      <span style="font-size:13px;font-weight:800;color:${remSwaps <= 0 && !isPro ? '#b91c1c' : 'var(--forest)'};">
+        ${isPro ? `✓ ${s.statusPro}` : `${s.statusCredits} ${remSwaps} / 10`}
+      </span>
+    </div>
+
+    <form onsubmit="activateSubscriptionPlan(event)" style="display:grid;gap:10px;">
+      <label style="padding:13px 15px;background:#fff;border:2px solid ${selPack ? 'var(--forest)' : 'rgba(12,44,40,0.16)'};border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <input type="radio" name="subTier" value="pack15" ${selPack ? "checked" : ""} style="width:18px;height:18px;margin-top:3px;accent-color:var(--forest);" />
+          <div>
+            <strong style="font-size:14px;color:var(--ink);display:block;">${s.optPackTitle}</strong>
+            <span style="font-size:12px;color:var(--muted);line-height:1.4;display:block;">${s.optPackDesc}</span>
+          </div>
+        </div>
+        <strong style="font-size:16px;color:var(--forest);white-space:nowrap;">${pricePack}</strong>
+      </label>
+
+      <label style="padding:13px 15px;background:var(--mint-soft);border:2px solid ${!selPack ? 'var(--forest)' : 'rgba(12,44,40,0.22)'};border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <input type="radio" name="subTier" value="pro_monthly" ${!selPack ? "checked" : ""} style="width:18px;height:18px;margin-top:3px;accent-color:var(--forest);" />
+          <div>
+            <strong style="font-size:14px;color:var(--forest);display:block;">${s.optProMonthlyTitle}</strong>
+            <span style="font-size:12px;color:var(--ink-soft);line-height:1.4;display:block;">${s.optProMonthlyDesc}</span>
+          </div>
+        </div>
+        <strong style="font-size:16px;color:var(--forest);white-space:nowrap;">${priceProM}${s.perMonth}</strong>
+      </label>
+
+      <label style="padding:13px 15px;background:#fff;border:2px solid rgba(12,44,40,0.16);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <input type="radio" name="subTier" value="pro_yearly" style="width:18px;height:18px;margin-top:3px;accent-color:var(--forest);" />
+          <div>
+            <strong style="font-size:14px;color:var(--ink);display:block;">${s.optProYearlyTitle}</strong>
+            <span style="font-size:12px;color:var(--muted);line-height:1.4;display:block;">${s.optProYearlyDesc}</span>
+          </div>
+        </div>
+        <strong style="font-size:16px;color:var(--forest);white-space:nowrap;">${priceProY}</strong>
+      </label>
+
+      <div class="field-group" style="margin:4px 0;">
+        <label style="font-size:12px;font-weight:700;color:var(--ink);">${s.payMethodLabel}</label>
+        <select name="payMethod" class="input-light">
+          <option value="card">${s.payCard}</option>
+          <option value="wallet">${s.payWallet}</option>
+          <option value="bank">${s.payBank}</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-dark btn-block" style="margin-top:4px;">
+        ✓ ${s.activateBtn}
+      </button>
+    </form>
+  `;
+  document.getElementById("guideModal")?.classList.add("open");
+  document.body.classList.add("modal-open");
+}
+
+function activateSubscriptionPlan(e) {
+  if (e) e.preventDefault();
+  const s = getSubscriptionUiCopy();
+  const fd = e && e.target ? new FormData(e.target) : null;
+  const chosenTier = (fd && fd.get("subTier")) || document.querySelector('input[name="subTier"]:checked')?.value || "pro_monthly";
+
+  if (!currentUser) {
+    activateUserAccount({
+      name: "PRO Member",
+      email: "member@changeit4me.com",
+      country: detectedIpInfo?.countryName || "Romania",
+      prefLang: currentLang,
+      prefCurrency: currentCurrency,
+      freeSwaps: chosenTier === "pack15" ? 25 : 999,
+      plan: chosenTier === "pack15" ? "pack" : "pro"
+    });
+  } else {
+    if (chosenTier === "pack15") {
+      currentUser.freeSwaps = (Number(currentUser.freeSwaps) || 0) + 15;
+      if (currentUser.plan !== "pro") currentUser.plan = "pack";
+    } else {
+      currentUser.plan = "pro";
+      currentUser.freeSwaps = 999;
+    }
+    localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
+    const emailKey = String(currentUser.email || "").trim().toLowerCase();
+    if (emailKey && accountsDb[emailKey]) {
+      accountsDb[emailKey] = { ...accountsDb[emailKey], ...currentUser };
+      saveAccountsDb();
+    }
+  }
+  guestFreeSwaps = chosenTier === "pack15" ? guestFreeSwaps + 15 : 999;
+  localStorage.setItem("ci4m_guest_free_swaps", String(guestFreeSwaps));
+
+  renderUserHeaderState();
+  closeGuideModal();
+  if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+    renderDashboardContent();
+  }
+  showToast(chosenTier === "pack15" ? s.packActivatedToast : s.proActivatedToast);
+}
+
+function simulateZeroFreeSwaps() {
+  if (currentUser) {
+    currentUser.plan = "starter";
+    currentUser.freeSwaps = 0;
+    localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
+    const emailKey = String(currentUser.email || "").trim().toLowerCase();
+    if (emailKey && accountsDb[emailKey]) {
+      accountsDb[emailKey].plan = "starter";
+      accountsDb[emailKey].freeSwaps = 0;
+      saveAccountsDb();
+    }
+  }
+  guestFreeSwaps = 0;
+  localStorage.setItem("ci4m_guest_free_swaps", "0");
+  renderUserHeaderState();
+  if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+    renderDashboardContent();
+  }
+  showToast(getSubscriptionUiCopy().zeroSimulatedToast);
+}
+
 // 7-Step Wizard State (Persisted in localStorage so refresh never loses data)
 const DEFAULT_WIZ_DATA = {
   editingOfferId: null,
   image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
+  images: ["https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80"],
   category: "cars",
   titleHave: "",
   valueEur: "",
@@ -180,14 +1075,14 @@ let wizData = (() => {
         return { ...DEFAULT_WIZ_DATA, ...parsed.wizData };
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return { ...DEFAULT_WIZ_DATA };
 })();
 
 function persistWizardDraft() {
   try {
     localStorage.setItem("ci4m_wiz_draft_v1", JSON.stringify({ wizStep, wizData }));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function isLocalhostServer() {
@@ -208,7 +1103,7 @@ function syncUrlWithRoute(routePath, replace = false) {
       currentDashTab,
       currentCategoryFilter
     }));
-  } catch (e) {}
+  } catch (e) { }
 
   try {
     let targetUrl = cleanRoute;
@@ -223,7 +1118,7 @@ function syncUrlWithRoute(routePath, replace = false) {
         window.history.pushState({ route: cleanRoute }, "", targetUrl);
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function getRouteFromUrlOrStorage() {
@@ -251,7 +1146,7 @@ function getRouteFromUrlOrStorage() {
         return "/start";
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return "/";
 }
 
@@ -552,6 +1447,7 @@ function updateCurrencyDependentLabels() {
     quickValLabel.textContent = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(MDL\)|\(RUB\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${c.short || c.code})`);
   }
   onQuickPostPriceChange();
+  updatePricingCardsUI();
 }
 
 function setCurrency(currCode, isManualUserAction = false) {
@@ -619,7 +1515,11 @@ async function detectLanguageByGeoIP(forceOverwriteManual = false) {
     setLanguage("en", false);
   }
 
-  // 3. Query Geo-IP APIs to detect visitor's European country
+  // 3. Query Geo-IP APIs to detect visitor's European country (only if functional GDPR consent allows it)
+  if (gdprConsent && gdprConsent.decided && gdprConsent.functional === false) {
+    updateGeoIpBannerUI();
+    return;
+  }
   const endpoints = [
     {
       url: "https://ipwho.is/",
@@ -762,6 +1662,7 @@ function setLanguage(langCode, isManualUserAction = false) {
 
   updateCurrencyDependentLabels();
   updateGeoIpBannerUI();
+  renderGdprBannerText();
   renderUserHeaderState();
   renderOffers();
   renderMapPinsAndPanel();
@@ -785,16 +1686,34 @@ function updateFavCountUI() {
 
 function toggleFavorite(offerId, ev) {
   if (ev) ev.stopPropagation();
+  const favMsgMap = {
+    ro: "♥ Salvat la favorite!",
+    en: "♥ Saved to your favorites!",
+    de: "♥ Zu Ihren Favoriten hinzugefügt!",
+    fr: "♥ Ajouté à vos favoris !",
+    it: "♥ Salvato nei preferiti!",
+    es: "♥ ¡Guardado en tus favoritos!",
+    ru: "♥ Сохранено в избранное!"
+  };
   const idx = favoriteIds.indexOf(offerId);
   if (idx >= 0) {
     favoriteIds.splice(idx, 1);
   } else {
     favoriteIds.push(offerId);
-    showToast("♥ Saved to your favorites!");
+    showToast(favMsgMap[currentLang] || favMsgMap.en);
   }
   localStorage.setItem("ci4m_favs", JSON.stringify(favoriteIds));
   updateFavCountUI();
   renderOffers();
+  if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId === offerId) {
+    const modalFavBtn = document.getElementById("offerModalFavBtn");
+    if (modalFavBtn) {
+      const isFav = favoriteIds.includes(offerId);
+      modalFavBtn.style.background = isFav ? "var(--mint)" : "var(--bg)";
+      modalFavBtn.style.color = isFav ? "var(--forest)" : "var(--ink)";
+      modalFavBtn.textContent = isFav ? "♥" : "♡";
+    }
+  }
 }
 
 function filterByCategory(catCode) {
@@ -1733,6 +2652,21 @@ function initWorldMap() {
   renderMapPinsAndPanel();
 }
 
+function getLocalizedCountryName(country) {
+  const map = {
+    "Germany": { en: "Germany", ro: "Germania", de: "Deutschland", fr: "Allemagne", it: "Germania", es: "Alemania", ru: "Германия" },
+    "Romania": { en: "Romania", ro: "România", de: "Rumänien", fr: "Roumanie", it: "Romania", es: "Rumanía", ru: "Румыния" },
+    "Spain": { en: "Spain", ro: "Spania", de: "Spanien", fr: "Espagne", it: "Spagna", es: "España", ru: "Испания" },
+    "Italy": { en: "Italy", ro: "Italia", de: "Italien", fr: "Italie", it: "Italia", es: "Italia", ru: "Италия" },
+    "France": { en: "France", ro: "Franța", de: "Frankreich", fr: "France", it: "Francia", es: "Francia", ru: "Франция" },
+    "Austria": { en: "Austria", ro: "Austria", de: "Österreich", fr: "Autriche", it: "Austria", es: "Austria", ru: "Австрия" },
+    "Switzerland": { en: "Switzerland", ro: "Elveția", de: "Schweiz", fr: "Suisse", it: "Svizzera", es: "Suiza", ru: "Швейцария" },
+    "United Kingdom": { en: "United Kingdom", ro: "Marea Britanie", de: "Großbritannien", fr: "Royaume-Uni", it: "Regno Unito", es: "Reino Unido", ru: "Великобритания" },
+    "Moldova": { en: "Moldova", ro: "Moldova", de: "Moldau", fr: "Moldavie", it: "Moldavia", es: "Moldavia", ru: "Молдова" }
+  };
+  return (map[country] && map[country][currentLang]) || country;
+}
+
 function renderMapPinsAndPanel() {
   const grouped = new Map();
   offers.forEach(o => {
@@ -1756,7 +2690,7 @@ function renderMapPinsAndPanel() {
   if (chipsEl) {
     chipsEl.innerHTML = countries.map(g => `
       <button type="button" class="country-chip ${g.country === selectedMapCountry ? 'active' : ''}" onclick="selectCountryOnMap('${g.country}')">
-        ${g.country} (${g.items.length})
+        ${getLocalizedCountryName(g.country)} (${g.items.length})
       </button>
     `).join("");
   }
@@ -1764,6 +2698,9 @@ function renderMapPinsAndPanel() {
   if (leafletMap) {
     mapMarkers.forEach(m => m.remove());
     mapMarkers = [];
+
+    const swapsWordMap = { ro: "oferte", en: "swaps", de: "Angebote", fr: "offres", it: "offerte", es: "ofertas", ru: "обменов" };
+    const swapsWord = swapsWordMap[currentLang] || swapsWordMap.en;
 
     countries.forEach(g => {
       const isSelected = g.country === selectedMapCountry;
@@ -1774,8 +2711,9 @@ function renderMapPinsAndPanel() {
         iconAnchor: [14, 14]
       });
 
-      const marker = window.L.marker([g.lat, g.lng], { icon, title: g.country }).addTo(leafletMap);
-      marker.bindTooltip(`${g.country} · ${g.items.length} swaps`, {
+      const locC = getLocalizedCountryName(g.country);
+      const marker = window.L.marker([g.lat, g.lng], { icon, title: locC }).addTo(leafletMap);
+      marker.bindTooltip(`${locC} · ${g.items.length} ${swapsWord}`, {
         direction: "top",
         offset: [0, -10],
         opacity: 1,
@@ -1791,7 +2729,7 @@ function renderMapPinsAndPanel() {
   const listEl = document.getElementById("countryOffersList");
 
   if (activeGroup && listEl) {
-    headingEl.innerHTML = `${PREMIUM_ICONS.pin}${activeGroup.country} (${activeGroup.items.length})`;
+    headingEl.innerHTML = `${PREMIUM_ICONS.pin}${getLocalizedCountryName(activeGroup.country)} (${activeGroup.items.length})`;
     listEl.innerHTML = activeGroup.items.map(item => {
       const loc = getOfferLocalized(item);
       return `
@@ -1830,9 +2768,42 @@ function renderUserHeaderState() {
   const mobileRegBtn = document.getElementById("mobileRegisterBtn");
   if (!guestBtns || !userPill) return;
 
+  const isProPlan = Boolean(currentUser && currentUser.plan === "pro");
+  const remCount = currentUser ? (currentUser.freeSwaps ?? 10) : guestFreeSwaps;
+  const subCopy = getSubscriptionUiCopy();
   const dashSwapsEl = document.getElementById("dashFreeSwapsCount");
   if (dashSwapsEl) {
-    dashSwapsEl.textContent = String(currentUser ? (currentUser.freeSwaps ?? 10) : 10);
+    dashSwapsEl.textContent = isProPlan ? "PRO ∞" : String(remCount);
+  }
+  const dashSuffixEl = document.getElementById("dashFreeSwapsSuffix");
+  if (dashSuffixEl) {
+    if (isProPlan) {
+      dashSuffixEl.textContent = "";
+    } else {
+      const suffixMap = {
+        ro: "/ 10 Schimburi Gratuite",
+        en: "/ 10 Free Swaps Available",
+        de: "/ 10 Gratis-Swaps verfügbar",
+        fr: "/ 10 Échanges Gratuits",
+        it: "/ 10 Scambi Gratuiti",
+        es: "/ 10 Intercambios Gratis",
+        ru: "/ 10 бесплатных обменов"
+      };
+      dashSuffixEl.textContent = suffixMap[currentLang] || suffixMap.en;
+    }
+  }
+  const dashProfBtn = document.getElementById("dashTabProfileBtn");
+  if (dashProfBtn) {
+    const profTabMap = {
+      ro: "Profil & Setări",
+      en: "Profile & Settings",
+      de: "Profil & Einstellungen",
+      fr: "Profil & Paramètres",
+      it: "Profilo & Impostazioni",
+      es: "Perfil y Ajustes",
+      ru: "Профиль и настройки"
+    };
+    dashProfBtn.textContent = profTabMap[currentLang] || profTabMap.en;
   }
 
   if (currentUser) {
@@ -1848,11 +2819,12 @@ function renderUserHeaderState() {
       mobileAuthBtn.onclick = () => { closeMobileMenu(); handleUserLogout(); };
     }
     const initials = (currentUser.name || "U").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
+    const badgeLabel = isProPlan ? subCopy.proBadgeText : `${remCount} ${subCopy.swapsWord}`;
     userPill.innerHTML = `
       <div class="user-pill" onclick="openDashboardModal('proposals')" title="${t('navMyDashboard')}">
         <span class="user-pill-avatar">${initials}</span>
         <span>${currentUser.name.split(" ")[0]}</span>
-        <span class="user-swaps-badge">${currentUser.freeSwaps ?? 10} Swaps</span>
+        <span class="user-swaps-badge" onclick="event.stopPropagation(); openSubscriptionModal('pro');" title="Upgrade / Top-up Swaps">${badgeLabel}</span>
         <button type="button" class="user-logout-btn" onclick="event.stopPropagation(); handleUserLogout();" title="${t('dashLogout')}" aria-label="${t('dashLogout')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
@@ -1901,6 +2873,7 @@ function activateUserAccount(userData) {
     country: userData.country || existingAcc?.country || detectedIpInfo.countryName || "Europe",
     prefLang: userData.prefLang || existingAcc?.prefLang || currentLang,
     prefCurrency: userData.prefCurrency || existingAcc?.prefCurrency || currentCurrency,
+    plan: userData.plan || existingAcc?.plan || "starter",
     freeSwaps: typeof userData.freeSwaps === "number" ? userData.freeSwaps : (typeof existingAcc?.freeSwaps === "number" ? existingAcc.freeSwaps : 10)
   };
   if (emailKey) {
@@ -2054,8 +3027,57 @@ function parseSmartLocationString(rawLoc) {
   return { country: detectedCountry, city: detectedCity, lat: coords.lat, lng: coords.lng };
 }
 
+function fillQuickPostSample(cat) {
+  const samples = {
+    "cars": {
+      eur: 58000,
+      have: currentLang === "ro" ? "2022 BMW X5 xDrive45e M-Sport (42.000 km)" : "2022 BMW X5 xDrive45e M-Sport (42,000 km)",
+      want: currentLang === "ro" ? "Porsche Macan S / Apartament 2 camere (± diferență)" : "Porsche Macan S / 2-Room Apartment (± cash)",
+      loc: currentLang === "ro" ? "București, România" : "Munich, Germany",
+      desc: currentLang === "ro" ? "Primul proprietar, istoric complet în reprezentanța BMW, fără accident, pachet M-Sport" : "First owner, full official BMW service history, accident-free, M-Sport package",
+      img: "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80"
+    },
+    "real-estate": {
+      eur: 195000,
+      have: currentLang === "ro" ? "Apartament 3 Camere Modern + Parcare Subterană (86 m²)" : "Modern 3-Room Apartment + Underground Parking (86 m²)",
+      want: currentLang === "ro" ? "Casă cu curte / Vilă sau SUV + diferență" : "House with Garden / Villa or Luxury SUV + Cash",
+      loc: currentLang === "ro" ? "Cluj-Napoca, România" : "Vienna, Austria",
+      desc: currentLang === "ro" ? "Mobilat complet, încălzire în pardoseală, liber de sarcini, pregătit pentru schimb notarial 1:1" : "Fully furnished, underfloor heating, mortgage-free, ready for 1:1 notary deed swap",
+      img: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80"
+    },
+    "electronics": {
+      eur: 1450,
+      have: "Apple iPhone 16 Pro Max 512GB Natural Titanium",
+      want: currentLang === "ro" ? "MacBook Pro 16 M3 / iPad Pro M4 + diferență" : "MacBook Pro 16 M3 / iPad Pro M4 + cash balance",
+      loc: currentLang === "ro" ? "București, România" : "Zurich, Switzerland",
+      desc: currentLang === "ro" ? "100% sănătate baterie, cutie sigilată + factură și garanție Apple 24 luni" : "100% battery health, original box + invoice and 24M Apple warranty",
+      img: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=1000&q=80"
+    }
+  };
+  const s = samples[cat] || samples.cars;
+  const catSel = document.getElementById("quickPostCategorySelect");
+  const valIn = document.getElementById("quickPostValueInput");
+  const currSel = document.getElementById("quickPostCurrencySelect");
+  const haveIn = document.getElementById("quickHaveInput");
+  const wantIn = document.getElementById("quickWantInput");
+  const locIn = document.getElementById("quickLocationInput");
+  const descIn = document.getElementById("quickDescInput");
+  const photoIn = document.getElementById("quickPhotoUrlInput");
+
+  if (catSel) catSel.value = cat;
+  const activeCurr = currSel?.value || currentCurrency;
+  if (valIn) valIn.value = String(convertFromEur(s.eur, activeCurr));
+  if (haveIn) haveIn.value = s.have;
+  if (wantIn) wantIn.value = s.want;
+  if (locIn) locIn.value = s.loc;
+  if (descIn) descIn.value = s.desc;
+  if (photoIn) photoIn.value = s.img;
+  onQuickPostPriceChange();
+}
+
 function handleInlineQuickPost(e) {
   e.preventDefault();
+  if (!canPerformSwapOrPost()) return;
   const fd = new FormData(e.target);
   const parsedLoc = parseSmartLocationString(fd.get("location"));
 
@@ -2076,6 +3098,12 @@ function handleInlineQuickPost(e) {
   const titleHave = String(fd.get("titleHave") || "").trim();
   const titleWant = String(fd.get("titleWant") || "").trim() || (dealType === "sale" ? t("dealSaleOnly") : "Direct 1:1 Swap");
   const desc = String(fd.get("desc") || "").trim() || "Verified Condition";
+  const customImgUrl = String(fd.get("imageUrl") || "").trim();
+  const primaryImage = (customImgUrl.startsWith("http://") || customImgUrl.startsWith("https://"))
+    ? customImgUrl
+    : (defaultImages[cat] || defaultImages.cars);
+  const pool = (typeof CATEGORY_GALLERY_POOLS !== "undefined" && CATEGORY_GALLERY_POOLS[cat]) ? CATEGORY_GALLERY_POOLS[cat] : [];
+  const galleryImages = [primaryImage, ...pool.filter(u => u !== primaryImage).slice(0, 2)];
 
   const newOffer = {
     id: Date.now(),
@@ -2093,7 +3121,8 @@ function handleInlineQuickPost(e) {
     owner: currentUser ? currentUser.name : "Verified Member",
     verified: true,
     matchScore: 99,
-    image: defaultImages[cat] || defaultImages.cars,
+    image: primaryImage,
+    images: galleryImages,
     specs: desc,
     title: titleHave,
     want: titleWant,
@@ -2102,6 +3131,7 @@ function handleInlineQuickPost(e) {
 
   offers.unshift(newOffer);
   saveOffersToStorage();
+  consumeFreeSwapIfLogged();
   currentCategoryFilter = "all";
   currentDealModeFilter = "all";
   const catSearch = document.getElementById("catalogSearchInput");
@@ -2145,6 +3175,7 @@ function switchAuthTab(mode) {
   const isReg = mode === "register";
   const isLogin = mode === "login";
   const isVerify = mode === "verify";
+  const isReset = mode === "reset";
   if (document.getElementById("authModal")?.classList.contains("open") && (isReg || isLogin)) {
     syncUrlWithRoute(isLogin ? "/login" : "/register", true);
   }
@@ -2155,15 +3186,42 @@ function switchAuthTab(mode) {
   const regForm = document.getElementById("modalRegisterForm");
   const loginForm = document.getElementById("modalLoginForm");
   const verifyForm = document.getElementById("modalVerifyForm");
+  const resetForm = document.getElementById("modalResetForm");
 
   if (regForm) regForm.style.display = isReg ? "flex" : "none";
   if (loginForm) loginForm.style.display = isLogin ? "flex" : "none";
   if (verifyForm) verifyForm.style.display = isVerify ? "flex" : "none";
+  if (resetForm) resetForm.style.display = isReset ? "flex" : "none";
 
   const titleEl = document.getElementById("authModalTitle");
   if (titleEl) {
     if (isVerify) {
       titleEl.style.display = "none";
+    } else if (isReset) {
+      titleEl.style.display = "block";
+      titleEl.textContent = t("authForgotPwd");
+      const resetPromptMap = {
+        ro: "Introdu adresa de email a contului și alege o parolă nouă:",
+        en: "Enter your account email and choose a new password:",
+        de: "Geben Sie Ihre Konto-E-Mail-Adresse und ein neues Passwort ein:",
+        fr: "Entrez l'e-mail de votre compte et choisissez un nouveau mot de passe :",
+        it: "Inserisci l'email del tuo account e scegli una nuova password:",
+        es: "Introduce el correo de tu cuenta y elige una nueva contraseña:",
+        ru: "Введите email вашего аккаунта и укажите новый пароль:"
+      };
+      const resetBtnMap = {
+        ro: "Resetează parola →",
+        en: "Reset Password →",
+        de: "Passwort zurücksetzen →",
+        fr: "Réinitialiser le mot de passe →",
+        it: "Reimposta password →",
+        es: "Restablecer contraseña →",
+        ru: "Сбросить пароль →"
+      };
+      const rpEl = document.getElementById("resetPromptText");
+      if (rpEl) rpEl.textContent = resetPromptMap[currentLang] || resetPromptMap.en;
+      const rbEl = document.getElementById("resetSubmitBtn");
+      if (rbEl) rbEl.textContent = resetBtnMap[currentLang] || resetBtnMap.en;
     } else {
       titleEl.style.display = "block";
       const key = isReg ? "authCreateHeading" : "authSignInHeading";
@@ -2296,7 +3354,43 @@ function updatePasswordStrength(val, barsContainerId) {
 }
 
 function handleForgotPassword() {
-  showToast(getAuthMsg().resetSent);
+  document.getElementById("authModal")?.classList.add("open");
+  document.body.classList.add("modal-open");
+  switchAuthTab("reset");
+  const resetEmailEl = document.getElementById("resetEmailInput");
+  if (resetEmailEl) {
+    const existingEmail = document.querySelector("#modalLoginForm input[name='email']")?.value
+      || document.querySelector("#enrollSignInPanel input[name='email']")?.value
+      || "";
+    if (existingEmail && !resetEmailEl.value) resetEmailEl.value = existingEmail;
+    setTimeout(() => resetEmailEl.focus(), 60);
+  }
+}
+
+function handleResetPasswordSubmit(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const email = String(fd.get("email") || "").trim();
+  const newPassword = String(fd.get("newPassword") || "");
+  if (!email || newPassword.length < 6) return;
+  const emailKey = email.toLowerCase();
+  const existing = accountsDb[emailKey] || {};
+  const rawPrefix = email.split("@")[0].replace(/[._-]+/g, " ").trim();
+  const defaultName = rawPrefix
+    ? rawPrefix.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+    : "Verified Member";
+
+  startEmailVerification({
+    name: existing.name || defaultName,
+    email,
+    password: newPassword,
+    phone: existing.phone || "",
+    country: existing.country || detectedIpInfo.countryName || "Romania",
+    prefLang: existing.prefLang || currentLang,
+    prefCurrency: existing.prefCurrency || currentCurrency,
+    freeSwaps: typeof existing.freeSwaps === "number" ? existing.freeSwaps : 10
+  });
+  e.target.reset();
 }
 
 function handleModalRegister(e) {
@@ -2352,21 +3446,31 @@ function handleModalLogin(e) {
 }
 
 function handleGoogleAuth() {
+  const existingAccounts = Object.values(accountsDb);
+  const baseUser = existingAccounts.length > 0 ? existingAccounts[0] : null;
   activateUserAccount({
-    name: "Google Verified Member",
-    email: "verified@gmail.com",
+    name: baseUser?.name || "Google Verified Member",
+    email: baseUser?.email || "verified@gmail.com",
+    phone: baseUser?.phone || "",
+    country: baseUser?.country || detectedIpInfo.countryName || "Romania",
     prefLang: currentLang,
-    prefCurrency: currentCurrency
+    prefCurrency: currentCurrency,
+    freeSwaps: typeof baseUser?.freeSwaps === "number" ? baseUser.freeSwaps : 10
   });
   closeAuthModal();
 }
 
 function handleAppleAuth() {
+  const existingAccounts = Object.values(accountsDb);
+  const baseUser = existingAccounts.length > 0 ? existingAccounts[0] : null;
   activateUserAccount({
-    name: "Apple ID Verified",
-    email: "verified@icloud.com",
+    name: baseUser?.name || "Apple ID Verified",
+    email: baseUser?.email || "verified@icloud.com",
+    phone: baseUser?.phone || "",
+    country: baseUser?.country || detectedIpInfo.countryName || "Romania",
     prefLang: currentLang,
-    prefCurrency: currentCurrency
+    prefCurrency: currentCurrency,
+    freeSwaps: typeof baseUser?.freeSwaps === "number" ? baseUser.freeSwaps : 10
   });
   closeAuthModal();
 }
@@ -2646,9 +3750,12 @@ function editListingInWizard(offerId) {
   const loc = getOfferLocalized(item);
   closeDashboardModal();
   closeOfferModal();
+  const primaryImg = item.image || WIZ_CATEGORY_PHOTOS[item.category] || DEFAULT_WIZ_DATA.image;
+  const galleryImgs = Array.isArray(item.images) && item.images.length > 0 ? [...item.images] : [primaryImg];
   wizData = {
     editingOfferId: item.id,
-    image: item.image || WIZ_CATEGORY_PHOTOS[item.category] || DEFAULT_WIZ_DATA.image,
+    image: primaryImg,
+    images: galleryImgs,
     category: item.category || "cars",
     titleHave: item.title || loc.title || "",
     valueEur: item.valueEur || 15000,
@@ -2685,7 +3792,16 @@ function deleteUserListing(offerId) {
   if (document.getElementById("dashboardModal")?.classList.contains("open")) {
     renderDashboardContent();
   }
-  showToast("✓ Listing removed");
+  const delMsgMap = {
+    ro: "✓ Anunțul a fost șters",
+    en: "✓ Listing removed",
+    de: "✓ Inserat gelöscht",
+    fr: "✓ Annonce supprimée",
+    it: "✓ Annuncio rimosso",
+    es: "✓ Anuncio eliminado",
+    ru: "✓ Объявление удалено"
+  };
+  showToast(delMsgMap[currentLang] || delMsgMap.en);
 }
 
 function saveCurrentWizStepInputs() {
@@ -3013,7 +4129,7 @@ async function handleWizGeoSearchInput(val) {
         const merged = [...localMatches, ...apiPlaces].slice(0, 6);
         renderGeoList(merged);
       }
-    } catch (e) {}
+    } catch (e) { }
   }, 240);
 }
 
@@ -3083,14 +4199,92 @@ function onQuickPostPriceChange() {
   }
 }
 
+const CATEGORY_GALLERY_POOLS = {
+  "cars": [
+    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1000&q=80"
+  ],
+  "real-estate": [
+    "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80"
+  ],
+  "electronics": [
+    "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=1000&q=80"
+  ],
+  "home-garden": [
+    "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1000&q=80"
+  ],
+  "auto-parts": [
+    "https://images.unsplash.com/photo-1600706432502-77a0e2e32795?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?auto=format&fit=crop&w=1000&q=80"
+  ],
+  "clothing": [
+    "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1000&q=80"
+  ]
+};
+
+function getOfferGalleryImages(item) {
+  if (!item) return [DEFAULT_WIZ_DATA.image];
+  if (Array.isArray(item.images) && item.images.length > 0) {
+    return item.images;
+  }
+  const primary = item.image || WIZ_CATEGORY_PHOTOS[item.category] || DEFAULT_WIZ_DATA.image;
+  const pool = CATEGORY_GALLERY_POOLS[item.category] || CATEGORY_GALLERY_POOLS.cars;
+  const extras = pool.filter(u => u !== primary).slice(0, 2);
+  return [primary, ...extras];
+}
+
+function ensureWizImagesArray() {
+  if (!Array.isArray(wizData.images) || wizData.images.length === 0) {
+    wizData.images = [wizData.image || DEFAULT_WIZ_DATA.image];
+  }
+}
+
 function selectWizPresetPhoto(url) {
+  ensureWizImagesArray();
+  if (!wizData.images.includes(url)) {
+    wizData.images = [url, ...wizData.images].slice(0, 6);
+  }
   wizData.image = url;
+  renderWizStep();
+}
+
+function setWizPrimaryPhoto(idx) {
+  ensureWizImagesArray();
+  const chosen = wizData.images[idx];
+  if (!chosen) return;
+  wizData.image = chosen;
+  wizData.images = [chosen, ...wizData.images.filter((_, i) => i !== idx)];
+  renderWizStep();
+}
+
+function removeWizPhoto(idx) {
+  ensureWizImagesArray();
+  if (wizData.images.length <= 1) return;
+  wizData.images.splice(idx, 1);
+  wizData.image = wizData.images[0];
   renderWizStep();
 }
 
 function handleWizImageUrlInput(val) {
   const cleanUrl = String(val || "").trim();
   if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+    ensureWizImagesArray();
+    if (!wizData.images.includes(cleanUrl)) {
+      wizData.images = [cleanUrl, ...wizData.images].slice(0, 6);
+    }
     wizData.image = cleanUrl;
     const b = document.getElementById("wizPhotoPreviewBox");
     if (b) b.style.backgroundImage = `url('${cleanUrl}')`;
@@ -3099,14 +4293,25 @@ function handleWizImageUrlInput(val) {
 }
 
 function handleWizFileUpload(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    wizData.image = ev.target.result;
-    renderWizStep();
-  };
-  reader.readAsDataURL(file);
+  const files = Array.from(e.target.files || []).slice(0, 5);
+  if (!files.length) return;
+  ensureWizImagesArray();
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      if (!wizData.images.includes(dataUrl)) {
+        wizData.images = [dataUrl, ...wizData.images].slice(0, 6);
+      }
+      wizData.image = wizData.images[0];
+      loaded++;
+      if (loaded === files.length) {
+        renderWizStep();
+      }
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 const WIZ_CATEGORY_PHOTOS = {
@@ -3122,6 +4327,7 @@ function selectWizCategoryCard(cat) {
   wizData.category = cat;
   if (WIZ_CATEGORY_PHOTOS[cat]) {
     wizData.image = WIZ_CATEGORY_PHOTOS[cat];
+    wizData.images = [WIZ_CATEGORY_PHOTOS[cat], ...(CATEGORY_GALLERY_POOLS[cat] || []).slice(1, 3)];
   }
   wizStep = 2;
   renderWizStep();
@@ -3205,33 +4411,47 @@ function renderWizStep() {
       </div>
     `;
   } else if (wizStep === 3) {
+    ensureWizImagesArray();
     const ui = getSmartUiLabels();
     const presets = [
-      WIZ_CATEGORY_PHOTOS[wizData.category] || WIZ_CATEGORY_PHOTOS["cars"],
+      ...(CATEGORY_GALLERY_POOLS[wizData.category] || []),
       WIZ_CATEGORY_PHOTOS["cars"],
       WIZ_CATEGORY_PHOTOS["real-estate"],
       WIZ_CATEGORY_PHOTOS["electronics"],
       WIZ_CATEGORY_PHOTOS["home-garden"],
       WIZ_CATEGORY_PHOTOS["clothing"]
-    ].filter((v, i, a) => a.indexOf(v) === i);
+    ].filter((v, i, a) => v && a.indexOf(v) === i).slice(0, 6);
     c.innerHTML = `
-      <h3 style="margin:0 0 8px;font-size:24px;">3. ${t("wizStep1")}</h3>
+      <h3 style="margin:0 0 8px;font-size:24px;">3. ${t("wizStep1")} (${wizData.images.length} / 6)</h3>
       <p style="color:var(--muted);margin:0 0 14px;">${ui.uploadPhotoDesc}</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;">
-        <label style="border:2px dashed var(--forest);background:var(--mint-soft);border-radius:20px;padding:26px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:8px;align-items:center;">
-          <strong style="color:var(--forest);">${ui.uploadPhotoTitle}</strong>
-          <span style="font-size:13px;color:var(--muted);">${ui.uploadPhotoSub}</span>
-          <input type="file" accept="image/*" style="display:none;" onchange="handleWizFileUpload(event)" />
+        <label style="border:2px dashed var(--forest);background:var(--mint-soft);border-radius:20px;padding:22px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:8px;align-items:center;">
+          <strong style="color:var(--forest);">+ ${ui.uploadPhotoTitle}</strong>
+          <span style="font-size:13px;color:var(--muted);">${ui.uploadPhotoSub} (Max 6)</span>
+          <input type="file" accept="image/*" multiple style="display:none;" onchange="handleWizFileUpload(event)" />
         </label>
-        <div id="wizPhotoPreviewBox" style="height:160px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:2px solid var(--forest);"></div>
+        <div id="wizPhotoPreviewBox" style="height:160px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:2px solid var(--forest);position:relative;">
+          <span style="position:absolute;top:10px;left:10px;background:var(--forest);color:var(--mint);font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;">1. Cover</span>
+        </div>
       </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        ${wizData.images.map((imgUrl, idx) => `
+          <div style="position:relative;width:78px;height:56px;border-radius:10px;overflow:hidden;border:2.5px solid ${idx === 0 ? 'var(--forest)' : 'rgba(12,44,40,0.2)'};cursor:pointer;" onclick="setWizPrimaryPhoto(${idx})">
+            <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;" alt="" />
+            <span style="position:absolute;bottom:2px;left:4px;background:rgba(12,44,40,0.82);color:#fff;font-size:10px;font-weight:800;padding:1px 5px;border-radius:6px;">${idx === 0 ? 'Cover' : '#' + (idx + 1)}</span>
+            ${wizData.images.length > 1 ? `<button type="button" onclick="event.stopPropagation(); removeWizPhoto(${idx});" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(185,28,28,0.9);color:#fff;font-size:10px;line-height:18px;padding:0;cursor:pointer;">✕</button>` : ""}
+          </div>
+        `).join("")}
+      </div>
+
       <div class="field-group" style="margin-top:12px;margin-bottom:8px;">
-        <input type="url" id="wizImageUrlInput" class="input-light" placeholder="${vc.pasteUrlPlaceholder}" value="${wizData.image.startsWith('http') ? wizData.image : ''}" oninput="handleWizImageUrlInput(this.value)" />
+        <input type="url" id="wizImageUrlInput" class="input-light" placeholder="${vc.pasteUrlPlaceholder}" value="" oninput="handleWizImageUrlInput(this.value)" />
       </div>
       <p style="font-size:13px;font-weight:700;margin:10px 0 8px;color:var(--muted);">${ui.samplePhotoLabel}</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         ${presets.map(u => `
-          <img src="${u}" onclick="selectWizPresetPhoto('${u}')" style="width:90px;height:64px;object-fit:cover;border-radius:12px;cursor:pointer;border:3px solid ${wizData.image === u ? 'var(--forest)' : 'transparent'};" alt="Preset" />
+          <img src="${u}" onclick="selectWizPresetPhoto('${u}')" style="width:86px;height:60px;object-fit:cover;border-radius:12px;cursor:pointer;border:3px solid ${wizData.images.includes(u) ? 'var(--forest)' : 'transparent'};" alt="Preset" />
         `).join("")}
       </div>
     `;
@@ -3362,6 +4582,10 @@ function renderWizStep() {
           </div>
         </div>
       </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--ink-soft);margin-top:12px;cursor:pointer;line-height:1.45;">
+        <input type="checkbox" id="wizGdprConsent" checked style="width:16px;height:16px;margin-top:2px;accent-color:var(--forest);flex-shrink:0;" />
+        <span>${getGdprUiCopy().wizConsentLabel}</span>
+      </label>
     `;
   }
 
@@ -3380,13 +4604,14 @@ function renderWizStep() {
 function publishWizardOffer() {
   saveCurrentWizStepInputs();
   if (!validateWizStep(7)) return;
+  const isEditing = Boolean(wizData.editingOfferId);
+  if (!isEditing && !canPerformSwapOrPost()) return;
   const fallbackCoords = COUNTRY_COORDS[wizData.country] || { lat: 48.13, lng: 11.58 };
   const finalLat = wizData.lat || fallbackCoords.lat;
   const finalLng = wizData.lng || fallbackCoords.lng;
   const chosenCurr = wizData.originalCurrency || currentCurrency;
   const chosenAmt = Number(wizData.originalAmount) || convertFromEur(20000, chosenCurr);
   const exactEur = convertToEur(chosenAmt, chosenCurr);
-  const isEditing = Boolean(wizData.editingOfferId);
   const offerPayload = {
     id: isEditing ? wizData.editingOfferId : Date.now(),
     createdByUser: true,
@@ -3404,6 +4629,7 @@ function publishWizardOffer() {
     verified: true,
     matchScore: 99,
     image: wizData.image,
+    images: Array.isArray(wizData.images) && wizData.images.length > 0 ? [...wizData.images] : [wizData.image],
     specs: wizData.specs || "Verified Condition",
     title: wizData.titleHave || "New Swap Listing",
     want: wizData.titleWant || (wizData.dealType === "sale" ? t("dealSaleOnly") : "Direct 1:1 Swap"),
@@ -3422,6 +4648,7 @@ function publishWizardOffer() {
   }
 
   saveOffersToStorage();
+  if (!isEditing) consumeFreeSwapIfLogged();
   wizStep = 1;
   wizData = { ...DEFAULT_WIZ_DATA };
   persistWizardDraft();
@@ -3440,6 +4667,84 @@ function publishWizardOffer() {
 // ============================================================================
 // OFFER DETAIL, 1:1 VALUE CALCULATOR & "PROPOSE A SWAP" MODAL
 // ============================================================================
+let currentGalleryIndex = 0;
+let selectedMySwapOfferId = null;
+let activeProposalThreadId = null;
+
+function selectOfferGalleryPhoto(offerId, idx) {
+  const item = offers.find(o => o.id === offerId);
+  if (!item) return;
+  const imgs = getOfferGalleryImages(item);
+  currentGalleryIndex = ((idx % imgs.length) + imgs.length) % imgs.length;
+  const mainBox = document.getElementById("offerModalGalleryMain");
+  const countBadge = document.getElementById("offerModalGalleryCount");
+  if (mainBox) mainBox.style.backgroundImage = `url('${imgs[currentGalleryIndex]}')`;
+  if (countBadge) countBadge.textContent = `${currentGalleryIndex + 1} / ${imgs.length}`;
+  document.querySelectorAll("#offerModalThumbsRow img").forEach((imgEl, i) => {
+    imgEl.style.borderColor = i === currentGalleryIndex ? "var(--forest)" : "transparent";
+    imgEl.style.opacity = i === currentGalleryIndex ? "1" : "0.68";
+  });
+}
+
+function stepOfferGalleryPhoto(offerId, delta) {
+  selectOfferGalleryPhoto(offerId, currentGalleryIndex + delta);
+}
+
+function buildSwapSideBySideHtml(targetOfferId) {
+  const target = offers.find(o => o.id === targetOfferId);
+  if (!target) return "";
+  const targetLoc = getOfferLocalized(target);
+  const myOffer = selectedMySwapOfferId ? offers.find(o => o.id === selectedMySwapOfferId) : null;
+  const myTypedTitle = document.getElementById("swapOfferedItemInput")?.value?.trim();
+  const myTitle = myTypedTitle || (myOffer ? getOfferLocalized(myOffer).title : "—");
+  const myImg = myOffer ? myOffer.image : WIZ_CATEGORY_PHOTOS[target.category] || DEFAULT_WIZ_DATA.image;
+
+  const myVal = Number(document.getElementById("calcMyValueInput")?.value) || getOfferValueInCurrency(target, currentCurrency);
+  const myCurr = document.getElementById("calcMyCurrencySelect")?.value || currentCurrency;
+  const myValInCur = convertBetweenCurrencies(myVal, myCurr, currentCurrency);
+  const theirValInCur = getOfferValueInCurrency(target, currentCurrency);
+  const diff = theirValInCur - myValInCur;
+  const cObj = getCurrencyObj(currentCurrency);
+  const threshold = Math.round(250 * cObj.rateFromEur);
+  const diffLabel = Math.abs(diff) < threshold
+    ? "1:1"
+    : (diff > 0 ? `+${formatAmountInCurrentCurrency(diff, currentCurrency)}` : `-${formatAmountInCurrentCurrency(Math.abs(diff), currentCurrency)}`);
+
+  const sideLabels = {
+    ro: { youOffer: "TU OFERI", youGet: "PRIMEȘTI" },
+    en: { youOffer: "YOU OFFER", youGet: "YOU RECEIVE" },
+    de: { youOffer: "SIE BIETEN", youGet: "SIE ERHALTEN" },
+    fr: { youOffer: "VOUS OFFREZ", youGet: "VOUS RECEVEZ" },
+    it: { youOffer: "TU OFFRI", youGet: "TU RICEVI" },
+    es: { youOffer: "TÚ OFRECES", youGet: "TÚ RECIBES" },
+    ru: { youOffer: "ВЫ ОТДАЁТЕ", youGet: "ВЫ ПОЛУЧАЕТЕ" }
+  }[currentLang] || { youOffer: "YOU OFFER", youGet: "YOU RECEIVE" };
+
+  return `
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:10px;background:#fff;border:1px solid rgba(12,44,40,0.14);border-radius:14px;margin-top:10px;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <img src="${myImg}" style="width:44px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
+        <div style="min-width:0;">
+          <span style="display:block;font-size:9.5px;font-weight:800;color:var(--muted);">${sideLabels.youOffer}</span>
+          <strong style="display:block;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${myTitle}</strong>
+          <span style="font-size:11px;font-weight:700;color:var(--forest);">~${formatAmountInCurrentCurrency(myVal, myCurr)}</span>
+        </div>
+      </div>
+      <div style="background:var(--forest);color:var(--mint);padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;text-align:center;white-space:nowrap;">
+        ⇄ ${diffLabel}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <img src="${target.image}" style="width:44px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
+        <div style="min-width:0;">
+          <span style="display:block;font-size:9.5px;font-weight:800;color:var(--muted);">${sideLabels.youGet}</span>
+          <strong style="display:block;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${targetLoc.title}</strong>
+          <span style="font-size:11px;font-weight:700;color:var(--forest);">~${formatOfferPrice(target, currentCurrency)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function updateSwapValueCalculator(offerId) {
   const item = offers.find(o => o.id === offerId);
   if (!item) return;
@@ -3460,6 +4765,10 @@ function updateSwapValueCalculator(offerId) {
     resEl.innerHTML = `<span>${t("calcYouAdd")}</span><span>+ ${formatAmountInCurrentCurrency(diff, currentCurrency)}</span>`;
   } else {
     resEl.innerHTML = `<span>${t("calcTheyAdd")}</span><span>+ ${formatAmountInCurrentCurrency(Math.abs(diff), currentCurrency)}</span>`;
+  }
+  const sbsBox = document.getElementById("swapSideBySideBox");
+  if (sbsBox) {
+    sbsBox.innerHTML = buildSwapSideBySideHtml(offerId);
   }
 }
 
@@ -3486,8 +4795,170 @@ function onBuyOfferPriceChange(offerId) {
   }
 }
 
+function getProposalToastCopy() {
+  const map = {
+    ro: {
+      swapSent: "✓ Propunerea de schimb a fost trimisă și salvată în Panoul tău!",
+      buySentPrefix: "✓ Oferta de cumpărare",
+      buySentTo: "a fost trimisă către",
+      acceptedPrefix: "✓ Schimbul cu",
+      acceptedSuffix: "a fost acceptat! Contact direct deblocat.",
+      statusSentSwap: "Trimisă · În așteptarea răspunsului proprietarului",
+      statusSentBuy: "Trimisă · În așteptarea confirmării vânzătorului",
+      statusAccepted: "Acceptată · Contact direct deblocat",
+      linkCopied: "✓ Link-ul anunțului a fost copiat!",
+      pickMyAdLabel: "Sau alege rapid din anunțurile tale:",
+      pickMyAdDefault: "— Selectează un anunț propriu (opțional) —",
+      messageLabel: "Mesaj / Detalii propunere (opțional)",
+      messagePlaceholder: "Ex: Propun verificare la reprezentanță / schimb cheie pe cheie...",
+      shareBtn: "Distribuie",
+      editBtn: "Editează",
+      profileSaved: "✓ Profilul și preferințele tale au fost salvate!"
+    },
+    en: {
+      swapSent: "✓ Swap Proposal sent & saved to your Dashboard!",
+      buySentPrefix: "✓ Cash Purchase Offer",
+      buySentTo: "sent to",
+      acceptedPrefix: "✓ Swap with",
+      acceptedSuffix: "accepted! Direct contact unlocked.",
+      statusSentSwap: "Sent · Awaiting Owner Response",
+      statusSentBuy: "Sent · Awaiting Seller Confirmation",
+      statusAccepted: "Accepted · Direct Contact Unlocked",
+      linkCopied: "✓ Listing link copied to clipboard!",
+      pickMyAdLabel: "Or pick 1-click from your listings:",
+      pickMyAdDefault: "— Select one of your listings (optional) —",
+      messageLabel: "Message / Proposal Notes (optional)",
+      messagePlaceholder: "E.g. Ready for inspection / key-for-key handover...",
+      shareBtn: "Share",
+      editBtn: "Edit",
+      profileSaved: "✓ Your profile and preferences have been saved!"
+    },
+    de: {
+      swapSent: "✓ Tauschvorschlag gesendet & im Dashboard gespeichert!",
+      buySentPrefix: "✓ Kaufangebot",
+      buySentTo: "gesendet an",
+      acceptedPrefix: "✓ Tausch mit",
+      acceptedSuffix: "angenommen! Direktkontakt freigeschaltet.",
+      statusSentSwap: "Gesendet · Warte auf Antwort des Eigentümers",
+      statusSentBuy: "Gesendet · Warte auf Bestätigung des Verkäufers",
+      statusAccepted: "Angenommen · Direktkontakt freigeschaltet",
+      linkCopied: "✓ Link zum Inserat kopiert!",
+      pickMyAdLabel: "Oder wählen Sie aus Ihren Inseraten:",
+      pickMyAdDefault: "— Eigenes Inserat wählen (optional) —",
+      messageLabel: "Nachricht / Details zum Vorschlag (optional)",
+      messagePlaceholder: "z.B. Besichtigung jederzeit möglich...",
+      shareBtn: "Teilen",
+      editBtn: "Bearbeiten",
+      profileSaved: "✓ Ihr Profil und Ihre Einstellungen wurden gespeichert!"
+    },
+    fr: {
+      swapSent: "✓ Proposition d'échange envoyée et enregistrée !",
+      buySentPrefix: "✓ Offre d'achat",
+      buySentTo: "envoyée à",
+      acceptedPrefix: "✓ Échange avec",
+      acceptedSuffix: "accepté ! Contact direct débloqué.",
+      statusSentSwap: "Envoyée · En attente de réponse du propriétaire",
+      statusSentBuy: "Envoyée · En attente de confirmation du vendeur",
+      statusAccepted: "Acceptée · Contact direct débloqué",
+      linkCopied: "✓ Lien de l'annonce copié !",
+      pickMyAdLabel: "Ou choisissez parmi vos annonces :",
+      pickMyAdDefault: "— Sélectionner une de vos annonces (optionnel) —",
+      messageLabel: "Message / Détails de la proposition (optionnel)",
+      messagePlaceholder: "Ex : Disponible pour inspection / échange clé contre clé...",
+      shareBtn: "Partager",
+      editBtn: "Modifier",
+      profileSaved: "✓ Votre profil et vos préférences ont été enregistrés !"
+    },
+    it: {
+      swapSent: "✓ Proposta di scambio inviata e salvata nella Dashboard!",
+      buySentPrefix: "✓ Offerta d'acquisto",
+      buySentTo: "inviata a",
+      acceptedPrefix: "✓ Scambio con",
+      acceptedSuffix: "accettato! Contatto diretto sbloccato.",
+      statusSentSwap: "Inviata · In attesa di risposta del proprietario",
+      statusSentBuy: "Inviata · In attesa di conferma del venditore",
+      statusAccepted: "Accettata · Contatto diretto sbloccato",
+      linkCopied: "✓ Link dell'annuncio copiato!",
+      pickMyAdLabel: "Oppure scegli dai tuoi annunci:",
+      pickMyAdDefault: "— Seleziona un tuo annuncio (opzionale) —",
+      messageLabel: "Messaggio / Note sulla proposta (opzionale)",
+      messagePlaceholder: "Es: Disponibile per verifica / scambio chiave contro chiave...",
+      shareBtn: "Condividi",
+      editBtn: "Modifica",
+      profileSaved: "✓ Il tuo profilo e le preferenze sono stati salvati!"
+    },
+    es: {
+      swapSent: "✓ ¡Propuesta de intercambio enviada y guardada en tu Panel!",
+      buySentPrefix: "✓ Oferta de compra",
+      buySentTo: "enviada a",
+      acceptedPrefix: "✓ ¡Intercambio con",
+      acceptedSuffix: "aceptado! Contacto directo desbloqueado.",
+      statusSentSwap: "Enviada · Esperando respuesta del propietario",
+      statusSentBuy: "Enviada · Esperando confirmación del vendedor",
+      statusAccepted: "Aceptada · Contacto directo desbloqueado",
+      linkCopied: "✓ ¡Enlace del anuncio copiado!",
+      pickMyAdLabel: "O elige entre tus anuncios:",
+      pickMyAdDefault: "— Selecciona uno de tus anuncios (opcional) —",
+      messageLabel: "Mensaje / Detalles de la propuesta (opcional)",
+      messagePlaceholder: "Ej: Disponible para revisión / intercambio llave por llave...",
+      shareBtn: "Compartir",
+      editBtn: "Editar",
+      profileSaved: "✓ ¡Tu perfil y preferencias han sido guardados!"
+    },
+    ru: {
+      swapSent: "✓ Предложение обмена отправлено и сохранено в панели!",
+      buySentPrefix: "✓ Предложение о покупке",
+      buySentTo: "отправлено",
+      acceptedPrefix: "✓ Обмен с",
+      acceptedSuffix: "принят! Прямой контакт открыт.",
+      statusSentSwap: "Отправлено · Ожидание ответа владельца",
+      statusSentBuy: "Отправлено · Ожидание подтверждения продавца",
+      statusAccepted: "Принято · Прямой контакт открыт",
+      linkCopied: "✓ Ссылка на объявление скопирована!",
+      pickMyAdLabel: "Или выберите из ваших объявлений:",
+      pickMyAdDefault: "— Выберите ваше объявление (необязательно) —",
+      messageLabel: "Сообщение / Детали предложения (необязательно)",
+      messagePlaceholder: "Напр.: Готов к проверке / обмен ключ в ключ...",
+      shareBtn: "Поделиться",
+      editBtn: "Изменить",
+      profileSaved: "✓ Ваш профиль и настройки сохранены!"
+    }
+  };
+  return map[currentLang] || map.en;
+}
+
+function copyOfferShareLink(offerId) {
+  const url = `${window.location.origin}/offer/${offerId}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).catch(() => { });
+  }
+  showToast(getProposalToastCopy().linkCopied);
+}
+
+function pickMyListingForSwap(targetOfferId, myOfferIdStr) {
+  const myId = Number(myOfferIdStr);
+  selectedMySwapOfferId = myId || null;
+  if (!myId) {
+    updateSwapValueCalculator(targetOfferId);
+    return;
+  }
+  const myOffer = offers.find(o => o.id === myId);
+  if (!myOffer) return;
+  const myLoc = getOfferLocalized(myOffer);
+  const inputEl = document.getElementById("swapOfferedItemInput");
+  if (inputEl) inputEl.value = myLoc.title;
+  const calcInput = document.getElementById("calcMyValueInput");
+  const calcCurr = document.getElementById("calcMyCurrencySelect")?.value || currentCurrency;
+  if (calcInput) {
+    calcInput.value = getOfferValueInCurrency(myOffer, calcCurr);
+  }
+  updateSwapValueCalculator(targetOfferId);
+}
+
 function submitDirectBuyOffer(e, offerId) {
   e.preventDefault();
+  if (!canPerformSwapOrPost()) return;
+  const ptc = getProposalToastCopy();
   const fd = new FormData(e.target);
   const item = offers.find(o => o.id === offerId);
   const loc = item ? getOfferLocalized(item) : { title: "Listing" };
@@ -3495,6 +4966,7 @@ function submitDirectBuyOffer(e, offerId) {
   const curr = String(fd.get("buyCurrency") || currentCurrency).toUpperCase();
   const formattedOffer = formatAmountInCurrentCurrency(amount, curr);
   const payMethod = String(fd.get("paymentMethod") || "Direct Purchase");
+  const note = String(fd.get("proposalNote") || "").trim();
 
   swapProposals.unshift({
     id: Date.now(),
@@ -3503,19 +4975,24 @@ function submitDirectBuyOffer(e, offerId) {
     targetTitle: loc.title,
     offeredItem: `Cash Offer: ${formattedOffer}`,
     partner: item ? `${item.owner} (${item.city}, ${item.country})` : "Owner",
-    cashBalance: `${payMethod} · Listed at ~${item ? formatOfferPrice(item, curr) : formattedOffer}`,
-    status: "Sent · Awaiting Seller Confirmation"
+    cashBalance: `${payMethod} · ~${item ? formatOfferPrice(item, curr) : formattedOffer}`,
+    note,
+    status: ptc.statusSentBuy
   });
   localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  consumeFreeSwapIfLogged();
   updateFavCountUI();
   closeOfferModal();
-  showToast(`✓ Cash Purchase Offer (${formattedOffer}) sent to ${item ? item.owner : "Seller"}!`);
+  showToast(`${ptc.buySentPrefix} (${formattedOffer}) ${ptc.buySentTo} ${item ? item.owner : "Seller"}!`);
 }
 
 function openOfferModal(offerId, mode = "details") {
   const item = offers.find(o => o.id === offerId);
   if (!item) return;
   currentOpenOfferId = offerId;
+  currentGalleryIndex = 0;
+  selectedMySwapOfferId = null;
+  const galleryImgs = getOfferGalleryImages(item);
   const loc = getOfferLocalized(item);
   const valFormatted = formatOfferPrice(item, currentCurrency);
   const cObj = getCurrencyObj(currentCurrency);
@@ -3528,6 +5005,10 @@ function openOfferModal(offerId, mode = "details") {
   const yourValLabel = t("calcYourValue").replace(/\(EUR\)|\(€\)/gi, `(${cObj.short || cObj.code})`);
   const theirValLabel = t("calcTheirValue").replace(/\(EUR\)|\(€\)/gi, `(${cObj.short || cObj.code})`);
   const startInBuyMode = mode === "buy" || item.dealType === "sale";
+  const ptc = getProposalToastCopy();
+  const isFav = favoriteIds.includes(item.id);
+  const isCustomOwner = Boolean(item.createdByUser || item.id > 100000);
+  const userPickableAds = offers.filter(o => o.id !== item.id && (o.createdByUser || o.id > 100000)).concat(offers.filter(o => o.id !== item.id).slice(0, 4)).slice(0, 6);
 
   const modal = document.getElementById("offerModal");
   const content = document.getElementById("offerModalContent");
@@ -3629,20 +5110,38 @@ function openOfferModal(offerId, mode = "details") {
   const mUi = modalUiMap[currentLang] || modalUiMap.en;
 
   content.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;">
       <span style="margin:0;font-size:13.5px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ${mUi.ownerVerified}: ${item.owner} (${mUi.verifiedWord}) · ${getDealTypeLabel(item.dealType)}</span>
-      <button type="button" class="modal-close" style="position:static;color:var(--ink);background:var(--bg);flex-shrink:0;" onclick="closeOfferModal()" aria-label="Close">✕</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        ${isCustomOwner ? `<button type="button" class="btn btn-mint" style="padding:5px 12px;font-size:12px;" onclick="editListingInWizard(${item.id})">${ptc.editBtn}</button>` : ""}
+        <button type="button" class="btn btn-login" style="padding:5px 12px;font-size:12px;" onclick="copyOfferShareLink(${item.id})">${ptc.shareBtn}</button>
+        <button type="button" class="btn btn-login" style="padding:5px 11px;font-size:11.5px;color:var(--muted);" onclick="reportOfferListing(${item.id})">${getGdprUiCopy().dsaReportBtn}</button>
+        <button type="button" id="offerModalFavBtn" onclick="toggleFavorite(${item.id})" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:${isFav ? 'var(--mint)' : 'var(--bg)'};color:${isFav ? 'var(--forest)' : 'var(--ink)'};font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;" aria-label="Favorite">${isFav ? "♥" : "♡"}</button>
+        <button type="button" class="modal-close" style="position:static;color:var(--ink);background:var(--bg);flex-shrink:0;" onclick="closeOfferModal()" aria-label="Close">✕</button>
+      </div>
     </div>
 
     <div class="offer-modal-grid">
       <div>
-        <div style="height:220px;border-radius:20px;background:url('${item.image}') 50%/cover no-repeat;margin-bottom:14px;position:relative;">
+        <div id="offerModalGalleryMain" style="height:215px;border-radius:20px;background:url('${galleryImgs[0]}') 50%/cover no-repeat;margin-bottom:8px;position:relative;transition:background-image 0.2s ease;">
+          ${galleryImgs.length > 1 ? `
+            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, -1)" style="position:absolute;top:50%;left:10px;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:0;background:rgba(12,44,40,0.78);color:#fff;font-weight:800;cursor:pointer;">‹</button>
+            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, 1)" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:0;background:rgba(12,44,40,0.78);color:#fff;font-weight:800;cursor:pointer;">›</button>
+            <span id="offerModalGalleryCount" style="position:absolute;top:12px;right:12px;background:rgba(12,44,40,0.82);color:#fff;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:800;">1 / ${galleryImgs.length}</span>
+          ` : ""}
           <span style="position:absolute;bottom:14px;left:14px;background:var(--forest);color:var(--mint);padding:6px 14px;border-radius:999px;font-weight:700;font-size:13px;">
             ${getCategoryLabel(item.category)} · ~ ${valFormatted}${clientBaseNote}
           </span>
         </div>
-        <h2 style="font-size:23px;margin:0 0 8px;line-height:1.2;">${loc.title}</h2>
-        <p style="color:var(--ink-soft);margin:0 0 14px;font-size:14px;">${loc.desc || item.specs}</p>
+        ${galleryImgs.length > 1 ? `
+          <div id="offerModalThumbsRow" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;">
+            ${galleryImgs.map((u, i) => `
+              <img src="${u}" onclick="selectOfferGalleryPhoto(${item.id}, ${i})" style="width:68px;height:46px;object-fit:cover;border-radius:10px;cursor:pointer;border:2.5px solid ${i === 0 ? 'var(--forest)' : 'transparent'};opacity:${i === 0 ? '1' : '0.68'};flex-shrink:0;" alt="" />
+            `).join("")}
+          </div>
+        ` : ""}
+        <h2 style="font-size:22px;margin:0 0 8px;line-height:1.2;">${loc.title}</h2>
+        <p style="color:var(--ink-soft);margin:0 0 12px;font-size:13.5px;">${loc.desc || item.specs}</p>
 
         <div class="swap-exchange-box" style="margin-bottom:0;">
           <div class="swap-row">
@@ -3669,8 +5168,8 @@ function openOfferModal(offerId, mode = "details") {
 
         <!-- PANEL 1: 1:1 SWAP + VALUE BALANCE CALCULATOR -->
         <div id="offerActionSwapPanel" style="display:${startInBuyMode ? 'none' : 'block'};">
-          <div class="calc-box" style="margin:0 0 14px;">
-            <strong style="display:flex;align-items:center;font-size:14px;margin-bottom:10px;">${PREMIUM_ICONS.scale}${t("calcTitle")} (${cObj.code})</strong>
+          <div class="calc-box" style="margin:0 0 12px;">
+            <strong style="display:flex;align-items:center;font-size:14px;margin-bottom:8px;">${PREMIUM_ICONS.scale}${t("calcTitle")} (${cObj.code})</strong>
             <div class="form-grid-2">
               <div>
                 <label style="font-size:12px;color:var(--muted);font-weight:700;">${yourValLabel}</label>
@@ -3689,13 +5188,28 @@ function openOfferModal(offerId, mode = "details") {
             <div class="calc-result-banner" id="calcResultBanner">
               <span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>
             </div>
+            <div id="swapSideBySideBox">${buildSwapSideBySideHtml(item.id)}</div>
           </div>
 
-          <form onsubmit="submitDirectSwapProposal(event, ${item.id})" style="background:var(--mint-soft);padding:18px;border-radius:20px;border:1.5px solid var(--forest);">
-            <strong style="display:block;margin-bottom:10px;color:var(--forest);font-size:15px;">⇄ ${t("proposeSwapBtn")} (${mUi.zeroFeeDirect})</strong>
-            <div class="field-group">
+          <form onsubmit="submitDirectSwapProposal(event, ${item.id})" style="background:var(--mint-soft);padding:16px;border-radius:20px;border:1.5px solid var(--forest);">
+            <strong style="display:block;margin-bottom:8px;color:var(--forest);font-size:15px;">⇄ ${t("proposeSwapBtn")} (${mUi.zeroFeeDirect})</strong>
+            <div class="field-group" style="margin-bottom:8px;">
+              <label style="font-size:11.5px;color:var(--muted);font-weight:700;">${ptc.pickMyAdLabel}</label>
+              <select class="input-light" style="font-size:13px;" onchange="pickMyListingForSwap(${item.id}, this.value)">
+                <option value="">${ptc.pickMyAdDefault}</option>
+                ${userPickableAds.map(ad => {
+    const adLoc = getOfferLocalized(ad);
+    return `<option value="${ad.id}">${adLoc.title} (~${formatOfferPrice(ad, currentCurrency)})</option>`;
+  }).join("")}
+              </select>
+            </div>
+            <div class="field-group" style="margin-bottom:8px;">
               <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("quickTitleHave")}</label>
-              <input type="text" name="offeredItem" class="input-light" required />
+              <input type="text" id="swapOfferedItemInput" name="offeredItem" class="input-light" required oninput="updateSwapValueCalculator(${item.id})" />
+            </div>
+            <div class="field-group" style="margin-bottom:10px;">
+              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${ptc.messageLabel}</label>
+              <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
             </div>
             <div class="form-grid-2">
               <div class="field-group" style="margin-bottom:0;">
@@ -3710,6 +5224,7 @@ function openOfferModal(offerId, mode = "details") {
             <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
               ${mUi.sendSwapTo} ${item.owner} →
             </button>
+            <p style="margin:8px 0 0;font-size:11px;color:var(--muted);line-height:1.35;">✓ ${getGdprUiCopy().gdprContactNote}</p>
           </form>
         </div>
 
@@ -3738,6 +5253,10 @@ function openOfferModal(offerId, mode = "details") {
                 <option value="Notary / Verified Escrow Contract">${mUi.payOpt3}</option>
               </select>
             </div>
+            <div class="field-group" style="margin-bottom:10px;">
+              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${ptc.messageLabel}</label>
+              <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
+            </div>
             <div class="form-grid-2">
               <div class="field-group" style="margin-bottom:0;">
                 <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formFullName")}</label>
@@ -3751,6 +5270,7 @@ function openOfferModal(offerId, mode = "details") {
             <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
               ${mUi.sendBuyTo} ${item.owner} →
             </button>
+            <p style="margin:8px 0 0;font-size:11px;color:var(--muted);line-height:1.35;">✓ ${getGdprUiCopy().gdprContactNote}</p>
           </form>
         </div>
       </div>
@@ -3770,25 +5290,38 @@ function closeOfferModal() {
 }
 
 function consumeFreeSwapIfLogged() {
-  if (currentUser && typeof currentUser.freeSwaps === "number" && currentUser.freeSwaps > 0) {
-    currentUser.freeSwaps = Math.max(0, currentUser.freeSwaps - 1);
-    localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
-    const emailKey = String(currentUser.email || "").trim().toLowerCase();
-    if (emailKey && accountsDb[emailKey]) {
-      accountsDb[emailKey].freeSwaps = currentUser.freeSwaps;
-      saveAccountsDb();
+  if (currentUser) {
+    if (currentUser.plan === "pro") {
+      renderUserHeaderState();
+      return;
     }
+    if (typeof currentUser.freeSwaps === "number" && currentUser.freeSwaps > 0) {
+      currentUser.freeSwaps = Math.max(0, currentUser.freeSwaps - 1);
+      localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
+      const emailKey = String(currentUser.email || "").trim().toLowerCase();
+      if (emailKey && accountsDb[emailKey]) {
+        accountsDb[emailKey].freeSwaps = currentUser.freeSwaps;
+        saveAccountsDb();
+      }
+      renderUserHeaderState();
+    }
+  } else {
+    guestFreeSwaps = Math.max(0, guestFreeSwaps - 1);
+    localStorage.setItem("ci4m_guest_free_swaps", String(guestFreeSwaps));
     renderUserHeaderState();
   }
 }
 
 function submitDirectSwapProposal(e, offerId) {
   e.preventDefault();
+  if (!canPerformSwapOrPost()) return;
+  const ptc = getProposalToastCopy();
   const fd = new FormData(e.target);
   const item = offers.find(o => o.id === offerId);
   const loc = item ? getOfferLocalized(item) : { title: "Swap Offer" };
   const bannerEl = document.getElementById("calcResultBanner");
   const calcBanner = String(bannerEl?.innerText || bannerEl?.textContent || "").replace(/\n/g, " ").trim() || "1:1 Key-for-Key";
+  const note = String(fd.get("proposalNote") || "").trim();
 
   swapProposals.unshift({
     id: Date.now(),
@@ -3798,23 +5331,25 @@ function submitDirectSwapProposal(e, offerId) {
     offeredItem: String(fd.get("offeredItem")),
     partner: item ? `${item.owner} (${item.city}, ${item.country})` : "Owner",
     cashBalance: calcBanner,
-    status: "Sent · Awaiting Owner Response"
+    note,
+    status: ptc.statusSentSwap
   });
   localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
   consumeFreeSwapIfLogged();
   updateFavCountUI();
   closeOfferModal();
-  showToast("✓ Swap Proposal sent & saved to your Dashboard!");
+  showToast(ptc.swapSent);
 }
 
 function acceptSwapProposal(propId) {
   const p = swapProposals.find(x => x.id === propId);
   if (!p) return;
-  p.status = "Accepted · Direct Contact Unlocked";
+  const ptc = getProposalToastCopy();
+  p.status = ptc.statusAccepted;
   p.accepted = true;
   localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
   renderDashboardContent();
-  showToast(`✓ Swap with ${p.partner} accepted!`);
+  showToast(`${ptc.acceptedPrefix} ${p.partner} ${ptc.acceptedSuffix}`);
 }
 
 function deleteSwapProposal(propId) {
@@ -3825,7 +5360,7 @@ function deleteSwapProposal(propId) {
 }
 
 // ============================================================================
-// PERSONAL DASHBOARD MODAL (PROPOSALS, MY LISTINGS, FAVORITES, GEO-IP)
+// PERSONAL DASHBOARD MODAL (PROPOSALS, MY LISTINGS, FAVORITES, PROFILE)
 // ============================================================================
 function openDashboardModal(tab = "proposals") {
   if (!currentUser) {
@@ -3855,18 +5390,277 @@ function switchDashboardTab(tab) {
   renderDashboardContent();
 }
 
+function saveDashboardProfile(e) {
+  e.preventDefault();
+  if (!currentUser) return;
+  const fd = new FormData(e.target);
+  currentUser.name = String(fd.get("name") || currentUser.name).trim();
+  currentUser.phone = String(fd.get("phone") || "").trim();
+  currentUser.country = String(fd.get("country") || currentUser.country).trim();
+  const nextLang = String(fd.get("prefLang") || currentLang);
+  const nextCurr = String(fd.get("prefCurrency") || currentCurrency);
+  currentUser.prefLang = nextLang;
+  currentUser.prefCurrency = nextCurr;
+
+  localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
+  const emailKey = String(currentUser.email || "").trim().toLowerCase();
+  if (emailKey) {
+    accountsDb[emailKey] = {
+      ...(accountsDb[emailKey] || {}),
+      ...currentUser
+    };
+    saveAccountsDb();
+  }
+  if (nextLang !== currentLang) setLanguage(nextLang);
+  if (nextCurr !== currentCurrency) setCurrency(nextCurr);
+  renderUserHeaderState();
+  renderDashboardContent();
+  showToast(getProposalToastCopy().profileSaved);
+}
+
+function ensureProposalMessages(p) {
+  if (!Array.isArray(p.messages) || p.messages.length === 0) {
+    const initReplyMap = {
+      ro: `Salut! Am văzut propunerea ta (${p.offeredItem} ⇄ ${p.targetTitle}). Putem discuta detaliile și stabili o verificare.`,
+      en: `Hi! I saw your proposal (${p.offeredItem} ⇄ ${p.targetTitle}). Let's discuss details and schedule an inspection.`,
+      de: `Hallo! Ich habe Ihren Vorschlag (${p.offeredItem} ⇄ ${p.targetTitle}) gesehen. Lassen Sie uns die Details besprechen.`,
+      fr: `Bonjour ! J'ai vu votre proposition (${p.offeredItem} ⇄ ${p.targetTitle}). Discutons des détails.`,
+      it: `Ciao! Ho visto la tua proposta (${p.offeredItem} ⇄ ${p.targetTitle}). Parliamo dei dettagli.`,
+      es: `¡Hola! Vi tu propuesta (${p.offeredItem} ⇄ ${p.targetTitle}). Hablemos de los detalles.`,
+      ru: `Здравствуйте! Я увидел ваше предложение (${p.offeredItem} ⇄ ${p.targetTitle}). Давайте обсудим детали.`
+    };
+    p.messages = [
+      {
+        sender: "partner",
+        author: p.partner.split("(")[0].trim(),
+        text: p.note || (initReplyMap[currentLang] || initReplyMap.en),
+        time: "10:15"
+      }
+    ];
+  }
+  return p.messages;
+}
+
+function toggleProposalThread(propId) {
+  activeProposalThreadId = activeProposalThreadId === propId ? null : propId;
+  renderDashboardContent();
+}
+
+function sendProposalMessage(e, propId) {
+  e.preventDefault();
+  const input = document.getElementById(`propChatInput_${propId}`);
+  const text = String(input?.value || "").trim();
+  if (!text) return;
+  appendProposalMessage(propId, text);
+}
+
+function sendQuickProposalChip(propId, text) {
+  appendProposalMessage(propId, text);
+}
+
+function appendProposalMessage(propId, text) {
+  const p = swapProposals.find(x => x.id === propId);
+  if (!p) return;
+  ensureProposalMessages(p);
+  const nowStr = new Date().toTimeString().slice(0, 5);
+  p.messages.push({
+    sender: "me",
+    author: currentUser ? currentUser.name.split(" ")[0] : "Tu",
+    text,
+    time: nowStr
+  });
+  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  activeProposalThreadId = propId;
+  renderDashboardContent();
+
+  setTimeout(() => {
+    const autoReplyMap = {
+      ro: "Perfect, sunt de acord! Putem face verificarea și semna Acordul de Schimb 1:1 direct fără comision.",
+      en: "Sounds great, I agree! We can do the inspection and sign the 1:1 Swap Agreement with 0% commission.",
+      de: "Klingt super, einverstanden! Wir können die Prüfung durchführen und den 1:1-Tauschvertrag unterschreiben.",
+      fr: "Parfait, je suis d'accord ! Nous pouvons faire la vérification et signer l'accord d'échange 1:1.",
+      it: "Perfetto, sono d'accordo! Possiamo fare la verifica e firmare l'accordo di scambio 1:1.",
+      es: "¡Perfecto, estoy de acuerdo! Podemos hacer la revisión y firmar el acuerdo de intercambio 1:1.",
+      ru: "Отлично, я согласен! Можем провести проверку и подписать соглашение об обмене 1:1."
+    };
+    p.messages.push({
+      sender: "partner",
+      author: p.partner.split("(")[0].trim(),
+      text: autoReplyMap[currentLang] || autoReplyMap.en,
+      time: new Date().toTimeString().slice(0, 5)
+    });
+    localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+    if (document.getElementById("dashboardModal")?.classList.contains("open") && currentDashTab === "proposals") {
+      renderDashboardContent();
+    }
+  }, 650);
+}
+
+function openSwapAgreementModal(propId) {
+  const p = swapProposals.find(x => x.id === propId);
+  if (!p) return;
+  const content = document.getElementById("guideModalContent");
+  if (!content) return;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const partyA = currentUser ? `${currentUser.name} (${currentUser.email})` : "Verified Member A";
+  const partyB = p.partner;
+  const agrCopy = {
+    ro: {
+      badge: "Acord Oficial de Schimb Direct 1:1 · 0% Comision",
+      title: "Proces-Verbal / Acord de Schimb Reciproc (1:1)",
+      dateLabel: "Data generării",
+      partyALabel: "Partea A (Propunător)",
+      partyBLabel: "Partea B (Partener)",
+      itemALabel: "Bunul oferit de Partea A",
+      itemBLabel: "Bunul oferit de Partea B",
+      balanceLabel: "Paritate & Diferență agreată",
+      clausesTitle: "Clauze de verificare și predare cheie-pe-cheie:",
+      c1: "Ambele părți declară că sunt proprietarii de drept ai bunurilor supuse schimbului și că acestea nu sunt grevate de sarcini/datorii ascunse.",
+      c2: "Verificarea tehnică/fizică a bunurilor se realizează în prezența ambelor părți înainte de predarea cheie-pe-cheie.",
+      c3: "Platforma ChangeIt4Me percepe 0% comision pentru acest schimb direct.",
+      printBtn: "Printează / Salvează Acordul PDF"
+    },
+    en: {
+      badge: "Official 1:1 Direct Swap Handover Agreement · 0% Fee",
+      title: "1:1 Mutual Swap & Handover Agreement",
+      dateLabel: "Date generated",
+      partyALabel: "Party A (Proposer)",
+      partyBLabel: "Party B (Partner)",
+      itemALabel: "Asset offered by Party A",
+      itemBLabel: "Asset offered by Party B",
+      balanceLabel: "Agreed Parity & Cash Balance",
+      clausesTitle: "Inspection & Key-for-Key Handover Clauses:",
+      c1: "Both parties confirm rightful ownership of the exchanged assets and declare them free of undisclosed liens or encumbrances.",
+      c2: "Physical/technical inspection of both items is completed jointly prior to key-for-key handover.",
+      c3: "ChangeIt4Me charges 0% platform commission on this direct exchange.",
+      printBtn: "Print / Save Agreement as PDF"
+    },
+    de: {
+      badge: "Offizieller 1:1-Tauschvertrag · 0% Gebühr",
+      title: "Gegenseitiger 1:1-Tausch- & Übergabevertrag",
+      dateLabel: "Erstellungsdatum",
+      partyALabel: "Partei A (Anbieter)",
+      partyBLabel: "Partei B (Tauschpartner)",
+      itemALabel: "Objekt von Partei A",
+      itemBLabel: "Objekt von Partei B",
+      balanceLabel: "Vereinbarte Parität & Wertausgleich",
+      clausesTitle: "Prüfungs- & Schlüssel-gegen-Schlüssel-Klauseln:",
+      c1: "Beide Parteien bestätigen das rechtmäßige Eigentum an den Tauschobjekten sowie die Freiheit von Rechten Dritter.",
+      c2: "Die technische/physische Prüfung beider Objekte erfolgt gemeinsam vor der Übergabe.",
+      c3: "ChangeIt4Me erhebt 0% Provision für diesen direkten Tausch.",
+      printBtn: "Vertrag drucken / als PDF speichern"
+    },
+    fr: {
+      badge: "Accord Officiel d'Échange Direct 1:1 · 0% Commission",
+      title: "Contrat d'Échange Réciproque 1:1",
+      dateLabel: "Date de génération",
+      partyALabel: "Partie A (Proposant)",
+      partyBLabel: "Partie B (Partenaire)",
+      itemALabel: "Bien proposé par la Partie A",
+      itemBLabel: "Bien proposé par la Partie B",
+      balanceLabel: "Parité et soulte convenues",
+      clausesTitle: "Clauses de vérification et remise clé contre clé :",
+      c1: "Les deux parties attestent être les propriétaires légitimes des biens échangés, libres de tout gage ou dette cachée.",
+      c2: "L'inspection physique et technique des deux biens est effectuée conjointement avant la remise.",
+      c3: "ChangeIt4Me applique 0% de commission sur cet échange direct.",
+      printBtn: "Imprimer / Enregistrer en PDF"
+    },
+    it: {
+      badge: "Accordo Ufficiale di Scambio Diretto 1:1 · 0% Commissione",
+      title: "Verbale / Accordo di Scambio Reciproco (1:1)",
+      dateLabel: "Data di generazione",
+      partyALabel: "Parte A (Proponente)",
+      partyBLabel: "Parte B (Partner)",
+      itemALabel: "Bene offerto dalla Parte A",
+      itemBLabel: "Bene offerto dalla Parte B",
+      balanceLabel: "Parità e conguaglio concordati",
+      clausesTitle: "Clausole di verifica e consegna chiave su chiave:",
+      c1: "Entrambe le parti confermano la legittima proprietà dei beni scambiati e l'assenza di vincoli o ipoteche occulte.",
+      c2: "La verifica tecnica e fisica dei beni viene effettuata congiuntamente prima della consegna.",
+      c3: "ChangeIt4Me applica lo 0% di commissione su questo scambio diretto.",
+      printBtn: "Stampa / Salva Accordo in PDF"
+    },
+    es: {
+      badge: "Acuerdo Oficial de Intercambio Directo 1:1 · 0% Comisión",
+      title: "Acuerdo de Intercambio Mutuo (1:1)",
+      dateLabel: "Fecha de generación",
+      partyALabel: "Parte A (Proponente)",
+      partyBLabel: "Parte B (Socio)",
+      itemALabel: "Bien ofrecido por la Parte A",
+      itemBLabel: "Bien ofrecido por la Parte B",
+      balanceLabel: "Paridad y diferencia acordadas",
+      clausesTitle: "Cláusulas de revisión y entrega llave por llave:",
+      c1: "Ambas partes confirman la propiedad legítima de los bienes intercambiados y que están libres de cargas ocultas.",
+      c2: "La inspección técnica y física de ambos bienes se realiza conjuntamente antes de la entrega.",
+      c3: "ChangeIt4Me cobra 0% de comisión por este intercambio directo.",
+      printBtn: "Imprimir / Guardar Acuerdo en PDF"
+    },
+    ru: {
+      badge: "Официальное соглашение о прямом обмене 1:1 · 0% комиссия",
+      title: "Акт / Соглашение о взаимном обмене (1:1)",
+      dateLabel: "Дата формирования",
+      partyALabel: "Сторона А (Инициатор)",
+      partyBLabel: "Сторона Б (Партнёр)",
+      itemALabel: "Имущество Стороны А",
+      itemBLabel: "Имущество Стороны Б",
+      balanceLabel: "Согласованный паритет и доплата",
+      clausesTitle: "Условия проверки и передачи ключ-в-ключ:",
+      c1: "Обе стороны подтверждают законное право собственности на обмениваемые объекты и отсутствие скрытых обременений.",
+      c2: "Техническая и физическая проверка обоих объектов проводится совместно перед передачей.",
+      c3: "Платформа ChangeIt4Me взимает 0% комиссии за этот прямой обмен.",
+      printBtn: "Распечатать / Сохранить в PDF"
+    }
+  };
+  const ac = agrCopy[currentLang] || agrCopy.en;
+
+  content.innerHTML = `
+    <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
+    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;">${ac.badge}</span>
+    <h2 style="font-size:24px;margin:10px 0 6px;">${ac.title}</h2>
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 14px;">ID #CI4M-${p.id} · ${ac.dateLabel}: <strong>${todayStr}</strong></p>
+
+    <div style="background:var(--mint-soft);border:1.5px solid var(--forest);border-radius:16px;padding:14px 16px;margin-bottom:14px;display:grid;gap:8px;font-size:13.5px;">
+      <div><strong>${ac.partyALabel}:</strong> ${partyA}</div>
+      <div><strong>${ac.partyBLabel}:</strong> ${partyB}</div>
+      <hr style="border:0;border-top:1px solid rgba(12,44,40,0.12);margin:4px 0;" />
+      <div><strong>${ac.itemALabel}:</strong> ${p.offeredItem}</div>
+      <div><strong>${ac.itemBLabel}:</strong> ${p.targetTitle}</div>
+      <div><strong>${ac.balanceLabel}:</strong> <span style="color:var(--forest);font-weight:800;">${p.cashBalance}</span></div>
+    </div>
+
+    <strong style="display:block;font-size:13.5px;margin-bottom:8px;">${ac.clausesTitle}</strong>
+    <ul class="checks" style="margin-bottom:18px;font-size:13px;">
+      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#a9ffca"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c1}</span></li>
+      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#a9ffca"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c2}</span></li>
+      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#a9ffca"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c3}</span></li>
+    </ul>
+
+    <button type="button" class="btn btn-dark btn-block" onclick="window.print()">
+      ✓ ${ac.printBtn}
+    </button>
+  `;
+  document.getElementById("guideModal").classList.add("open");
+  document.body.classList.add("modal-open");
+}
+
+function deleteWatchlistAlert(alertId) {
+  watchlistAlerts = watchlistAlerts.filter(a => a.id !== alertId);
+  saveWatchlistAlerts();
+  renderDashboardContent();
+}
+
 function renderDashboardContent() {
   const container = document.getElementById("dashboardBodyContent");
   if (!container) return;
 
   const dashLabelsMap = {
-    en: { partner: "Partner", view: "View", edit: "Edit", del: "Delete", accept: "Accept", emptyFav: "No saved favorites yet. Click the heart icon on any swap offer card to save it here.", emptyProps: "No active swap proposals yet. Open any listing and click Propose Swap.", incoming: "Incoming", outgoing: "Outgoing", yourAd: "Your Ad" },
-    de: { partner: "Partner", view: "Ansehen", edit: "Bearbeiten", del: "Löschen", accept: "Annehmen", emptyFav: "Noch keine Favoriten gespeichert. Klicken Sie auf das Herz-Symbol bei einem Angebot.", emptyProps: "Noch keine aktiven Tauschvorschläge.", incoming: "Eingehend", outgoing: "Ausgehend", yourAd: "Ihr Inserat" },
-    fr: { partner: "Partenaire", view: "Voir", edit: "Modifier", del: "Supprimer", accept: "Accepter", emptyFav: "Aucun favori enregistré. Cliquez sur l'icône cœur sur une annonce pour la sauvegarder.", emptyProps: "Aucune proposition d'échange active.", incoming: "Reçue", outgoing: "Envoyée", yourAd: "Votre annonce" },
-    it: { partner: "Partner", view: "Vedi", edit: "Modifica", del: "Elimina", accept: "Accetta", emptyFav: "Nessun preferito salvato. Clicca sull'icona del cuore su un annuncio per salvarlo qui.", emptyProps: "Nessuna proposta di scambio attiva.", incoming: "In entrata", outgoing: "In uscita", yourAd: "Tuo annuncio" },
-    es: { partner: "Socio", view: "Ver", edit: "Editar", del: "Eliminar", accept: "Aceptar", emptyFav: "Aún no tienes favoritos guardados. Haz clic en el icono de corazón en cualquier oferta.", emptyProps: "Aún no hay propuestas de intercambio activas.", incoming: "Recibida", outgoing: "Enviada", yourAd: "Tu anuncio" },
-    ro: { partner: "Partener", view: "Vezi", edit: "Editează", del: "Șterge", accept: "Acceptă", emptyFav: "Nu ai încă favorite salvate. Apasă pe iconița inimă de pe orice anunț pentru a-l salva aici.", emptyProps: "Nu ai propuneri active. Deschide orice ofertă și apasă pe Propune schimb.", incoming: "Primită", outgoing: "Trimisă", yourAd: "Anunțul tău" },
-    ru: { partner: "Партнёр", view: "Открыть", edit: "Изменить", del: "Удалить", accept: "Принять", emptyFav: "Пока нет сохранённых избранных. Нажмите на сердечко на любой карточке объявления.", emptyProps: "Пока нет активных предложений обмена.", incoming: "Входящее", outgoing: "Исходящее", yourAd: "Ваше объявление" }
+    en: { partner: "Partner", view: "View", edit: "Edit", del: "Delete", accept: "Accept", chat: "Chat", contract: "1:1 Agreement", sendMsg: "Send", chatPlaceholder: "Write a message to your swap partner...", chip1: "Propose technical inspection", chip2: "Accept 1:1 key-for-key", chip3: "When can we meet?", emptyFav: "No saved favorites yet. Click the heart icon on any swap offer card to save it here.", emptyProps: "No active swap proposals yet. Open any listing and click Propose Swap.", incoming: "Incoming", outgoing: "Outgoing", yourAd: "Your Ad", saveBtn: "Save Profile & Preferences", watchlistTitle: "Active Watchlist Alerts" },
+    de: { partner: "Partner", view: "Ansehen", edit: "Bearbeiten", del: "Löschen", accept: "Annehmen", chat: "Nachrichten", contract: "1:1-Vertrag", sendMsg: "Senden", chatPlaceholder: "Nachricht an Tauschpartner schreiben...", chip1: "Besichtigung vorschlagen", chip2: "1:1-Tausch annehmen", chip3: "Wann können wir uns treffen?", emptyFav: "Noch keine Favoriten gespeichert. Klicken Sie auf das Herz-Symbol bei einem Angebot.", emptyProps: "Noch keine aktiven Tauschvorschläge.", incoming: "Eingehend", outgoing: "Ausgehend", yourAd: "Ihr Inserat", saveBtn: "Profil & Einstellungen speichern", watchlistTitle: "Aktive Suchaufträge (Watchlist)" },
+    fr: { partner: "Partenaire", view: "Voir", edit: "Modifier", del: "Supprimer", accept: "Accepter", chat: "Messages", contract: "Accord 1:1", sendMsg: "Envoyer", chatPlaceholder: "Écrire un message au partenaire...", chip1: "Proposer une inspection", chip2: "Accepter l'échange 1:1", chip3: "Quand pouvons-nous nous voir ?", emptyFav: "Aucun favori enregistré. Cliquez sur l'icône cœur sur une annonce pour la sauvegarder.", emptyProps: "Aucune proposition d'échange active.", incoming: "Reçue", outgoing: "Envoyée", yourAd: "Votre annonce", saveBtn: "Enregistrer le profil et les préférences", watchlistTitle: "Alertes Watchlist actives" },
+    it: { partner: "Partner", view: "Vedi", edit: "Modifica", del: "Elimina", accept: "Accetta", chat: "Messaggi", contract: "Accordo 1:1", sendMsg: "Invia", chatPlaceholder: "Scrivi un messaggio al partner...", chip1: "Proponi verifica tecnica", chip2: "Accetta scambio 1:1", chip3: "Quando possiamo incontrarci?", emptyFav: "Nessun preferito salvato. Clicca sull'icona del cuore su un annuncio per salvarlo qui.", emptyProps: "Nessuna proposta di scambio attiva.", incoming: "In entrata", outgoing: "In uscita", yourAd: "Tuo annuncio", saveBtn: "Salva profilo e preferenze", watchlistTitle: "Avvisi Watchlist attivi" },
+    es: { partner: "Socio", view: "Ver", edit: "Editar", del: "Eliminar", accept: "Aceptar", chat: "Mensajes", contract: "Acuerdo 1:1", sendMsg: "Enviar", chatPlaceholder: "Escribe un mensaje al socio...", chip1: "Proponer revisión técnica", chip2: "Aceptar intercambio 1:1", chip3: "¿Cuándo podemos vernos?", emptyFav: "Aún no tienes favoritos guardados. Haz clic en el icono de corazón en cualquier oferta.", emptyProps: "Aún no hay propuestas de intercambio activas.", incoming: "Recibida", outgoing: "Enviada", yourAd: "Tu anuncio", saveBtn: "Guardar perfil y preferencias", watchlistTitle: "Alertas Watchlist activas" },
+    ro: { partner: "Partener", view: "Vezi", edit: "Editează", del: "Șterge", accept: "Acceptă", chat: "Mesaje", contract: "Acord 1:1", sendMsg: "Trimite", chatPlaceholder: "Scrie un mesaj partenerului de schimb...", chip1: "Propun verificare tehnică", chip2: "Accept schimbul 1:1", chip3: "Când ne putem vedea?", emptyFav: "Nu ai încă favorite salvate. Apasă pe iconița inimă de pe orice anunț pentru a-l salva aici.", emptyProps: "Nu ai propuneri active. Deschide orice ofertă și apasă pe Propune schimb.", incoming: "Primită", outgoing: "Trimisă", yourAd: "Anunțul tău", saveBtn: "Salvează profilul și preferințele", watchlistTitle: "Alerte Watchlist active" },
+    ru: { partner: "Партнёр", view: "Открыть", edit: "Изменить", del: "Удалить", accept: "Принять", chat: "Сообщения", contract: "Договор 1:1", sendMsg: "Отправить", chatPlaceholder: "Напишите сообщение партнёру...", chip1: "Предложить проверку", chip2: "Принять обмен 1:1", chip3: "Когда можем встретиться?", emptyFav: "Пока нет сохранённых избранных. Нажмите на сердечко на любой карточке объявления.", emptyProps: "Пока нет активных предложений обмена.", incoming: "Входящее", outgoing: "Исходящее", yourAd: "Ваше объявление", saveBtn: "Сохранить профиль и настройки", watchlistTitle: "Активные уведомления Watchlist" }
   };
   const dl = dashLabelsMap[currentLang] || dashLabelsMap.en;
 
@@ -3875,31 +5669,62 @@ function renderDashboardContent() {
       container.innerHTML = `<p style="color:var(--muted);">${dl.emptyProps}</p>`;
       return;
     }
-    container.innerHTML = swapProposals.map(p => `
-      <div class="dash-list-item" style="gap:12px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:220px;">
-          <span style="font-size:11.5px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:${p.direction === 'Incoming' ? 'var(--mint)' : 'var(--forest)'};color:${p.direction === 'Incoming' ? 'var(--forest)' : '#fff'};">
-            ${p.direction === 'Incoming' ? dl.incoming : dl.outgoing}
-          </span>
-          <strong style="display:block;font-size:15.5px;margin-top:6px;cursor:pointer;color:var(--forest);" onclick="closeDashboardModal(); if(${Number(p.offerId) || 0}) openOfferModal(${Number(p.offerId)}, 'details');">${p.offeredItem} ⇄ ${p.targetTitle}</strong>
-          <span style="font-size:13px;color:var(--muted);">${dl.partner}: ${p.partner} · ${p.cashBalance}</span>
+    container.innerHTML = swapProposals.map(p => {
+      const msgs = ensureProposalMessages(p);
+      const isThreadOpen = activeProposalThreadId === p.id;
+      return `
+        <div class="dash-list-item" style="flex-direction:column;align-items:stretch;gap:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:220px;">
+              <span style="font-size:11.5px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:${p.direction === 'Incoming' ? 'var(--mint)' : 'var(--forest)'};color:${p.direction === 'Incoming' ? 'var(--forest)' : '#fff'};">
+                ${p.direction === 'Incoming' ? dl.incoming : dl.outgoing}
+              </span>
+              <strong style="display:block;font-size:15.5px;margin-top:6px;cursor:pointer;color:var(--forest);" onclick="closeDashboardModal(); if(${Number(p.offerId) || 0}) openOfferModal(${Number(p.offerId)}, 'details');">${p.offeredItem} ⇄ ${p.targetTitle}</strong>
+              <span style="font-size:13px;color:var(--muted);display:block;">${dl.partner}: ${p.partner} · ${p.cashBalance}</span>
+              ${p.note ? `<span style="font-size:12.5px;color:var(--ink-soft);display:block;margin-top:3px;font-style:italic;">"${p.note}"</span>` : ""}
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="font-size:12px;font-weight:700;color:var(--forest);white-space:nowrap;">✓ ${p.status}</span>
+              ${p.direction === "Incoming" && !p.accepted ? `<button type="button" class="btn btn-mint" style="padding:6px 11px;font-size:12px;" onclick="acceptSwapProposal(${p.id})">${dl.accept}</button>` : ""}
+              <button type="button" class="btn ${isThreadOpen ? 'btn-dark' : 'btn-login'}" style="padding:6px 11px;font-size:12px;" onclick="toggleProposalThread(${p.id})">${dl.chat} (${msgs.length})</button>
+              <button type="button" class="btn btn-login" style="padding:6px 11px;font-size:12px;" onclick="openSwapAgreementModal(${p.id})">${dl.contract}</button>
+              ${p.offerId ? `<button type="button" class="btn btn-login" style="padding:6px 11px;font-size:12px;" onclick="closeDashboardModal(); openOfferModal(${p.offerId}, 'details')">${dl.view}</button>` : ""}
+              <button type="button" class="btn btn-login" style="padding:6px 10px;font-size:12px;color:#b91c1c;" onclick="deleteSwapProposal(${p.id})" title="${dl.del}">✕</button>
+            </div>
+          </div>
+
+          ${isThreadOpen ? `
+            <div style="margin-top:4px;padding:12px;background:var(--mint-soft);border:1px solid rgba(12,44,40,0.16);border-radius:14px;">
+              <div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+                ${msgs.map(m => `
+                  <div style="align-self:${m.sender === 'me' ? 'flex-end' : 'flex-start'};max-width:85%;padding:7px 11px;border-radius:12px;font-size:12.5px;background:${m.sender === 'me' ? 'var(--forest)' : '#fff'};color:${m.sender === 'me' ? '#fff' : 'var(--ink)'};border:1px solid rgba(12,44,40,0.1);">
+                    <strong style="font-size:10.5px;opacity:0.8;display:block;">${m.author} · ${m.time}</strong>
+                    <span>${m.text}</span>
+                  </div>
+                `).join("")}
+              </div>
+              <div class="wiz-chip-row" style="margin-bottom:8px;">
+                <button type="button" class="wiz-chip" onclick="sendQuickProposalChip(${p.id}, '${dl.chip1.replace(/'/g, "\\'")}')">+ ${dl.chip1}</button>
+                <button type="button" class="wiz-chip" onclick="sendQuickProposalChip(${p.id}, '${dl.chip2.replace(/'/g, "\\'")}')">+ ${dl.chip2}</button>
+                <button type="button" class="wiz-chip" onclick="sendQuickProposalChip(${p.id}, '${dl.chip3.replace(/'/g, "\\'")}')">+ ${dl.chip3}</button>
+              </div>
+              <form onsubmit="sendProposalMessage(event, ${p.id})" style="display:flex;gap:8px;">
+                <input type="text" id="propChatInput_${p.id}" class="input-light" placeholder="${dl.chatPlaceholder}" required style="flex:1;height:38px;font-size:13px;" />
+                <button type="submit" class="btn btn-dark" style="padding:0 16px;height:38px;font-size:12.5px;">${dl.sendMsg} →</button>
+              </form>
+            </div>
+          ` : ""}
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:12.5px;font-weight:700;color:var(--forest);white-space:nowrap;">✓ ${p.status}</span>
-          ${p.direction === "Incoming" && !p.accepted ? `<button type="button" class="btn btn-mint" style="padding:6px 12px;font-size:12px;" onclick="acceptSwapProposal(${p.id})">${dl.accept}</button>` : ""}
-          ${p.offerId ? `<button type="button" class="btn btn-login" style="padding:6px 12px;font-size:12px;" onclick="closeDashboardModal(); openOfferModal(${p.offerId}, 'details')">${dl.view}</button>` : ""}
-          <button type="button" class="btn btn-login" style="padding:6px 10px;font-size:12px;color:#b91c1c;" onclick="deleteSwapProposal(${p.id})" title="${dl.del}">✕</button>
-        </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   } else if (currentDashTab === "mylistings") {
     const userCreated = offers.filter(o => o.createdByUser || o.id > 100000);
     const myItems = userCreated.length > 0 ? userCreated : offers.slice(0, 3);
     container.innerHTML = `
       ${myItems.map(item => {
-        const loc = getOfferLocalized(item);
-        const isCustom = Boolean(item.createdByUser || item.id > 100000);
-        return `
+      const loc = getOfferLocalized(item);
+      const isCustom = Boolean(item.createdByUser || item.id > 100000);
+      return `
           <div class="dash-list-item" style="gap:12px;flex-wrap:wrap;">
             <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:210px;">
               <img src="${item.image}" style="width:64px;height:48px;object-fit:cover;border-radius:10px;flex-shrink:0;" alt="" />
@@ -3918,7 +5743,7 @@ function renderDashboardContent() {
             </div>
           </div>
         `;
-      }).join("")}
+    }).join("")}
       <button type="button" class="btn btn-mint btn-block" style="margin-top:12px;" onclick="closeDashboardModal(); resetWizardDraft(); openWizardModal(1);">
         ${t("navPostSwap")} →
       </button>
@@ -3949,6 +5774,102 @@ function renderDashboardContent() {
         `;
       }).join("");
     }
+  } else if (currentDashTab === "profile") {
+    const u = currentUser || { name: "", email: "", phone: "", country: "Romania", prefLang: currentLang, prefCurrency: currentCurrency };
+    const alertsHtml = watchlistAlerts.length > 0 ? `
+      <div style="margin-top:16px;">
+        <strong style="display:block;font-size:14px;margin-bottom:8px;color:var(--forest);">${dl.watchlistTitle} (${watchlistAlerts.length})</strong>
+        ${watchlistAlerts.map(a => `
+          <div class="dash-list-item" style="padding:10px 14px;">
+            <div>
+              <strong>${a.interest}</strong>
+              <span style="font-size:12px;color:var(--muted);display:block;">${a.country} · ${a.email}</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="btn btn-mint" style="padding:5px 11px;font-size:12px;" onclick="closeDashboardModal(); executeQuickKeywordSearch('${a.interest.replace(/'/g, "\\'")}')">${dl.view}</button>
+              <button type="button" class="btn btn-login" style="padding:5px 9px;font-size:12px;color:#b91c1c;" onclick="deleteWatchlistAlert(${a.id})">✕</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    ` : "";
+
+    const subCopy = getSubscriptionUiCopy();
+    const isProPlan = Boolean(u.plan === "pro");
+    const remSwaps = typeof u.freeSwaps === "number" ? u.freeSwaps : 10;
+    const subCardHtml = `
+      <div style="margin-bottom:16px;padding:16px 18px;background:#0a2520;color:#fff;border-radius:18px;border:1.5px solid rgba(169,255,202,0.35);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          <strong style="font-size:15px;color:#a9ffca;">${subCopy.dashCardTitle}</strong>
+          <span style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;">
+            ${isProPlan ? subCopy.statusPro : `${subCopy.statusCredits} ${remSwaps} / 10`}
+          </span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          <button type="button" class="btn btn-mint" style="font-size:12px;padding:7px 13px;" onclick="openSubscriptionModal('pack15')">${subCopy.packBtn} (${formatCurrency(9, currentCurrency)})</button>
+          <button type="button" class="btn btn-login" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);font-size:12px;padding:7px 13px;" onclick="openSubscriptionModal('pro')">${subCopy.proBtn} (${formatCurrency(19, currentCurrency)}${subCopy.perMonth})</button>
+          <button type="button" class="btn btn-login" style="background:rgba(239,68,68,0.18);color:#fca5a5;border:1px solid rgba(239,68,68,0.35);font-size:11.5px;padding:6px 11px;" onclick="simulateZeroFreeSwaps()">${subCopy.dashSimulateZeroBtn}</button>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = `
+      ${subCardHtml}
+      <form onsubmit="saveDashboardProfile(event)" style="background:var(--mint-soft);padding:20px;border-radius:20px;border:1.5px solid var(--forest);">
+        <div class="form-grid-2">
+          <div class="field-group">
+            <label style="color:var(--ink);font-weight:700;">${t("formFullName")}</label>
+            <input type="text" name="name" class="input-light" required value="${u.name || ''}" />
+          </div>
+          <div class="field-group">
+            <label style="color:var(--ink);font-weight:700;">${t("formEmail")}</label>
+            <input type="email" class="input-light" value="${u.email || ''}" disabled />
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field-group">
+            <label style="color:var(--ink);font-weight:700;">${t("formPhone")}</label>
+            <input type="tel" name="phone" class="input-light" value="${u.phone || ''}" placeholder="+40 / +49 / +43..." />
+          </div>
+          <div class="field-group">
+            <label style="color:var(--ink);font-weight:700;">${t("formCountry")}</label>
+            <select name="country" class="input-light">
+              ${Object.keys(COUNTRY_COORDS).map(cName => `<option value="${cName}" ${u.country === cName ? 'selected' : ''}>${cName}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field-group" style="margin-bottom:0;">
+            <label style="color:var(--ink);font-weight:700;">${t("formPrefLang")}</label>
+            <select name="prefLang" class="input-light">
+              ${(window.LANGUAGES || []).map(l => `<option value="${l.code}" ${currentLang === l.code ? 'selected' : ''}>${l.name}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label style="color:var(--ink);font-weight:700;">${t("formPrefCurrency")}</label>
+            <select name="prefCurrency" class="input-light">
+              ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${currentCurrency === c.code ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-dark btn-block" style="margin-top:16px;">
+          ✓ ${dl.saveBtn}
+        </button>
+      </form>
+      ${alertsHtml}
+      <div style="margin-top:16px;padding:16px 18px;background:#fff;border:1.5px solid rgba(12,44,40,0.16);border-radius:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <strong style="font-size:14.5px;color:var(--forest);">${getGdprUiCopy().rightsTitle}</strong>
+          <span style="background:var(--mint-soft);color:var(--forest);padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;">EU Reg. 2016/679</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted);line-height:1.45;">${getGdprUiCopy().rightsSub}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-login" style="font-size:12px;padding:7px 13px;" onclick="openGdprPreferencesModal()">${getGdprUiCopy().consentPrefsBtn}</button>
+          <button type="button" class="btn btn-mint" style="font-size:12px;padding:7px 13px;" onclick="exportUserGdprData()">↓ ${getGdprUiCopy().exportBtn}</button>
+          <button type="button" class="btn btn-login" style="font-size:12px;padding:7px 13px;color:#b91c1c;border-color:rgba(185,28,28,0.28);" onclick="deleteUserGdprAccount()">✕ ${getGdprUiCopy().deleteAccBtn}</button>
+        </div>
+      </div>
+    `;
   }
 }
 
@@ -3959,14 +5880,26 @@ function openGuideModal(guideKey) {
   const g = window.GUIDES_DATA[guideKey];
   if (!g) return;
   const title = g.title[currentLang] || g.title.en;
+  const lines = Array.isArray(g.items)
+    ? g.items
+    : (g.items && (g.items[currentLang] || g.items.en)) || [];
+  const badgeMap = {
+    ro: "Ghid & Regulament Oficial ChangeIt4Me",
+    en: "ChangeIt4Me Official Guide & Checklist",
+    de: "Offizieller ChangeIt4Me Leitfaden",
+    fr: "Guide Officiel ChangeIt4Me",
+    it: "Guida Ufficiale ChangeIt4Me",
+    es: "Guía Oficial ChangeIt4Me",
+    ru: "Официальное руководство ChangeIt4Me"
+  };
   const content = document.getElementById("guideModalContent");
 
   content.innerHTML = `
     <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
-    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">ChangeIt4Me Checklist</span>
-    <h2 style="font-size:28px;margin:12px 0 18px;">${title}</h2>
+    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${badgeMap[currentLang] || badgeMap.en}</span>
+    <h2 style="font-size:26px;margin:12px 0 18px;">${title}</h2>
     <ul class="checks" style="margin-bottom:22px;">
-      ${g.items.map(line => `
+      ${lines.map(line => `
         <li>
           <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#a9ffca"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"/></svg>
           <span>${line}</span>
@@ -3990,11 +5923,33 @@ function closeGuideModal() {
 function handleWatchlistSubmit(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
+  const interest = String(fd.get("interest") || "").trim();
+  const country = String(fd.get("country") || "Europe").trim();
+  const email = String(fd.get("email") || (currentUser ? currentUser.email : "")).trim();
+  if (interest) {
+    watchlistAlerts.unshift({
+      id: Date.now(),
+      interest,
+      country,
+      email
+    });
+    saveWatchlistAlerts();
+  }
+  const wlMsgMap = {
+    ro: `✓ Alertă Watchlist activată pentru „${interest}” în ${country}!`,
+    en: `✓ Watchlist alert activated for "${interest}" in ${country}!`,
+    de: `✓ Suchauftrag aktiviert für „${interest}“ in ${country}!`,
+    fr: `✓ Alerte activée pour « ${interest} » (${country}) !`,
+    it: `✓ Avviso attivato per "${interest}" in ${country}!`,
+    es: `✓ ¡Alerta activada para "${interest}" en ${country}!`,
+    ru: `✓ Уведомление активировано для «${interest}» (${country})!`
+  };
+  const msg = wlMsgMap[currentLang] || wlMsgMap.en;
   const note = document.getElementById("watchlistNote");
   if (note) {
-    note.textContent = `✓ Alert active for "${fd.get("interest")}" in ${fd.get("country")}!`;
+    note.textContent = msg;
   }
-  showToast(`✓ Watchlist alert activated for ${fd.get("interest")}!`);
+  showToast(msg);
   e.target.reset();
 }
 
@@ -4142,6 +6097,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLanguageDropdown();
   initCurrencyDropdown();
   initWorldMap();
+  initGdprBanner();
   // Start with English ('en') as default and run European Geo-IP detection
   detectLanguageByGeoIP(false);
   syncLiveExchangeRates();
