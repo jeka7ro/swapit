@@ -112,6 +112,7 @@ function saveOffersToStorage() {
     const customOrEdited = offers.filter(o => o.createdByUser || o.id > 100000);
     localStorage.setItem("ci4m_user_offers_v1", JSON.stringify(customOrEdited));
     localStorage.setItem("ci4m_deleted_offers_v1", JSON.stringify(deletedOfferIds));
+    if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush();
   } catch (e) { }
 }
 
@@ -130,6 +131,7 @@ let accountsDb = (() => {
 function saveAccountsDb() {
   try {
     localStorage.setItem("ci4m_accounts_db", JSON.stringify(accountsDb));
+    if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush();
   } catch (e) { }
 }
 
@@ -156,6 +158,7 @@ let watchlistAlerts = (() => {
 function saveWatchlistAlerts() {
   try {
     localStorage.setItem("ci4m_watchlist_alerts", JSON.stringify(watchlistAlerts));
+    if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush();
   } catch (e) { }
 }
 
@@ -545,7 +548,12 @@ function deleteUserGdprAccount() {
     saveAccountsDb();
   }
   currentUser = null;
-  offers = offers.filter(o => !(o.createdByUser || o.id > 100000));
+  offers = offers.filter(o => {
+    if (emailKey && o.ownerEmail) {
+      return String(o.ownerEmail).trim().toLowerCase() !== emailKey;
+    }
+    return !(o.createdByUser && !o.ownerEmail);
+  });
   saveOffersToStorage();
   watchlistAlerts = [];
   saveWatchlistAlerts();
@@ -1151,7 +1159,7 @@ function getRouteFromUrlOrStorage() {
 }
 
 function closeAllModalsSilently() {
-  ["wizardModal", "offerModal", "authModal", "dashboardModal", "guideModal"].forEach(id => {
+  ["wizardModal", "offerModal", "authModal", "dashboardModal", "guideModal", "adminModal"].forEach(id => {
     document.getElementById(id)?.classList.remove("open");
   });
   document.body.classList.remove("modal-open");
@@ -1168,6 +1176,9 @@ function navigateToPageRoute(routePath, replace = false) {
     } else if (clean === "/start") {
       document.body.classList.add("mobile-started");
       window.scrollTo({ top: 0, behavior: "instant" });
+    } else if (clean === "/admin") {
+      document.body.classList.add("mobile-started");
+      openAdminModal("listings");
     } else if (clean.startsWith("/wizard")) {
       document.body.classList.add("mobile-started");
       const m = clean.match(/step-(\d+)/);
@@ -1278,23 +1289,53 @@ function getCurrencyObj(code = currentCurrency) {
   return list.find(c => c.code === code) || list[0];
 }
 
+// Universal numeric parser resilient to empty strings "", comma decimals ("15.500,50" or "15000,50"), thousands commas ("15,000"), and whitespace
+function sanitizeNumericAmount(rawVal, fallback = 0) {
+  if (typeof rawVal === "number") {
+    return Number.isFinite(rawVal) ? rawVal : fallback;
+  }
+  if (rawVal === null || rawVal === undefined) return fallback;
+  let str = String(rawVal).trim().replace(/\s+/g, "");
+  if (!str) return fallback;
+  str = str.replace(/[^0-9.,-]/g, "");
+  if (!str) return fallback;
+  const lastComma = str.lastIndexOf(",");
+  const lastDot = str.lastIndexOf(".");
+  if (lastComma > -1 && lastDot > -1) {
+    if (lastComma > lastDot) {
+      str = str.replace(/\./g, "").replace(",", ".");
+    } else {
+      str = str.replace(/,/g, "");
+    }
+  } else if (lastComma > -1) {
+    const parts = str.split(",");
+    if (parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1) {
+      str = str.replace(/,/g, "");
+    } else {
+      str = str.replace(/,/g, ".");
+    }
+  }
+  const parsed = Number(str);
+  return (Number.isFinite(parsed) && parsed >= 0) ? parsed : fallback;
+}
+
 // Exact unrounded conversion to EUR base (prevents any round-trip drift)
 function convertToEur(valInCurr, code = currentCurrency) {
   const c = getCurrencyObj(code);
-  const num = Number(valInCurr) || 0;
+  const num = sanitizeNumericAmount(valInCurr, 0);
   if (!c.rateFromEur) return num;
   return num / c.rateFromEur;
 }
 
 function convertFromEur(valEur, code = currentCurrency) {
   const c = getCurrencyObj(code);
-  const num = Number(valEur) || 0;
+  const num = sanitizeNumericAmount(valEur, 0);
   return Math.round(num * c.rateFromEur);
 }
 
 // Direct cross-currency conversion respecting exact parity with client-set price
 function convertBetweenCurrencies(amount, fromCode, toCode = currentCurrency) {
-  const num = Number(amount) || 0;
+  const num = sanitizeNumericAmount(amount, 0);
   if (!num) return 0;
   const src = String(fromCode || "EUR").toUpperCase();
   const dst = String(toCode || currentCurrency).toUpperCase();
@@ -1310,8 +1351,8 @@ function getOfferValueInCurrency(item, targetCode = currentCurrency) {
   if (!item) return 0;
   const origCurr = String(item.originalCurrency || "EUR").toUpperCase();
   const origAmt = item.originalAmount !== undefined && item.originalAmount !== ""
-    ? Number(item.originalAmount)
-    : Number(item.valueEur || 0);
+    ? sanitizeNumericAmount(item.originalAmount, 0)
+    : sanitizeNumericAmount(item.valueEur, 0);
   if (origCurr === String(targetCode).toUpperCase()) {
     return Math.round(origAmt);
   }
@@ -1320,7 +1361,7 @@ function getOfferValueInCurrency(item, targetCode = currentCurrency) {
 
 function formatAmountInCurrentCurrency(rawAmount, code = currentCurrency) {
   const c = getCurrencyObj(code);
-  const rounded = Math.round(Number(rawAmount) || 0);
+  const rounded = Math.round(sanitizeNumericAmount(rawAmount, 0));
   if (c.code === "RON") return `${rounded.toLocaleString("ro-RO")} LEI`;
   if (c.code === "MDL") return `${rounded.toLocaleString("ro-RO")} MDL`;
   if (c.code === "RUB") return `${rounded.toLocaleString("ru-RU")} ₽`;
@@ -1341,7 +1382,7 @@ function formatCurrency(valEur, code = currentCurrency) {
 }
 
 function buildParityPreviewHtml(amount, baseCurrCode) {
-  const num = Number(amount) || 0;
+  const num = sanitizeNumericAmount(amount, 0);
   if (num <= 0) return "";
   const others = (window.CURRENCIES || []).filter(c => c.code !== baseCurrCode);
   const pills = others.map(c => {
@@ -1682,6 +1723,24 @@ function updateFavCountUI() {
   if (pill) pill.textContent = String(favoriteIds.length);
   const propBadge = document.getElementById("headerProposalsBadge");
   if (propBadge) propBadge.textContent = String(swapProposals.length);
+  const userPillCount = document.getElementById("userListingsCountPill");
+  if (userPillCount) {
+    const customCount = offers.filter(o => o.createdByUser || o.id > 100000).length;
+    userPillCount.textContent = String(customCount);
+  }
+  const userFilterLbl = document.getElementById("userListingsFilterLabel");
+  if (userFilterLbl) {
+    const lblMap = {
+      ro: "★ Anunțuri Adăugate",
+      en: "★ Added Listings",
+      de: "★ Neue Inserate",
+      fr: "★ Annonces Ajoutées",
+      it: "★ Annunci Aggiunti",
+      es: "★ Anuncios Añadidos",
+      ru: "★ Новые Объявления"
+    };
+    userFilterLbl.textContent = lblMap[currentLang] || lblMap.en;
+  }
 }
 
 function toggleFavorite(offerId, ev) {
@@ -1812,7 +1871,10 @@ const SEARCH_SYNONYMS = {
   "laptop": ["macbook", "laptop", "notebook", "portátil", "ноутбук"],
   "tableta": ["ipad", "tablet", "планшет"],
   "tabletă": ["ipad", "tablet", "планшет"],
-  "ceas": ["rolex", "watch", "chronograph", "часы"]
+  "ceas": ["rolex", "watch", "chronograph", "часы"],
+  "bucuresti": ["bucharest", "bucuresti", "bucurești"],
+  "bucurești": ["bucharest", "bucuresti", "bucurești"],
+  "bucharest": ["bucharest", "bucuresti", "bucurești"]
 };
 
 const STOP_PREFIX_TOKENS = new Set([
@@ -1823,10 +1885,16 @@ const STOP_PREFIX_TOKENS = new Set([
   "portatil", "portátil", "portbagaj", "portable", "portiere", "port", "por"
 ]);
 
-function extractSearchTokens(str) {
+function normalizeSearchText(str) {
   return String(str || "")
     .toLowerCase()
-    .split(/[^a-z0-9ăâîșțäöüßéèêëàùûüçñа-яё]+/i)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function extractSearchTokens(str) {
+  return normalizeSearchText(str)
+    .split(/[^a-z0-9ßа-яё]+/i)
     .filter(Boolean);
 }
 
@@ -1836,11 +1904,12 @@ function tokensMatchQueryWords(tokens, queryWords, allowSynonyms = true) {
       return true;
     }
     if (!allowSynonyms) return false;
-    const directSyns = SEARCH_SYNONYMS[w];
-    if (directSyns && directSyns.some(s => tokens.some(tok => tok.startsWith(s)))) return true;
+    const directSyns = (SEARCH_SYNONYMS[w] || []).map(s => normalizeSearchText(s));
+    if (directSyns.length && directSyns.some(s => tokens.some(tok => tok.startsWith(s)))) return true;
     if (w.length >= 3) {
       for (const [k, synList] of Object.entries(SEARCH_SYNONYMS)) {
-        if (k.startsWith(w) && synList.some(s => tokens.some(tok => tok.startsWith(s)))) return true;
+        const normKey = normalizeSearchText(k);
+        if (normKey.startsWith(w) && synList.some(s => tokens.some(tok => tok.startsWith(normalizeSearchText(s))))) return true;
       }
     }
     return false;
@@ -1850,7 +1919,8 @@ function tokensMatchQueryWords(tokens, queryWords, allowSynonyms = true) {
 function getOfferPrimaryTokens(item) {
   const activeTr = (item.i18n && item.i18n[currentLang]) || {};
   const enTr = (item.i18n && item.i18n.en) || {};
-  const primaryText = `${item.category || ""} ${item.country || ""} ${item.city || ""} ${item.specs || ""} ${item.title || ""} ${activeTr.title || ""} ${enTr.title || ""}`;
+  const roTr = (item.i18n && item.i18n.ro) || {};
+  const primaryText = `${item.id || ""} ${item.category || ""} ${item.country || ""} ${item.city || ""} ${item.owner || ""} ${item.ownerEmail || ""} ${item.specs || ""} ${item.title || ""} ${item.desc || ""} ${item.want || ""} ${activeTr.title || ""} ${activeTr.desc || ""} ${activeTr.want || ""} ${enTr.title || ""} ${enTr.desc || ""} ${roTr.title || ""} ${roTr.desc || ""}`;
   return extractSearchTokens(primaryText);
 }
 
@@ -2329,10 +2399,23 @@ function buildLiveSearchDropdownHtml(val) {
   const q = String(val || "").trim();
   if (q.length < 1) return "";
   const ui = getSmartUiLabels();
+  const isAdminQuery = normalizeSearchText(q) === "admin" || normalizeSearchText(q).startsWith("admin");
+  const adminShortcutHtml = isAdminQuery ? `
+    <button type="button" class="smart-dd-item" style="background:#0a2520;color:#fff;" onclick="document.getElementById('heroSmartDropdown').style.display='none'; document.getElementById('mobileSmartDropdown').style.display='none'; openAdminModal('listings');">
+      <div class="smart-dd-info">
+        <strong style="color:#a9ffca;">★ Admin & Diagnostics Console (/admin)</strong>
+        <span style="color:#c9dfdb;">Vezi toate conturile înregistrate, anunțurile adăugate, ciornele și testele</span>
+      </div>
+      <span class="smart-dd-price" style="background:#a9ffca;color:#0c2c28;">Deschide →</span>
+    </button>
+  ` : "";
   const qTokens = extractSearchTokens(q);
   const exactMatches = offers
     .filter(it => matchesSmartSearchQuery(it, q))
     .sort((a, b) => {
+      const aCustom = (a.createdByUser || a.id > 100000) ? 1 : 0;
+      const bCustom = (b.createdByUser || b.id > 100000) ? 1 : 0;
+      if (bCustom !== aCustom) return bCustom - aCustom;
       const aTitleTokens = extractSearchTokens(`${a.title} ${getOfferLocalized(a).title}`);
       const bTitleTokens = extractSearchTokens(`${b.title} ${getOfferLocalized(b).title}`);
       const aInTitle = tokensMatchQueryWords(aTitleTokens, qTokens, true) ? 1 : 0;
@@ -2344,7 +2427,7 @@ function buildLiveSearchDropdownHtml(val) {
   const aiRecs = buildAiSmartRecommendations(q, exactMatches, offers);
   const alternatives = aiRecs.items.slice(0, 3);
 
-  if (exactMatches.length === 0 && alternatives.length === 0) {
+  if (exactMatches.length === 0 && alternatives.length === 0 && !adminShortcutHtml) {
     return `
       <div class="smart-dd-empty" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <span style="font-size:13px;color:var(--muted);font-weight:600;">${ui.noMatch} «${q}»</span>
@@ -2379,6 +2462,7 @@ function buildLiveSearchDropdownHtml(val) {
     : "";
 
   return `
+    ${adminShortcutHtml}
     ${exactMatches.map(item => renderRow(item)).join("")}
     ${chipsHtml}
     ${alternatives.length > 0 ? `
@@ -2464,6 +2548,8 @@ function renderOffers() {
   const passesBaseFilters = (item) => {
     if (currentCategoryFilter === "favs") {
       if (!favoriteIds.includes(item.id)) return false;
+    } else if (currentCategoryFilter === "user") {
+      if (!(item.createdByUser || item.id > 100000)) return false;
     } else if (currentCategoryFilter !== "all" && item.category !== currentCategoryFilter) {
       return false;
     }
@@ -2498,13 +2584,22 @@ function renderOffers() {
     } else if (query) {
       const qTokens = extractSearchTokens(query);
       list.sort((a, b) => {
+        const aCustom = (a.createdByUser || a.id > 100000) ? 1 : 0;
+        const bCustom = (b.createdByUser || b.id > 100000) ? 1 : 0;
+        if (bCustom !== aCustom) return bCustom - aCustom;
         const aTitle = tokensMatchQueryWords(extractSearchTokens(`${a.title} ${getOfferLocalized(a).title}`), qTokens, true) ? 1 : 0;
         const bTitle = tokensMatchQueryWords(extractSearchTokens(`${b.title} ${getOfferLocalized(b).title}`), qTokens, true) ? 1 : 0;
         if (bTitle !== aTitle) return bTitle - aTitle;
         return (b.matchScore || 90) - (a.matchScore || 90);
       });
     } else {
-      list.sort((a, b) => (b.matchScore || 90) - (a.matchScore || 90));
+      list.sort((a, b) => {
+        const aCustom = (a.createdByUser || a.id > 100000) ? 1 : 0;
+        const bCustom = (b.createdByUser || b.id > 100000) ? 1 : 0;
+        if (bCustom !== aCustom) return bCustom - aCustom;
+        if (aCustom && bCustom) return (b.id || 0) - (a.id || 0);
+        return (b.matchScore || 90) - (a.matchScore || 90);
+      });
     }
   };
   sortList(filtered);
@@ -2540,8 +2635,19 @@ function renderOffers() {
     const valFormatted = formatOfferPrice(item, currentCurrency);
     const isFav = favoriteIds.includes(item.id);
     const score = item.matchScore || 95;
-    const altPillHtml = extraBadge
-      ? `<span style="background:${isWantHighlight ? '#a9ffca' : 'rgba(255,255,255,0.94)'};color:var(--forest);font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">${extraBadge}</span>`
+    const isCustomUserAd = Boolean(item.createdByUser || item.id > 100000);
+    const newAdBadgeText = {
+      ro: "★ NOU · Anunț Membru",
+      en: "★ NEW · Member Ad",
+      de: "★ NEU · Mitgliedsinserat",
+      fr: "★ NOUVEAU · Annonce Membre",
+      it: "★ NUOVO · Annuncio Membro",
+      es: "★ NUEVO · Anuncio Miembro",
+      ru: "★ НОВОЕ · Объявление"
+    }[currentLang] || "★ NEW · Member Ad";
+    const resolvedBadge = extraBadge || (isCustomUserAd ? newAdBadgeText : null);
+    const altPillHtml = resolvedBadge
+      ? `<span style="background:${(isWantHighlight || isCustomUserAd) ? '#a9ffca' : 'rgba(255,255,255,0.94)'};color:var(--forest);font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">${resolvedBadge}</span>`
       : "";
 
     return `
@@ -3091,7 +3197,7 @@ function handleInlineQuickPost(e) {
     "clothing": "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1000&q=80"
   };
 
-  const enteredVal = Number(fd.get("valueEur")) || 15000;
+  const enteredVal = sanitizeNumericAmount(fd.get("valueEur"), 15000) || 15000;
   const enteredCurr = String(fd.get("valueCurrency") || currentCurrency).toUpperCase();
   const normalizedValueEur = convertToEur(enteredVal, enteredCurr);
   const dealType = fd.get("dealType") || "1to1";
@@ -3420,6 +3526,30 @@ function handleModalLogin(e) {
   const email = String(fd.get("email") || "member@changeit4me.com").trim();
   const password = String(fd.get("password") || "");
   const emailKey = email.toLowerCase();
+
+  // Super-Admin Backoffice Authentication Check
+  if ((emailKey === "jeka7ro@mail.com" || emailKey === "jeka7ro@gmail.com") && password === "11Noiembrie2026!") {
+    adminAuthenticated = true;
+    try { localStorage.setItem("ci4m_admin_session_v1", "jeka7ro@mail.com"); } catch (err) { }
+    activateUserAccount({
+      name: "Eugeniu · Super-Admin",
+      email: "jeka7ro@mail.com",
+      password: "11Noiembrie2026!",
+      phone: "+40 700 000 001",
+      country: "Romania",
+      prefLang: currentLang,
+      prefCurrency: currentCurrency,
+      plan: "pro",
+      freeSwaps: 999,
+      role: "superadmin"
+    });
+    updateAdminHeaderButtonsVisibility();
+    e.target.reset();
+    closeAuthModal();
+    openAdminModal("users");
+    return;
+  }
+
   const savedAcc = accountsDb[emailKey];
 
   if (savedAcc) {
@@ -3499,8 +3629,14 @@ function openWizardModal(stepOverride) {
 function closeWizardModal() {
   saveCurrentWizStepInputs();
   document.getElementById("wizardModal").classList.remove("open");
-  document.body.classList.remove("modal-open");
-  syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
+  if (document.getElementById("adminModal")?.classList.contains("open")) {
+    document.body.classList.add("modal-open");
+    renderAdminModalContent();
+    syncUrlWithRoute("/admin");
+  } else {
+    document.body.classList.remove("modal-open");
+    syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
+  }
 }
 
 function getWizValidationCopy() {
@@ -3642,7 +3778,7 @@ function validateWizStep(stepNum) {
       showToast(vc.needTitle);
       return false;
     }
-    const amt = Number(wizData.originalAmount) || Number(wizData.valueEur) || 0;
+    const amt = sanitizeNumericAmount(wizData.originalAmount, 0) || sanitizeNumericAmount(wizData.valueEur, 0) || 0;
     if (amt <= 0) {
       highlightInvalidWizInput("wizValueEur");
       showToast(vc.needValue);
@@ -3812,12 +3948,15 @@ function saveCurrentWizStepInputs() {
   if (val("wizTitleHave") !== undefined) wizData.titleHave = val("wizTitleHave");
   if (val("wizValueEur") !== undefined) {
     const rawStr = val("wizValueEur");
-    const rawVal = Number(rawStr) || 0;
+    const rawVal = sanitizeNumericAmount(rawStr, 0);
     const wizCurr = val("wizCurrencySelect") || wizData.originalCurrency || currentCurrency;
     wizData.originalCurrency = wizCurr;
     if (rawVal > 0) {
       wizData.originalAmount = rawVal;
       wizData.valueEur = convertToEur(rawVal, wizCurr);
+    } else {
+      wizData.originalAmount = "";
+      wizData.valueEur = "";
     }
   }
   if (val("wizSpecs") !== undefined) wizData.specs = val("wizSpecs");
@@ -3838,7 +3977,7 @@ function onWizPriceInputChange() {
   const currEl = document.getElementById("wizCurrencySelect");
   const previewEl = document.getElementById("wizParityPreview");
   const labelEl = document.getElementById("wizValueCurrencyLabel");
-  const rawVal = Number(valEl?.value) || 0;
+  const rawVal = sanitizeNumericAmount(valEl?.value, 0);
   const chosenCurr = currEl?.value || currentCurrency;
   wizData.originalCurrency = chosenCurr;
   wizData.originalAmount = rawVal > 0 ? rawVal : "";
@@ -4192,7 +4331,7 @@ function onQuickPostPriceChange() {
   const valEl = document.getElementById("quickPostValueInput");
   const currEl = document.getElementById("quickPostCurrencySelect");
   const previewEl = document.getElementById("quickParityPreview");
-  const rawVal = Number(valEl?.value) || 0;
+  const rawVal = sanitizeNumericAmount(valEl?.value, 0);
   const chosenCurr = currEl?.value || currentCurrency;
   if (previewEl) {
     previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
@@ -4659,8 +4798,13 @@ function publishWizardOffer() {
   if (catSearch) catSearch.value = "";
   renderOffers();
   renderMapPinsAndPanel();
-  syncUrlWithRoute("/offers");
-  document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
+  if (document.getElementById("adminModal")?.classList.contains("open")) {
+    renderAdminModalContent();
+    syncUrlWithRoute("/admin");
+  } else {
+    syncUrlWithRoute("/offers");
+    document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
+  }
   showToast(isEditing ? getWizValidationCopy().savedToast : `✓ ${offerPayload.title} — Live!`);
 }
 
@@ -4962,7 +5106,7 @@ function submitDirectBuyOffer(e, offerId) {
   const fd = new FormData(e.target);
   const item = offers.find(o => o.id === offerId);
   const loc = item ? getOfferLocalized(item) : { title: "Listing" };
-  const amount = Number(fd.get("buyAmount")) || 0;
+  const amount = sanitizeNumericAmount(fd.get("buyAmount"), 0);
   const curr = String(fd.get("buyCurrency") || currentCurrency).toUpperCase();
   const formattedOffer = formatAmountInCurrentCurrency(amount, curr);
   const payMethod = String(fd.get("paymentMethod") || "Direct Purchase");
@@ -5108,16 +5252,18 @@ function openOfferModal(offerId, mode = "details") {
     }
   };
   const mUi = modalUiMap[currentLang] || modalUiMap.en;
+  const isFromBackoffice = Boolean(document.getElementById("adminModal")?.classList.contains("open"));
 
   content.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;">
+    <button type="button" class="modal-close" style="position:absolute;top:18px;right:20px;color:var(--ink);background:var(--bg);z-index:10;" onclick="closeOfferModal()" aria-label="Close">✕</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;padding-right:52px;border-bottom:1px solid var(--line);flex-wrap:wrap;">
       <span style="margin:0;font-size:13.5px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ${mUi.ownerVerified}: ${item.owner} (${mUi.verifiedWord}) · ${getDealTypeLabel(item.dealType)}</span>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        ${isCustomOwner ? `<button type="button" class="btn btn-mint" style="padding:5px 12px;font-size:12px;" onclick="editListingInWizard(${item.id})">${ptc.editBtn}</button>` : ""}
+        ${isFromBackoffice ? `<button type="button" class="btn btn-dark" style="padding:5px 12px;font-size:12px;" onclick="closeOfferModal()">← Back to Backoffice</button>` : ""}
+        ${(isCustomOwner || isFromBackoffice) ? `<button type="button" class="btn btn-mint" style="padding:5px 12px;font-size:12px;" onclick="editListingInWizard(${item.id})">${ptc.editBtn}</button>` : ""}
         <button type="button" class="btn btn-login" style="padding:5px 12px;font-size:12px;" onclick="copyOfferShareLink(${item.id})">${ptc.shareBtn}</button>
         <button type="button" class="btn btn-login" style="padding:5px 11px;font-size:11.5px;color:var(--muted);" onclick="reportOfferListing(${item.id})">${getGdprUiCopy().dsaReportBtn}</button>
         <button type="button" id="offerModalFavBtn" onclick="toggleFavorite(${item.id})" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:${isFav ? 'var(--mint)' : 'var(--bg)'};color:${isFav ? 'var(--forest)' : 'var(--ink)'};font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;" aria-label="Favorite">${isFav ? "♥" : "♡"}</button>
-        <button type="button" class="modal-close" style="position:static;color:var(--ink);background:var(--bg);flex-shrink:0;" onclick="closeOfferModal()" aria-label="Close">✕</button>
       </div>
     </div>
 
@@ -5280,13 +5426,21 @@ function openOfferModal(offerId, mode = "details") {
   modal.classList.add("open");
   document.body.classList.add("modal-open");
   document.body.classList.add("mobile-started");
-  syncUrlWithRoute(`/offer/${offerId}`);
+  if (!document.getElementById("adminModal")?.classList.contains("open")) {
+    syncUrlWithRoute(`/offer/${offerId}`);
+  }
 }
 
 function closeOfferModal() {
   document.getElementById("offerModal").classList.remove("open");
-  document.body.classList.remove("modal-open");
-  syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
+  if (document.getElementById("adminModal")?.classList.contains("open")) {
+    document.body.classList.add("modal-open");
+    renderAdminModalContent();
+    syncUrlWithRoute("/admin");
+  } else {
+    document.body.classList.remove("modal-open");
+    syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
+  }
 }
 
 function consumeFreeSwapIfLogged() {
@@ -5917,7 +6071,11 @@ function openGuideModal(guideKey) {
 
 function closeGuideModal() {
   document.getElementById("guideModal").classList.remove("open");
-  document.body.classList.remove("modal-open");
+  if (document.getElementById("adminModal")?.classList.contains("open")) {
+    document.body.classList.add("modal-open");
+  } else {
+    document.body.classList.remove("modal-open");
+  }
 }
 
 function handleWatchlistSubmit(e) {
@@ -6093,7 +6251,1692 @@ function showToast(message) {
   }, 4200);
 }
 
+// ============================================================================
+// ENTERPRISE BACKOFFICE & CRM PORTAL (/admin)
+// Admin Login: jeka7ro@mail.com / 11Noiembrie2026!
+// ============================================================================
+const BACKOFFICE_ADMIN_EMAIL = "jeka7ro@mail.com";
+const BACKOFFICE_ADMIN_PASS = "11Noiembrie2026!";
+
+let adminAuthenticated = (() => {
+  try {
+    return localStorage.getItem("ci4m_admin_session_v1") === BACKOFFICE_ADMIN_EMAIL;
+  } catch (e) {
+    return false;
+  }
+})();
+
+let adminLoginErrorMsg = "";
+let currentAdminTab = "users";
+let adminListingFilterMode = "all";
+let adminUsersFilterMode = "all";
+let adminListingSearchQuery = "";
+
+const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
+  accounts: [
+    {
+      id: "USR-9001",
+      name: "Alexandru Ionescu",
+      email: "alex.ionescu@test.ro",
+      phone: "+40 722 300 100",
+      country: "Romania",
+      city: "Bucharest",
+      prefLang: "ro",
+      prefCurrency: "EUR",
+      plan: "pro",
+      freeSwaps: 999,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-11 10:14"
+    },
+    {
+      id: "USR-9002",
+      name: "Elena Popa",
+      email: "elena.popa@test.ro",
+      phone: "+40 744 500 200",
+      country: "Romania",
+      city: "Cluj-Napoca",
+      prefLang: "ro",
+      prefCurrency: "RON",
+      plan: "pro",
+      freeSwaps: 999,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-11 11:05"
+    },
+    {
+      id: "USR-9003",
+      name: "Mihai Rădulescu",
+      email: "mihai.radulescu@test.ro",
+      phone: "+40 755 800 300",
+      country: "Romania",
+      city: "Timișoara",
+      prefLang: "ro",
+      prefCurrency: "EUR",
+      plan: "pack",
+      freeSwaps: 22,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-11 11:48"
+    },
+    {
+      id: "USR-9004",
+      name: "Cristian Dumitrescu",
+      email: "cristian.dumitrescu@test.ro",
+      phone: "+40 731 940 410",
+      country: "Romania",
+      city: "Constanța",
+      prefLang: "ro",
+      prefCurrency: "EUR",
+      plan: "starter",
+      freeSwaps: 8,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-11 12:20"
+    },
+    {
+      id: "USR-9005",
+      name: "Ana-Maria Stan",
+      email: "anamaria.stan@test.md",
+      phone: "+373 69 412 880",
+      country: "Moldova",
+      city: "Chișinău",
+      prefLang: "ro",
+      prefCurrency: "EUR",
+      plan: "pack",
+      freeSwaps: 19,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-11 13:02"
+    },
+    {
+      id: "USR-9006",
+      name: "Radu Marinescu",
+      email: "radu.marinescu@test.ro",
+      phone: "+40 766 210 900",
+      country: "Romania",
+      city: "Brașov",
+      prefLang: "ro",
+      prefCurrency: "RON",
+      plan: "starter",
+      freeSwaps: 9,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-11 13:38"
+    }
+  ],
+  listings: [
+    {
+      id: 950101,
+      createdByUser: true,
+      ownerEmail: "alex.ionescu@test.ro",
+      category: "cars",
+      country: "Romania",
+      city: "Bucharest",
+      lat: 44.4268,
+      lng: 26.1025,
+      valueEur: 62000,
+      originalAmount: 62000,
+      originalCurrency: "EUR",
+      dealType: "1to1",
+      owner: "Alexandru Ionescu",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80",
+      images: ["https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80"],
+      specs: "2023 · 28,000 km · 3.0 Hybrid xDrive · M-Sport Package · Full BMW Warranty",
+      title: "2023 BMW X5 xDrive45e M-Sport · Bucharest",
+      want: "2-3 Bedroom Apartment in Bucharest / Cluj or Porsche Cayenne",
+      desc: "Registered by Alexandru Ionescu in Bucharest. Single owner, full official BMW service history."
+    },
+    {
+      id: 950102,
+      createdByUser: true,
+      ownerEmail: "elena.popa@test.ro",
+      category: "real-estate",
+      country: "Romania",
+      city: "Cluj-Napoca",
+      lat: 46.7712,
+      lng: 23.6236,
+      valueEur: 185000,
+      originalAmount: 185000,
+      originalCurrency: "EUR",
+      dealType: "either",
+      owner: "Elena Popa",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80",
+      images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80"],
+      specs: "3 Rooms · 84 m² + 14 m² Terrace · Underground Parking · Central Cluj",
+      title: "Modern 3-Room Apartment + Underground Parking · Cluj-Napoca",
+      want: "House with Garden or Apartment in Bucharest / Vienna (± cash difference)",
+      desc: "Registered by Elena Popa. Premium finishes, clear title deed, ready for direct 1:1 swap."
+    },
+    {
+      id: 950103,
+      createdByUser: true,
+      ownerEmail: "mihai.radulescu@test.ro",
+      category: "electronics",
+      country: "Romania",
+      city: "Timișoara",
+      lat: 45.7489,
+      lng: 21.2087,
+      valueEur: 1380,
+      originalAmount: 1380,
+      originalCurrency: "EUR",
+      dealType: "1to1",
+      owner: "Mihai Rădulescu",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=1000&q=80",
+      images: ["https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=1000&q=80"],
+      specs: "512GB · Natural Titanium · 100% Battery Health · Box & Invoice",
+      title: "Apple iPhone 16 Pro Max 512GB · Timisoara",
+      want: "MacBook Pro 16 M3 / iPad Pro M4",
+      desc: "Registered by Mihai Radulescu in Timisoara. Mint 10/10 condition with 24-month warranty."
+    },
+    {
+      id: 950104,
+      createdByUser: true,
+      ownerEmail: "cristian.dumitrescu@test.ro",
+      category: "cars",
+      country: "Romania",
+      city: "Constanța",
+      lat: 44.1598,
+      lng: 28.6348,
+      valueEur: 58500,
+      originalAmount: 58500,
+      originalCurrency: "EUR",
+      dealType: "cash",
+      owner: "Cristian Dumitrescu",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80",
+      images: ["https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80"],
+      specs: "2022 · 39,000 km · GLE 350de 4MATIC Plug-in Hybrid · AMG Line",
+      title: "2022 Mercedes-Benz GLE 350de 4MATIC AMG Line · Constanta",
+      want: "2-Room Apartment in Mamaia Nord / Brasov or Compact SUV + difference",
+      desc: "Registered by Cristian Dumitrescu. Authorized dealer purchase, full Mercedes-Benz service history."
+    },
+    {
+      id: 950105,
+      createdByUser: true,
+      ownerEmail: "anamaria.stan@test.md",
+      category: "real-estate",
+      country: "Moldova",
+      city: "Chișinău",
+      lat: 47.0105,
+      lng: 28.8638,
+      valueEur: 210000,
+      originalAmount: 210000,
+      originalCurrency: "EUR",
+      dealType: "1to1",
+      owner: "Ana-Maria Stan",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80",
+      images: ["https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80"],
+      specs: "4 Rooms · 142 m² · Valea Morilor Park View · 2 Underground Parking Spots",
+      title: "4-Room Luxury Penthouse (142 m²) · Central Chisinau",
+      want: "3-4 Room Apartment in Bucharest / Iasi or House + cash difference",
+      desc: "Registered by Ana-Maria Stan in Chisinau. Custom-furnished, available for direct key-for-key swap."
+    },
+    {
+      id: 950106,
+      createdByUser: true,
+      ownerEmail: "radu.marinescu@test.ro",
+      category: "real-estate",
+      country: "Romania",
+      city: "Brașov",
+      lat: 45.6427,
+      lng: 25.5887,
+      valueEur: 145000,
+      originalAmount: 145000,
+      originalCurrency: "EUR",
+      dealType: "either",
+      owner: "Radu Marinescu",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1000&q=80",
+      images: ["https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1000&q=80"],
+      specs: "4 Rooms · 125 m² Usable · 800 m² Land Plot · Solar Panels · Bran-Brasov",
+      title: "A-Frame Mountain Chalet (800 m² Plot) · Brasov / Bran",
+      want: "Apartment in Bucharest / Brasov or 2022+ SUV with cash difference",
+      desc: "Registered by Radu Marinescu. Turnkey mountain chalet with high rental yield, open to 1:1 swap."
+    }
+  ]
+};
+
+function ensurePlatformAccountsAndTestRegistrations() {
+  let dbChanged = false;
+  let offersChanged = false;
+
+  // 1. Ensure Super-Admin Account exists
+  const adminKey = BACKOFFICE_ADMIN_EMAIL.toLowerCase();
+  if (!accountsDb[adminKey]) {
+    accountsDb[adminKey] = {
+      id: "ADM-0001",
+      name: "Eugeniu · Super-Admin",
+      email: BACKOFFICE_ADMIN_EMAIL,
+      password: BACKOFFICE_ADMIN_PASS,
+      phone: "+40 700 000 001",
+      country: "Romania",
+      city: "Bucharest",
+      prefLang: "ro",
+      prefCurrency: "EUR",
+      plan: "pro",
+      freeSwaps: 999,
+      kycVerified: true,
+      role: "superadmin",
+      registeredAt: "2026-11-01 09:00"
+    };
+    dbChanged = true;
+  }
+
+  // 2. Ensure the 6 Test Registrations exist in accountsDb
+  INITIAL_TEST_REGISTRATIONS_AND_OFFERS.accounts.forEach(acc => {
+    const k = acc.email.toLowerCase();
+    if (!accountsDb[k]) {
+      accountsDb[k] = { ...acc };
+      dbChanged = true;
+    } else {
+      accountsDb[k].isTestRegistration = true;
+      if (!accountsDb[k].registeredAt) accountsDb[k].registeredAt = acc.registeredAt;
+      if (!accountsDb[k].city) accountsDb[k].city = acc.city;
+      if (!accountsDb[k].id) accountsDb[k].id = acc.id;
+    }
+  });
+
+  // 3. Ensure all 30 European Partner Accounts from INITIAL_OFFERS exist in accountsDb & link ownerEmail
+  const phonePrefixByCountry = {
+    "Romania": "+40 72",
+    "Germany": "+49 17",
+    "Austria": "+43 66",
+    "Switzerland": "+41 79",
+    "France": "+33 61",
+    "Italy": "+39 34",
+    "Spain": "+34 62",
+    "United Kingdom": "+44 77",
+    "Moldova": "+373 69"
+  };
+
+  (window.INITIAL_OFFERS || []).forEach((off, idx) => {
+    const rawOwner = String(off.owner || `Member ${off.id}`).trim();
+    const cleanSlug = normalizeSearchText(rawOwner).replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || `member.${off.id}`;
+    const domainMap = {
+      "Romania": "changeit4me.ro",
+      "Germany": "changeit4me.de",
+      "Austria": "changeit4me.at",
+      "Switzerland": "changeit4me.ch",
+      "France": "changeit4me.fr",
+      "Italy": "changeit4me.it",
+      "Spain": "changeit4me.es",
+      "United Kingdom": "changeit4me.co.uk",
+      "Moldova": "changeit4me.md"
+    };
+    const email = off.ownerEmail || `${cleanSlug}@${domainMap[off.country] || "changeit4me.eu"}`;
+    off.ownerEmail = email;
+    const liveMatch = offers.find(o => o.id === off.id);
+    if (liveMatch && !liveMatch.ownerEmail) {
+      liveMatch.ownerEmail = email;
+    }
+    const emailKey = email.toLowerCase();
+    if (!accountsDb[emailKey]) {
+      const pref = phonePrefixByCountry[off.country] || "+40 72";
+      const planPool = ["pro", "pack", "starter"];
+      const chosenPlan = planPool[idx % planPool.length];
+      accountsDb[emailKey] = {
+        id: `USR-${1000 + off.id}`,
+        name: rawOwner,
+        email,
+        phone: `${pref}${String(1000000 + idx * 23456).slice(0, 7)}`,
+        country: off.country || "Romania",
+        city: off.city || "Bucharest",
+        prefLang: off.country === "Romania" || off.country === "Moldova" ? "ro" : "en",
+        prefCurrency: off.originalCurrency || "EUR",
+        plan: chosenPlan,
+        freeSwaps: chosenPlan === "pro" ? 999 : (chosenPlan === "pack" ? 18 : 7),
+        kycVerified: true,
+        isPartnerSeed: true,
+        registeredAt: `2026-11-0${(idx % 9) + 1} ${10 + (idx % 10)}:30`
+      };
+      dbChanged = true;
+    }
+  });
+
+  // 4. Ensure the 6 Member Listings (#950101 - #950106) are present in offers (unless deleted by user)
+  [...INITIAL_TEST_REGISTRATIONS_AND_OFFERS.listings].reverse().forEach(tOff => {
+    if (deletedOfferIds.includes(tOff.id)) return;
+    const existingIdx = offers.findIndex(o => o.id === tOff.id);
+    if (existingIdx >= 0) {
+      if (offers[existingIdx].title !== tOff.title || offers[existingIdx].specs !== tOff.specs) {
+        offers[existingIdx] = { ...offers[existingIdx], ...tOff };
+        offersChanged = true;
+      }
+    } else {
+      offers.unshift({ ...tOff });
+      offersChanged = true;
+    }
+  });
+
+  if (dbChanged) saveAccountsDb();
+  if (offersChanged) saveOffersToStorage();
+}
+
+// Run immediately so accountsDb and test offers are always populated
+ensurePlatformAccountsAndTestRegistrations();
+
+function updateAdminHeaderButtonsVisibility() {
+  const show = Boolean(adminAuthenticated || (currentUser && String(currentUser.email || "").toLowerCase() === BACKOFFICE_ADMIN_EMAIL));
+  const hBtn = document.getElementById("headerAdminBtn");
+  const mBtn = document.getElementById("mobileAdminBtn");
+  const dBtn = document.getElementById("dashAdminBtn");
+  if (hBtn) hBtn.style.display = show ? "inline-flex" : "none";
+  if (mBtn) mBtn.style.display = show ? "block" : "none";
+  if (dBtn) dBtn.style.display = show ? "inline-flex" : "none";
+}
+
+// ============================================================================
+// CLOUD DATABASE & CROSS-DEVICE REAL-TIME SYNC ENGINE (/api/sync + Supabase)
+// ============================================================================
+let cloudSyncReady = false;
+let cloudSyncPendingTimer = null;
+let cloudSyncInFlight = false;
+let cloudSyncLastState = {
+  connected: true,
+  backend: "api-sync",
+  lastSyncAt: "Live",
+  error: ""
+};
+let liveSyncChannel = null;
+try {
+  if (typeof BroadcastChannel === "function") {
+    liveSyncChannel = new BroadcastChannel("ci4m_live_sync_v1");
+  }
+} catch (e) { }
+
+function getSupabaseClientConfig() {
+  try {
+    const raw = localStorage.getItem("ci4m_supabase_cfg_v1");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.url && parsed.key) {
+        return { url: String(parsed.url).trim(), key: String(parsed.key).trim() };
+      }
+    }
+  } catch (e) { }
+  return { url: "", key: "" };
+}
+
+function saveSupabaseClientConfig(e) {
+  if (e) e.preventDefault();
+  const url = String(document.getElementById("boSupabaseUrlInput")?.value || "").trim();
+  const key = String(document.getElementById("boSupabaseKeyInput")?.value || "").trim();
+  try {
+    if (url && key) {
+      localStorage.setItem("ci4m_supabase_cfg_v1", JSON.stringify({ url, key }));
+      showToast("✓ Supabase Cloud credentials saved — syncing...");
+    } else {
+      localStorage.removeItem("ci4m_supabase_cfg_v1");
+      showToast("✓ Switched to built-in /api/sync Cloud Store");
+    }
+  } catch (err) { }
+  pushCloudDatabaseSync({ forceSync: true }).then(() => pullCloudDatabaseSync(false));
+}
+
+function buildCloudSyncHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  const sb = getSupabaseClientConfig();
+  if (sb.url && sb.key) {
+    headers["x-supabase-url"] = sb.url;
+    headers["x-supabase-key"] = sb.key;
+  }
+  return headers;
+}
+
+function scheduleCloudSyncPush(extraPayload = null) {
+  if (!cloudSyncReady) return;
+  try {
+    if (liveSyncChannel) {
+      liveSyncChannel.postMessage({ type: "ci4m_state_changed", ts: Date.now() });
+    }
+  } catch (e) { }
+  if (cloudSyncPendingTimer) clearTimeout(cloudSyncPendingTimer);
+  cloudSyncPendingTimer = setTimeout(() => {
+    pushCloudDatabaseSync(extraPayload);
+  }, 180);
+}
+
+async function pushCloudDatabaseSync(extraPayload = null) {
+  if (!cloudSyncReady || typeof fetch !== "function") return;
+  const userCreatedOrEdited = offers.filter(o => o.createdByUser || o.id > 100000);
+  const payload = {
+    accounts: accountsDb,
+    userOffers: userCreatedOrEdited,
+    proposals: swapProposals,
+    watchlist: watchlistAlerts,
+    deletedOfferIds,
+    ...(extraPayload && typeof extraPayload === "object" ? extraPayload : {})
+  };
+  try {
+    const resp = await fetch("/api/sync", {
+      method: "POST",
+      headers: buildCloudSyncHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (resp && resp.ok) {
+      const data = await resp.json();
+      if (data && data.ok) {
+        cloudSyncLastState = {
+          connected: true,
+          backend: data.backend || "api-sync",
+          lastSyncAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          error: ""
+        };
+        applyMergedCloudState(data);
+      }
+    }
+  } catch (err) {
+    cloudSyncLastState.error = "Offline / Local fallback";
+  }
+}
+
+function applyMergedCloudState(remote) {
+  if (!remote || typeof remote !== "object") return false;
+  let changed = false;
+
+  if (Array.isArray(remote.deletedOfferIds)) {
+    remote.deletedOfferIds.forEach(id => {
+      const numId = Number(id);
+      if (Number.isFinite(numId) && !deletedOfferIds.includes(numId)) {
+        deletedOfferIds.push(numId);
+        changed = true;
+      }
+    });
+  }
+
+  if (remote.accounts && typeof remote.accounts === "object") {
+    Object.entries(remote.accounts).forEach(([k, acc]) => {
+      if (!acc || typeof acc !== "object") return;
+      const emailKey = String(acc.email || k || "").trim().toLowerCase();
+      if (!emailKey) return;
+      if (Array.isArray(remote.deletedAccountEmails) && remote.deletedAccountEmails.includes(emailKey)) return;
+      const existing = accountsDb[emailKey];
+      if (!existing || JSON.stringify(existing) !== JSON.stringify({ ...existing, ...acc })) {
+        accountsDb[emailKey] = { ...(existing || {}), ...acc };
+        changed = true;
+      }
+    });
+  }
+
+  if (Array.isArray(remote.userOffers)) {
+    const delSet = new Set(deletedOfferIds.map(Number));
+    remote.userOffers.forEach(rOff => {
+      if (!rOff || !rOff.id) return;
+      const oid = Number(rOff.id);
+      if (delSet.has(oid)) return;
+      const idx = offers.findIndex(o => Number(o.id) === oid);
+      if (idx === -1) {
+        offers.unshift(rOff);
+        changed = true;
+      } else if (JSON.stringify(offers[idx]) !== JSON.stringify({ ...offers[idx], ...rOff })) {
+        offers[idx] = { ...offers[idx], ...rOff };
+        changed = true;
+      }
+    });
+  }
+
+  if (Array.isArray(remote.proposals)) {
+    const existingPropIds = new Set(swapProposals.map(p => Number(p.id)));
+    remote.proposals.forEach(p => {
+      if (p && p.id && !existingPropIds.has(Number(p.id))) {
+        swapProposals.unshift(p);
+        changed = true;
+      }
+    });
+  }
+
+  if (Array.isArray(remote.watchlist)) {
+    const existingWlIds = new Set(watchlistAlerts.map(w => Number(w.id)));
+    remote.watchlist.forEach(w => {
+      if (w && w.id && !existingWlIds.has(Number(w.id))) {
+        watchlistAlerts.unshift(w);
+        changed = true;
+      }
+    });
+  }
+
+  if (changed) {
+    try {
+      localStorage.setItem("ci4m_accounts_db", JSON.stringify(accountsDb));
+      localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
+      localStorage.setItem("ci4m_user_offers_v1", JSON.stringify(offers.filter(o => o.createdByUser || o.id > 100000)));
+      localStorage.setItem("ci4m_deleted_offers_v1", JSON.stringify(deletedOfferIds));
+      localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+      localStorage.setItem("ci4m_watchlist_alerts", JSON.stringify(watchlistAlerts));
+    } catch (e) { }
+    renderOffers();
+    renderMapPinsAndPanel();
+    if (document.getElementById("adminModal")?.classList.contains("open")) {
+      const searchFocused = document.activeElement && document.activeElement.id === "adminListingSearchInput";
+      if (!searchFocused) renderAdminModalContent();
+    }
+  }
+  return changed;
+}
+
+async function pullCloudDatabaseSync(silent = true) {
+  if (typeof fetch !== "function" || cloudSyncInFlight) return;
+  cloudSyncInFlight = true;
+  try {
+    const resp = await fetch("/api/sync", {
+      method: "GET",
+      headers: buildCloudSyncHeaders()
+    });
+    if (resp && resp.ok) {
+      const data = await resp.json();
+      if (data && data.ok) {
+        cloudSyncLastState = {
+          connected: true,
+          backend: data.backend || "api-sync",
+          lastSyncAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          error: ""
+        };
+        const remoteAccCount = data.accounts ? Object.keys(data.accounts).length : 0;
+        if (remoteAccCount === 0 && Object.keys(accountsDb).length > 0) {
+          cloudSyncInFlight = false;
+          await pushCloudDatabaseSync();
+          if (!silent) showToast("✓ Cloud Database initialized & synced");
+          if (document.getElementById("adminModal")?.classList.contains("open")) renderAdminModalContent();
+          return;
+        }
+        applyMergedCloudState(data);
+        if (!silent) {
+          showToast(`✓ Cloud Sync complete (${Object.keys(accountsDb).length} users · ${offers.length} listings)`);
+          if (document.getElementById("adminModal")?.classList.contains("open")) renderAdminModalContent();
+        }
+      }
+    }
+  } catch (err) {
+    cloudSyncLastState.error = "Local mode";
+  } finally {
+    cloudSyncInFlight = false;
+  }
+}
+
+function initCloudSyncEngine() {
+  cloudSyncReady = true;
+  pullCloudDatabaseSync(true).then(() => {
+    pushCloudDatabaseSync();
+  });
+
+  if (liveSyncChannel) {
+    liveSyncChannel.onmessage = () => {
+      pullCloudDatabaseSync(true);
+    };
+  }
+
+  window.addEventListener("storage", (ev) => {
+    if (!ev || !ev.key) return;
+    if (["ci4m_accounts_db", "ci4m_offers_v4", "ci4m_user_offers_v1", "ci4m_proposals"].includes(ev.key)) {
+      try {
+        if (ev.key === "ci4m_accounts_db" && ev.newValue) {
+          accountsDb = { ...accountsDb, ...JSON.parse(ev.newValue) };
+        }
+        if (ev.key === "ci4m_offers_v4" && ev.newValue) {
+          offers = JSON.parse(ev.newValue);
+        }
+      } catch (e) { }
+      renderOffers();
+      if (document.getElementById("adminModal")?.classList.contains("open")) {
+        renderAdminModalContent();
+      }
+    }
+  });
+
+  setInterval(() => {
+    if (document.getElementById("adminModal")?.classList.contains("open")) {
+      pullCloudDatabaseSync(true);
+    }
+  }, 10000);
+}
+
+function openAdminModal(tab = "users") {
+  ensurePlatformAccountsAndTestRegistrations();
+  currentAdminTab = tab || "users";
+  closeAllModalsSilently();
+  document.body.classList.add("mobile-started");
+  document.getElementById("adminModal")?.classList.add("open");
+  document.body.classList.add("modal-open");
+  renderAdminModalContent();
+  syncUrlWithRoute("/admin");
+  pullCloudDatabaseSync(true);
+}
+
+function closeAdminModal() {
+  document.getElementById("adminModal")?.classList.remove("open");
+  document.body.classList.remove("modal-open");
+  syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
+}
+
+function handleAdminBackofficeLogin(e) {
+  if (e) e.preventDefault();
+  const emailIn = document.getElementById("adminLoginEmailInput");
+  const passIn = document.getElementById("adminLoginPassInput");
+  const remIn = document.getElementById("adminRememberMeCheck");
+  const email = String(emailIn ? emailIn.value : "").trim().toLowerCase();
+  const pass = String(passIn ? passIn.value : "").trim();
+  const rememberMe = remIn ? Boolean(remIn.checked) : true;
+
+  if ((email === BACKOFFICE_ADMIN_EMAIL || email === "jeka7ro@gmail.com") && pass === BACKOFFICE_ADMIN_PASS) {
+    adminAuthenticated = true;
+    adminLoginErrorMsg = "";
+    try {
+      if (rememberMe) {
+        localStorage.setItem("ci4m_admin_session_v1", BACKOFFICE_ADMIN_EMAIL);
+        localStorage.setItem("ci4m_admin_remember_v1", JSON.stringify({
+          email: BACKOFFICE_ADMIN_EMAIL,
+          pass: BACKOFFICE_ADMIN_PASS,
+          remember: true
+        }));
+      } else {
+        localStorage.removeItem("ci4m_admin_session_v1");
+        localStorage.removeItem("ci4m_admin_remember_v1");
+      }
+    } catch (err) { }
+    updateAdminHeaderButtonsVisibility();
+    renderAdminModalContent();
+    showToast("✓ Signed in to ChangeIt4Me Backoffice");
+  } else {
+    adminLoginErrorMsg = "Invalid email or password.";
+    renderAdminModalContent();
+  }
+}
+
+function logoutAdminBackoffice() {
+  adminAuthenticated = false;
+  adminLoginErrorMsg = "";
+  try {
+    localStorage.removeItem("ci4m_admin_session_v1");
+  } catch (e) { }
+  updateAdminHeaderButtonsVisibility();
+  renderAdminModalContent();
+  showToast("✓ Signed out of Backoffice");
+}
+
+function switchAdminTab(tab) {
+  currentAdminTab = tab;
+  renderAdminModalContent();
+}
+
+function setAdminListingsFilter(mode) {
+  adminListingFilterMode = mode;
+  renderAdminModalContent();
+}
+
+function setAdminUsersFilter(mode) {
+  adminUsersFilterMode = mode;
+  renderAdminModalContent();
+}
+
+function onAdminSearchInput(val) {
+  adminListingSearchQuery = String(val || "");
+  renderAdminModalContent();
+  const input = document.getElementById("adminListingSearchInput");
+  if (input) {
+    input.focus();
+    const len = input.value.length;
+    try { input.setSelectionRange(len, len); } catch (e) { }
+  }
+}
+
+function publishAdminWizardDraftNow() {
+  if (!wizData || !String(wizData.titleHave || "").trim()) return;
+  const fallbackCoords = COUNTRY_COORDS[wizData.country] || { lat: 44.4268, lng: 26.1025 };
+  const chosenCurr = wizData.originalCurrency || currentCurrency;
+  const chosenAmt = sanitizeNumericAmount(wizData.originalAmount, 0) || sanitizeNumericAmount(wizData.valueEur, 0) || 15000;
+  const exactEur = convertToEur(chosenAmt, chosenCurr);
+  const newOffer = {
+    id: Date.now(),
+    createdByUser: true,
+    ownerEmail: wizData.email || currentUser?.email || "alex.ionescu@test.ro",
+    category: wizData.category || "cars",
+    country: wizData.country || "Romania",
+    city: wizData.city || "Bucharest",
+    lat: wizData.lat || fallbackCoords.lat,
+    lng: wizData.lng || fallbackCoords.lng,
+    valueEur: exactEur,
+    originalAmount: chosenAmt,
+    originalCurrency: chosenCurr,
+    dealType: wizData.dealType || "1to1",
+    owner: wizData.owner || currentUser?.name || "Verified Member",
+    verified: true,
+    matchScore: 99,
+    image: wizData.image || DEFAULT_WIZ_DATA.image,
+    images: Array.isArray(wizData.images) && wizData.images.length > 0 ? [...wizData.images] : [wizData.image || DEFAULT_WIZ_DATA.image],
+    specs: wizData.specs || "Verified Condition",
+    title: wizData.titleHave,
+    want: wizData.titleWant || "Direct 1:1 Swap",
+    desc: wizData.desc || wizData.titleHave
+  };
+  offers.unshift(newOffer);
+  saveOffersToStorage();
+  wizStep = 1;
+  wizData = { ...DEFAULT_WIZ_DATA };
+  persistWizardDraft();
+  renderOffers();
+  renderMapPinsAndPanel();
+  renderAdminModalContent();
+  showToast(`✓ Published: ${newOffer.title}`);
+}
+
+function restoreDeletedOffersFromAdmin() {
+  deletedOfferIds = [];
+  localStorage.setItem("ci4m_deleted_offers_v1", "[]");
+  ensurePlatformAccountsAndTestRegistrations();
+  const existingIds = new Set(offers.map(o => o.id));
+  (window.INITIAL_OFFERS || []).forEach(baseOff => {
+    if (!existingIds.has(baseOff.id)) {
+      offers.push(baseOff);
+    }
+  });
+  saveOffersToStorage();
+  if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush({ clearDeletedOffers: true });
+  renderOffers();
+  renderMapPinsAndPanel();
+  renderAdminModalContent();
+  showToast("✓ Restored archived listings");
+}
+
+function seedAdminTestRegistrationsAndOffers() {
+  deletedOfferIds = deletedOfferIds.filter(id => id < 950100 || id > 950199);
+  INITIAL_TEST_REGISTRATIONS_AND_OFFERS.accounts.forEach(acc => {
+    const k = acc.email.toLowerCase();
+    accountsDb[k] = { ...(accountsDb[k] || {}), ...acc };
+  });
+  saveAccountsDb();
+
+  [...INITIAL_TEST_REGISTRATIONS_AND_OFFERS.listings].reverse().forEach(tOff => {
+    const existingIdx = offers.findIndex(o => o.id === tOff.id);
+    if (existingIdx >= 0) {
+      offers.splice(existingIdx, 1);
+    }
+    offers.unshift({ ...tOff });
+  });
+  saveOffersToStorage();
+  updateFavCountUI();
+  renderOffers();
+  renderMapPinsAndPanel();
+  renderAdminModalContent();
+}
+
+function handleAdminCreateQuickAccount(e) {
+  if (e) e.preventDefault();
+  const name = String(document.getElementById("boNewUserName")?.value || "").trim();
+  const email = String(document.getElementById("boNewUserEmail")?.value || "").trim();
+  const phone = String(document.getElementById("boNewUserPhone")?.value || "").trim();
+  const city = String(document.getElementById("boNewUserCity")?.value || "Bucharest").trim();
+  const plan = String(document.getElementById("boNewUserPlan")?.value || "starter");
+  if (!name || !email) return;
+
+  const emailKey = email.toLowerCase();
+  accountsDb[emailKey] = {
+    id: `USR-${Math.floor(1000 + Math.random() * 8999)}`,
+    name,
+    email,
+    phone: phone || "+40 722 000 000",
+    country: "Romania",
+    city,
+    prefLang: currentLang,
+    prefCurrency: currentCurrency,
+    plan,
+    freeSwaps: plan === "pro" ? 999 : (plan === "pack" ? 25 : 10),
+    kycVerified: true,
+    isTestRegistration: true,
+    registeredAt: new Date().toISOString().slice(0, 16).replace("T", " ")
+  };
+  saveAccountsDb();
+  renderAdminModalContent();
+  showToast(`✓ User created: ${name} (${email})`);
+}
+
+function adminDeleteAccount(emailKey) {
+  const k = String(emailKey || "").toLowerCase();
+  if (!k || k === BACKOFFICE_ADMIN_EMAIL) return;
+  const name = accountsDb[k]?.name || k;
+  delete accountsDb[k];
+  saveAccountsDb();
+  if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush({ deletedAccountEmails: [k] });
+  renderAdminModalContent();
+  showToast(`✓ Account removed: ${name}`);
+}
+
+function adminLoginAsUser(emailKey) {
+  const acc = accountsDb[String(emailKey || "").toLowerCase()];
+  if (!acc) return;
+  activateUserAccount(acc);
+  renderAdminModalContent();
+  showToast(`✓ Switched session to ${acc.name}`);
+}
+
+function adminGrantUserSwaps(emailKey, mode) {
+  const key = String(emailKey || "").toLowerCase();
+  const acc = accountsDb[key];
+  if (!acc) return;
+  if (mode === "pro") {
+    acc.plan = "pro";
+    acc.freeSwaps = 999;
+  } else {
+    acc.freeSwaps = (Number(acc.freeSwaps) || 0) + 10;
+  }
+  accountsDb[key] = acc;
+  saveAccountsDb();
+  if (currentUser && String(currentUser.email || "").toLowerCase() === key) {
+    currentUser.plan = acc.plan;
+    currentUser.freeSwaps = acc.freeSwaps;
+    localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
+    renderUserHeaderState();
+  }
+  renderAdminModalContent();
+  showToast(`✓ Updated account: ${acc.name}`);
+}
+
+function adminFilterOffersByUser(queryText) {
+  adminListingSearchQuery = String(queryText || "");
+  adminListingFilterMode = "all";
+  currentAdminTab = "listings";
+  renderAdminModalContent();
+}
+
+function getAccountLinkedOffers(acc) {
+  const emailKey = String(acc.email || "").toLowerCase();
+  const firstName = normalizeSearchText(String(acc.name || "").split(" ")[0]);
+  return offers.filter(o => {
+    if (o.ownerEmail && String(o.ownerEmail).toLowerCase() === emailKey) return true;
+    if (o.owner && normalizeSearchText(o.owner) === normalizeSearchText(acc.name || "")) return true;
+    if (acc.isTestRegistration && firstName && normalizeSearchText(o.owner || "").includes(firstName)) return true;
+    return false;
+  });
+}
+
+function renderAdminModalContent() {
+  const container = document.getElementById("adminBodyContent");
+  if (!container) return;
+
+  ensurePlatformAccountsAndTestRegistrations();
+
+  // ==========================================================================
+  // 1. CLEAN ENTERPRISE BACKOFFICE LOGIN SCREEN
+  // ==========================================================================
+  if (!adminAuthenticated) {
+    let savedAdminCreds = { email: "", pass: "", remember: true };
+    try {
+      const rawRem = localStorage.getItem("ci4m_admin_remember_v1");
+      if (rawRem) {
+        const parsed = JSON.parse(rawRem);
+        if (parsed && parsed.remember) {
+          savedAdminCreds = {
+            email: String(parsed.email || ""),
+            pass: String(parsed.pass || ""),
+            remember: true
+          };
+        }
+      }
+    } catch (err) { }
+
+    container.innerHTML = `
+      <div class="bo-login-screen">
+        <div class="bo-login-card">
+          <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:24px;">
+            <div class="logo" style="display:inline-flex;flex-direction:column;align-items:center;gap:10px;color:#ffffff;">
+              <svg width="52" height="52" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="box-shadow:0 0 0 2px rgba(169,255,202,0.35), 0 10px 28px rgba(0,0,0,0.35);border-radius:50%;">
+                <circle cx="16" cy="16" r="16" fill="#0c2c28"></circle>
+                <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+              <div>
+                <strong style="display:block;font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;">ChangeIt4Me</strong>
+                <span style="display:block;font-size:12px;font-weight:600;color:#a9ffca;letter-spacing:0.04em;text-transform:uppercase;margin-top:2px;">Backoffice</span>
+              </div>
+            </div>
+            <h2 style="font-size:18px;font-weight:700;color:#d8ece8;margin:14px 0 0;">Sign in</h2>
+          </div>
+
+          ${adminLoginErrorMsg ? `
+            <div style="margin-bottom:14px;padding:10px 13px;border-radius:10px;background:rgba(239,68,68,0.18);border:1px solid rgba(248,113,113,0.45);color:#fecaca;font-size:12.5px;font-weight:600;">
+              ${adminLoginErrorMsg}
+            </div>
+          ` : ""}
+
+          <form onsubmit="handleAdminBackofficeLogin(event)" autocomplete="on" style="display:grid;gap:14px;">
+            <div>
+              <label for="adminLoginEmailInput" style="display:block;font-size:12px;font-weight:700;color:#d1e7e3;margin-bottom:6px;">Email</label>
+              <input type="email" id="adminLoginEmailInput" name="email" autocomplete="username" required placeholder="Email"
+                value="${savedAdminCreds.email.replace(/"/g, '&quot;')}"
+                style="width:100%;height:44px;padding:0 14px;border-radius:11px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
+            </div>
+
+            <div>
+              <label for="adminLoginPassInput" style="display:block;font-size:12px;font-weight:700;color:#d1e7e3;margin-bottom:6px;">Password</label>
+              <div style="position:relative;">
+                <input type="password" id="adminLoginPassInput" name="password" autocomplete="current-password" required placeholder="Password"
+                  value="${savedAdminCreds.pass.replace(/"/g, '&quot;')}"
+                  style="width:100%;height:44px;padding:0 44px 0 14px;border-radius:11px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
+                <button type="button" onclick="togglePasswordVisibility('adminLoginPassInput', this)"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#a9ffca;cursor:pointer;padding:4px;" aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;font-weight:600;color:#cfe3df;margin-top:2px;">
+              <input type="checkbox" id="adminRememberMeCheck" ${savedAdminCreds.remember ? 'checked' : ''}
+                style="width:16px;height:16px;accent-color:#a9ffca;cursor:pointer;margin:0;" />
+              <span>Remember me</span>
+            </label>
+
+            <button type="submit" class="bo-btn bo-btn-mint" style="height:44px;font-size:14px;font-weight:800;border-radius:11px !important;margin-top:4px;">
+              Sign in →
+            </button>
+          </form>
+
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(169,255,202,0.14);display:flex;justify-content:center;">
+            <button type="button" class="bo-btn" style="background:transparent;border-color:rgba(255,255,255,0.2);color:#cfe3df;font-size:12px;" onclick="closeAdminModal()">
+              ← Back to ChangeIt4Me
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // ==========================================================================
+  // 2. AUTHENTICATED FULL-SCREEN BACKOFFICE WORKSPACE (100% CLEAN ENGLISH)
+  // ==========================================================================
+  const allAccountsMap = { ...accountsDb };
+  if (currentUser && currentUser.email) {
+    const k = currentUser.email.toLowerCase();
+    allAccountsMap[k] = { ...(allAccountsMap[k] || {}), ...currentUser };
+  }
+
+  const accountsList = Object.values(allAccountsMap).sort((a, b) => {
+    const aRecent = Boolean(a.isTestRegistration || (!a.isPartnerSeed && a.role !== "superadmin"));
+    const bRecent = Boolean(b.isTestRegistration || (!b.isPartnerSeed && b.role !== "superadmin"));
+    if (aRecent !== bRecent) return aRecent ? -1 : 1;
+    if (a.role === "superadmin" && b.role !== "superadmin") return -1;
+    if (b.role === "superadmin" && a.role !== "superadmin") return 1;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  const recentAccountsCount = accountsList.filter(a => a.isTestRegistration || (!a.isPartnerSeed && a.role !== "superadmin")).length;
+  const proAccountsCount = accountsList.filter(a => a.plan === "pro").length;
+  const packAccountsCount = accountsList.filter(a => a.plan === "pack").length;
+  const userCreatedOffers = offers.filter(o => o.createdByUser || o.id > 100000);
+  const totalGmvEur = offers.reduce((acc, o) => acc + (Number(o.valueEur) || 0), 0);
+  const totalGmvFormatted = formatAmountInCurrentCurrency(convertFromEur(totalGmvEur, currentCurrency), currentCurrency);
+  const hasWizDraft = Boolean(wizData && String(wizData.titleHave || "").trim());
+
+  const tabTitles = {
+    overview: "Overview",
+    users: "Users & Accounts",
+    listings: "Catalog Listings",
+    proposals: "Swap Proposals",
+    billing: "Subscriptions & Plans",
+    compliance: "GDPR & Compliance"
+  };
+  const activeTitle = tabTitles[currentAdminTab] || tabTitles.users;
+
+  let mainModuleHtml = "";
+
+  if (currentAdminTab === "users") {
+    let filteredUsers = [...accountsList];
+    if (adminUsersFilterMode === "test") {
+      filteredUsers = filteredUsers.filter(a => a.isTestRegistration || (!a.isPartnerSeed && a.role !== "superadmin"));
+    } else if (adminUsersFilterMode === "pro") {
+      filteredUsers = filteredUsers.filter(a => a.plan === "pro");
+    } else if (adminUsersFilterMode === "pack") {
+      filteredUsers = filteredUsers.filter(a => a.plan === "pack");
+    } else if (adminUsersFilterMode === "starter") {
+      filteredUsers = filteredUsers.filter(a => !a.plan || a.plan === "starter");
+    }
+
+    if (adminListingSearchQuery.trim()) {
+      const qNorm = normalizeSearchText(adminListingSearchQuery);
+      filteredUsers = filteredUsers.filter(a => {
+        const hay = normalizeSearchText(`${a.id || ""} ${a.name || ""} ${a.email || ""} ${a.phone || ""} ${a.city || ""} ${a.country || ""} ${a.plan || ""}`);
+        return hay.includes(qNorm);
+      });
+    }
+
+    mainModuleHtml = `
+      <div class="bo-card">
+        <form onsubmit="handleAdminCreateQuickAccount(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;align-items:end;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">Full Name</label>
+            <input type="text" id="boNewUserName" required placeholder="Full name" class="input-light" style="height:38px;font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">Email</label>
+            <input type="email" id="boNewUserEmail" required placeholder="Email address" class="input-light" style="height:38px;font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">Phone</label>
+            <input type="text" id="boNewUserPhone" placeholder="+40 / +49 / +43..." class="input-light" style="height:38px;font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">City</label>
+            <input type="text" id="boNewUserCity" placeholder="City" class="input-light" style="height:38px;font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">Plan</label>
+            <select id="boNewUserPlan" class="input-light" style="height:38px;font-size:13px;">
+              <option value="starter">Starter (10 Free)</option>
+              <option value="pack">+15 Swaps Pack (€9)</option>
+              <option value="pro">PRO Unlimited (€19)</option>
+            </select>
+          </div>
+          <button type="submit" class="bo-btn bo-btn-primary" style="height:38px;">+ Add User</button>
+        </form>
+      </div>
+
+      <div class="bo-card" style="padding:16px 18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" class="bo-btn ${adminUsersFilterMode === 'all' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('all')">
+              All (${accountsList.length})
+            </button>
+            <button type="button" class="bo-btn ${adminUsersFilterMode === 'test' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('test')">
+              Recent Signups (${recentAccountsCount})
+            </button>
+            <button type="button" class="bo-btn ${adminUsersFilterMode === 'pro' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('pro')">
+              PRO (${proAccountsCount})
+            </button>
+            <button type="button" class="bo-btn ${adminUsersFilterMode === 'pack' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('pack')">
+              Pack +15 (${packAccountsCount})
+            </button>
+            <button type="button" class="bo-btn ${adminUsersFilterMode === 'starter' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('starter')">
+              Starter (${accountsList.length - proAccountsCount - packAccountsCount})
+            </button>
+          </div>
+          <span style="font-size:12px;color:#526b67;font-weight:600;">${filteredUsers.length} users</span>
+        </div>
+
+        <div class="bo-table-wrap">
+          <table class="bo-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Contact</th>
+                <th>Location</th>
+                <th>Plan & Credits</th>
+                <th>Listings</th>
+                <th>Joined</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredUsers.map(acc => {
+                const emailKey = String(acc.email || "").toLowerCase();
+                const linkedOffers = getAccountLinkedOffers(acc);
+                const isSuper = acc.role === "superadmin";
+                const isActiveUser = Boolean(currentUser && String(currentUser.email || "").toLowerCase() === emailKey);
+                const initials = String(acc.name || "U").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+                const planBadge = acc.plan === "pro"
+                  ? `<span style="background:#0c2c28;color:#a9ffca;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;">PRO ∞</span>`
+                  : acc.plan === "pack"
+                    ? `<span style="background:#e0f2fe;color:#0369a1;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;">Pack · ${acc.freeSwaps ?? 15} left</span>`
+                    : `<span style="background:#f1f5f9;color:#334155;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">Starter · ${acc.freeSwaps ?? 10}/10</span>`;
+
+                return `
+                  <tr>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="width:32px;height:32px;border-radius:50%;background:${isSuper ? '#a9ffca' : '#e2ecea'};color:#0c2c28;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">${initials}</span>
+                        <div>
+                          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <strong style="font-size:13.5px;color:#0b221f;">${acc.name || "Member"}</strong>
+                            ${isSuper ? `<span style="background:#0c2c28;color:#a9ffca;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;">ADMIN</span>` : ""}
+                            ${isActiveUser ? `<span style="background:#a9ffca;color:#071d1a;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;">ACTIVE</span>` : ""}
+                          </div>
+                          <span style="font-size:11px;color:#64748b;">${acc.id || "USR-1000"} · Verified ✓</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <strong style="display:block;font-size:12.5px;color:#0b221f;">${acc.email || "—"}</strong>
+                      <span style="font-size:11.5px;color:#64748b;">${acc.phone || "—"}</span>
+                    </td>
+                    <td>
+                      <strong style="display:block;font-size:12.5px;">${acc.city || "Bucharest"}</strong>
+                      <span style="font-size:11.5px;color:#64748b;">${acc.country || "Romania"}</span>
+                    </td>
+                    <td>${planBadge}</td>
+                    <td>
+                      ${linkedOffers.length === 0 ? `<span style="font-size:11.5px;color:#94a3b8;">0</span>` : `
+                        <div style="display:flex;flex-direction:column;gap:4px;">
+                          ${linkedOffers.map(lo => `
+                            <button type="button" class="bo-btn" style="justify-content:flex-start;padding:4px 8px;font-size:11.5px;background:#f8fafc;max-width:270px;overflow:hidden;text-overflow:ellipsis;"
+                              onclick="openOfferModal(${lo.id}, 'details')">
+                              <strong>#${lo.id}</strong> · ${getOfferLocalized(lo).title.slice(0, 30)}
+                            </button>
+                          `).join("")}
+                        </div>
+                      `}
+                    </td>
+                    <td><span style="font-size:12px;color:#475569;">${acc.registeredAt || "2026-11-11"}</span></td>
+                    <td style="text-align:right;">
+                      <div style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
+                        <button type="button" class="bo-btn" onclick="adminFilterOffersByUser('${(acc.email || acc.name || "").replace(/'/g, "\\'")}')">
+                          Ads (${linkedOffers.length})
+                        </button>
+                        <button type="button" class="bo-btn bo-btn-mint" onclick="adminLoginAsUser('${emailKey.replace(/'/g, "\\'")}')">
+                          Sign in as
+                        </button>
+                        <button type="button" class="bo-btn" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'add10')">
+                          +10 Swaps
+                        </button>
+                        ${acc.plan !== "pro" ? `
+                          <button type="button" class="bo-btn bo-btn-primary" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'pro')">
+                            Set PRO
+                          </button>
+                        ` : ""}
+                        ${!isSuper ? `
+                          <button type="button" class="bo-btn bo-btn-danger" onclick="adminDeleteAccount('${emailKey.replace(/'/g, "\\'")}')" title="Delete">
+                            ✕
+                          </button>
+                        ` : ""}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (currentAdminTab === "listings") {
+    const draftBannerHtml = hasWizDraft ? `
+      <div class="bo-card" style="background:#fefce8;border-color:#fde047;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+        <div>
+          <span style="background:#fef08a;color:#854d0e;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;">UNPUBLISHED DRAFT (STEP ${wizStep}/7)</span>
+          <strong style="display:block;font-size:15px;color:#0b221f;margin-top:4px;">${wizData.titleHave} · ${wizData.city || wizData.country || "Europe"}</strong>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="bo-btn bo-btn-mint" onclick="publishAdminWizardDraftNow()">✓ Publish Now</button>
+          <button type="button" class="bo-btn" onclick="openWizardModal(${wizStep || 2});">Open in Wizard →</button>
+        </div>
+      </div>
+    ` : "";
+
+    let listToShow = [...offers];
+    if (adminListingFilterMode === "user") {
+      listToShow = listToShow.filter(o => o.createdByUser || o.id > 100000);
+    } else if (adminListingFilterMode === "seed") {
+      listToShow = listToShow.filter(o => !(o.createdByUser || o.id > 100000));
+    } else if (["cars", "real-estate", "electronics", "home-garden", "auto-parts", "clothing"].includes(adminListingFilterMode)) {
+      listToShow = listToShow.filter(o => o.category === adminListingFilterMode);
+    }
+    if (adminListingSearchQuery.trim()) {
+      listToShow = listToShow.filter(o => matchesSmartSearchQuery(o, adminListingSearchQuery));
+    }
+
+    mainModuleHtml = `
+      ${draftBannerHtml}
+      <div class="bo-card" style="padding:16px 18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" class="bo-btn ${adminListingFilterMode === 'all' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('all')">
+              All (${offers.length})
+            </button>
+            <button type="button" class="bo-btn ${adminListingFilterMode === 'user' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('user')">
+              New Member Ads (${userCreatedOffers.length})
+            </button>
+            <button type="button" class="bo-btn ${adminListingFilterMode === 'cars' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('cars')">
+              Cars
+            </button>
+            <button type="button" class="bo-btn ${adminListingFilterMode === 'real-estate' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('real-estate')">
+              Real Estate
+            </button>
+            <button type="button" class="bo-btn ${adminListingFilterMode === 'electronics' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('electronics')">
+              Electronics
+            </button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${deletedOfferIds.length > 0 ? `<button type="button" class="bo-btn" onclick="restoreDeletedOffersFromAdmin()">↺ Restore (${deletedOfferIds.length})</button>` : ""}
+            <button type="button" class="bo-btn bo-btn-primary" onclick="resetWizardDraft(); openWizardModal(1);">+ New Listing</button>
+          </div>
+        </div>
+
+        <div class="bo-table-wrap">
+          <table class="bo-table">
+            <thead>
+              <tr>
+                <th>Listing</th>
+                <th>Category</th>
+                <th>Want in Return</th>
+                <th>Value (${currentCurrency})</th>
+                <th>Owner</th>
+                <th>Location</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${listToShow.map(item => {
+                const loc = getOfferLocalized(item);
+                return `
+                  <tr>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:10px;">
+                        <img src="${item.image}" style="width:56px;height:40px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #dce6e4;" alt="" />
+                        <div>
+                          <span style="font-size:11px;font-weight:800;color:#0c2c28;background:#e2ecea;padding:1px 6px;border-radius:5px;">#${item.id}</span>
+                          <strong style="display:block;font-size:13px;color:#0b221f;margin-top:2px;">${loc.title}</strong>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <strong style="display:block;font-size:12px;color:#0c2c28;">${getCategoryLabel(item.category)}</strong>
+                      <span style="font-size:11.5px;color:#64748b;">${(item.specs || "").slice(0, 44)}</span>
+                    </td>
+                    <td>
+                      <span style="display:inline-block;font-size:11px;font-weight:700;color:#0c2c28;background:#e6f4f1;padding:2px 7px;border-radius:6px;margin-bottom:2px;">${getDealTypeLabel(item.dealType)}</span>
+                      <span style="display:block;font-size:12px;color:#334155;">${loc.want}</span>
+                    </td>
+                    <td>
+                      <strong style="font-size:13.5px;color:#0c2c28;">~${formatOfferPrice(item, currentCurrency)}</strong>
+                      <span style="display:block;font-size:11px;color:#64748b;">€${Number(item.valueEur || 0).toLocaleString("en-US")}</span>
+                    </td>
+                    <td>
+                      <strong style="display:block;font-size:12.5px;color:#0b221f;">${item.owner || "Verified Member"}</strong>
+                      <span style="font-size:11.5px;color:#0369a1;cursor:pointer;text-decoration:underline;" onclick="adminListingSearchQuery='${(item.ownerEmail || item.owner || "").replace(/'/g, "\\'")}'; switchAdminTab('users');">
+                        ${item.ownerEmail || "View user"}
+                      </span>
+                    </td>
+                    <td>
+                      <strong style="display:block;font-size:12.5px;">${item.city}</strong>
+                      <span style="font-size:11.5px;color:#64748b;">${item.country}</span>
+                    </td>
+                    <td style="text-align:right;">
+                      <div style="display:inline-flex;gap:5px;justify-content:flex-end;">
+                        <button type="button" class="bo-btn" onclick="openOfferModal(${item.id}, 'details')">View</button>
+                        <button type="button" class="bo-btn bo-btn-mint" onclick="editListingInWizard(${item.id})">Edit</button>
+                        <button type="button" class="bo-btn bo-btn-danger" onclick="deleteUserListing(${item.id}); renderAdminModalContent();" title="Delete">✕</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (currentAdminTab === "overview") {
+    const catStats = ["cars", "real-estate", "electronics", "home-garden", "auto-parts", "clothing"].map(cat => {
+      const items = offers.filter(o => o.category === cat);
+      const sumEur = items.reduce((s, o) => s + (Number(o.valueEur) || 0), 0);
+      return { cat, label: getCategoryLabel(cat), count: items.length, sumEur };
+    });
+
+    mainModuleHtml = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px;">
+        <div class="bo-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <strong style="font-size:15px;color:#071d1a;">Recent Users</strong>
+            <button type="button" class="bo-btn" onclick="switchAdminTab('users')">View All (${accountsList.length}) →</button>
+          </div>
+          <div class="bo-table-wrap">
+            <table class="bo-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email & City</th>
+                  <th>Plan</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${accountsList.slice(0, 6).map(acc => `
+                  <tr>
+                    <td><strong>${acc.name}</strong></td>
+                    <td>${acc.email}<br/><span style="font-size:11px;color:#64748b;">${acc.city || "Bucharest"}, ${acc.country}</span></td>
+                    <td><span style="font-size:11px;font-weight:700;">${(acc.plan || "starter").toUpperCase()}</span></td>
+                    <td style="text-align:right;"><button type="button" class="bo-btn bo-btn-mint" onclick="adminFilterOffersByUser('${acc.email}')">Listings</button></td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bo-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <strong style="font-size:15px;color:#071d1a;">Recent Listings</strong>
+            <button type="button" class="bo-btn" onclick="setAdminListingsFilter('user'); switchAdminTab('listings');">View All (${offers.length}) →</button>
+          </div>
+          <div class="bo-table-wrap">
+            <table class="bo-table">
+              <thead>
+                <tr>
+                  <th>Listing</th>
+                  <th>Owner</th>
+                  <th>Value</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${userCreatedOffers.slice(0, 6).map(item => `
+                  <tr>
+                    <td><strong>#${item.id}</strong> · ${getOfferLocalized(item).title.slice(0, 28)}</td>
+                    <td>${item.owner}<br/><span style="font-size:11px;color:#64748b;">${item.ownerEmail || ""}</span></td>
+                    <td><strong>~${formatOfferPrice(item, currentCurrency)}</strong></td>
+                    <td style="text-align:right;"><button type="button" class="bo-btn" onclick="openOfferModal(${item.id}, 'details')">View</button></td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="bo-card">
+        <strong style="display:block;font-size:15px;color:#071d1a;margin-bottom:12px;">Catalog Breakdown by Category (${offers.length} Listings · ~${totalGmvFormatted})</strong>
+        <div class="bo-table-wrap">
+          <table class="bo-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Listings</th>
+                <th>Share</th>
+                <th>Volume (${currentCurrency})</th>
+                <th style="text-align:right;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${catStats.map(cs => {
+                const pct = offers.length > 0 ? Math.round((cs.count / offers.length) * 100) : 0;
+                return `
+                  <tr>
+                    <td><strong>${cs.label}</strong></td>
+                    <td>${cs.count}</td>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <div style="width:110px;height:8px;background:#e2ecea;border-radius:999px;overflow:hidden;">
+                          <div style="width:${pct}%;height:100%;background:#0c2c28;"></div>
+                        </div>
+                        <span style="font-size:12px;font-weight:700;">${pct}%</span>
+                      </div>
+                    </td>
+                    <td><strong>~${formatAmountInCurrentCurrency(convertFromEur(cs.sumEur, currentCurrency), currentCurrency)}</strong></td>
+                    <td style="text-align:right;">
+                      <button type="button" class="bo-btn" onclick="setAdminListingsFilter('${cs.cat}'); switchAdminTab('listings');">View →</button>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (currentAdminTab === "proposals") {
+    mainModuleHtml = `
+      <div class="bo-card">
+        <strong style="display:block;font-size:15px;color:#071d1a;margin-bottom:12px;">Active 1:1 Swap Proposals (${swapProposals.length})</strong>
+        <div class="bo-table-wrap">
+          <table class="bo-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Direction</th>
+                <th>Offered ⇄ Requested</th>
+                <th>Partner</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${swapProposals.map(p => `
+                <tr>
+                  <td><strong>#CI4M-${p.id}</strong></td>
+                  <td><span style="background:#e6f4f1;color:#0c2c28;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800;">${p.direction}</span></td>
+                  <td><strong>${p.offeredItem}</strong> ⇄ ${p.targetTitle}</td>
+                  <td>${p.partner}</td>
+                  <td><strong style="color:#0c2c28;">${p.cashBalance}</strong></td>
+                  <td><span style="color:#059669;font-weight:700;">✓ ${p.status}</span></td>
+                  <td style="text-align:right;">
+                    <div style="display:inline-flex;gap:6px;">
+                      ${p.offerId ? `<button type="button" class="bo-btn" onclick="openOfferModal(${p.offerId}, 'details')">Listing</button>` : ""}
+                      <button type="button" class="bo-btn bo-btn-mint" onclick="openSwapAgreementModal(${p.id})">1:1 Agreement PDF</button>
+                    </div>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (currentAdminTab === "billing") {
+    mainModuleHtml = `
+      <div class="bo-card">
+        <strong style="display:block;font-size:15px;color:#071d1a;margin-bottom:12px;">Subscriptions & Swap Credits</strong>
+        <div class="bo-table-wrap">
+          <table class="bo-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Plan</th>
+                <th>Available Swaps</th>
+                <th>Country</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${accountsList.slice(0, 15).map(acc => {
+                const emailKey = String(acc.email || "").toLowerCase();
+                return `
+                  <tr>
+                    <td><strong>${acc.name}</strong> · <span style="color:#64748b;">${acc.email}</span></td>
+                    <td><strong>${(acc.plan || "starter").toUpperCase()}</strong></td>
+                    <td>${acc.plan === "pro" ? "Unlimited (∞)" : `${acc.freeSwaps ?? 10} swaps`}</td>
+                    <td>${acc.country || "Romania"}</td>
+                    <td style="text-align:right;">
+                      <div style="display:inline-flex;gap:6px;">
+                        <button type="button" class="bo-btn" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'add10')">+10 Swaps</button>
+                        <button type="button" class="bo-btn bo-btn-primary" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'pro')">Activate PRO ∞</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (currentAdminTab === "compliance") {
+    const sbCfg = getSupabaseClientConfig();
+    mainModuleHtml = `
+      <div class="bo-card" style="background:linear-gradient(135deg,#071d1a 0%,#0f3530 100%);color:#ffffff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+          <div>
+            <span style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;">● CLOUD SYNC ENGINE (${cloudSyncLastState.backend.toUpperCase()})</span>
+            <h3 style="margin:6px 0 2px;font-size:16px;color:#ffffff;">Central Cloud Database & Cross-Device Sync (/api/sync)</h3>
+            <p style="margin:0;font-size:12px;color:#b8d8d2;">All accounts, listings, and 1:1 proposals registered on any phone or computer sync automatically to the central database.</p>
+          </div>
+          <button type="button" class="bo-btn bo-btn-mint" onclick="pullCloudDatabaseSync(false)">↻ Sync Cloud Now</button>
+        </div>
+        <form onsubmit="saveSupabaseClientConfig(event)" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px solid rgba(169,255,202,0.16);">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:#b8d8d2;margin-bottom:4px;">Optional Supabase URL (or leave blank for built-in /api/sync)</label>
+            <input type="url" id="boSupabaseUrlInput" placeholder="https://your-project.supabase.co" value="${sbCfg.url.replace(/"/g, '&quot;')}"
+              style="width:100%;height:36px;padding:0 12px;border-radius:8px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.7);color:#fff;font-size:12.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:#b8d8d2;margin-bottom:4px;">Optional Supabase Key (Anon / Service Key)</label>
+            <input type="password" id="boSupabaseKeyInput" placeholder="eyJhbGciOi..." value="${sbCfg.key.replace(/"/g, '&quot;')}"
+              style="width:100%;height:36px;padding:0 12px;border-radius:8px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.7);color:#fff;font-size:12.5px;" />
+          </div>
+          <button type="submit" class="bo-btn bo-btn-mint" style="height:36px;">Save Cloud Config</button>
+        </form>
+      </div>
+
+      <div class="bo-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+          <h3 style="margin:0;font-size:16px;color:#071d1a;">EU GDPR (Reg. 2016/679), ePrivacy & DSA Compliance</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="bo-btn bo-btn-mint" onclick="exportUserGdprData()">Export GDPR JSON (Art. 20)</button>
+            <button type="button" class="bo-btn" onclick="openGdprPreferencesModal();">Consent Preferences</button>
+          </div>
+        </div>
+        <div class="bo-table-wrap">
+          <table class="bo-table">
+            <thead>
+              <tr>
+                <th>Module</th>
+                <th>Coverage</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Cloud Sync API (/api/sync)</strong></td><td>Centralized Multi-Device Accounts, Listings & Proposals Sync</td><td><span style="color:#059669;font-weight:800;">● Active (${cloudSyncLastState.lastSyncAt})</span></td></tr>
+              <tr><td><strong>SPA Build & Routing</strong></td><td>JS Syntax, DOM Integrity & Vercel Rewrites</td><td><span style="color:#059669;font-weight:800;">● Active</span></td></tr>
+              <tr><td><strong>Form & Numeric Validation</strong></td><td>Resilient decimal & currency parsing across 7 currencies</td><td><span style="color:#059669;font-weight:800;">● Active</span></td></tr>
+              <tr><td><strong>1:1 Parity & Billing</strong></td><td>EUR/USD/RON/MDL/RUB/GBP/CHF + 10 Free Swaps / PRO Plans</td><td><span style="color:#059669;font-weight:800;">● Active</span></td></tr>
+              <tr><td><strong>GDPR Art. 15, 17, 20 & DSA</strong></td><td>Data Access, Right to Erasure, JSON Portability & Listing Reports</td><td><span style="color:#059669;font-weight:800;">● Active</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="bo-workspace">
+      <!-- LEFT SIDEBAR -->
+      <aside class="bo-sidebar">
+        <div style="padding:20px 16px;">
+          <div class="logo" style="display:flex;align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px solid rgba(169,255,202,0.12);margin-bottom:16px;">
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="flex-shrink:0;box-shadow:0 0 0 1.5px rgba(169,255,202,0.35);border-radius:50%;">
+              <circle cx="16" cy="16" r="16" fill="#0c2c28"></circle>
+              <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
+              <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
+              <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <div style="min-width:0;">
+              <strong style="display:block;font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ChangeIt4Me</strong>
+              <span style="display:block;font-size:11px;color:#8ab8b0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Backoffice</span>
+            </div>
+          </div>
+
+          <div style="display:grid;gap:4px;">
+            <button type="button" class="bo-nav-btn ${currentAdminTab === 'overview' ? 'active' : ''}" onclick="switchAdminTab('overview')">
+              <span>Overview</span>
+            </button>
+            <button type="button" class="bo-nav-btn ${currentAdminTab === 'users' ? 'active' : ''}" onclick="switchAdminTab('users')" id="adminTabUsersBtn">
+              <span>Users</span>
+              <span class="bo-nav-badge">${accountsList.length}</span>
+            </button>
+            <button type="button" class="bo-nav-btn ${currentAdminTab === 'listings' ? 'active' : ''}" onclick="switchAdminTab('listings')" id="adminTabListingsBtn">
+              <span>Listings</span>
+              <span class="bo-nav-badge">${offers.length}</span>
+            </button>
+            <button type="button" class="bo-nav-btn ${currentAdminTab === 'proposals' ? 'active' : ''}" onclick="switchAdminTab('proposals')" id="adminTabProposalsBtn">
+              <span>Swap Proposals</span>
+              <span class="bo-nav-badge">${swapProposals.length}</span>
+            </button>
+            <button type="button" class="bo-nav-btn ${currentAdminTab === 'billing' ? 'active' : ''}" onclick="switchAdminTab('billing')">
+              <span>Subscriptions</span>
+            </button>
+            <button type="button" class="bo-nav-btn ${currentAdminTab === 'compliance' ? 'active' : ''}" onclick="switchAdminTab('compliance')">
+              <span>GDPR & Compliance</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="padding:16px;border-top:1px solid rgba(169,255,202,0.12);display:grid;gap:8px;">
+          <button type="button" class="bo-btn bo-btn-mint" style="width:100%;" onclick="resetWizardDraft(); openWizardModal(1);">
+            + New Listing
+          </button>
+          <button type="button" class="bo-btn" style="width:100%;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.14);color:#e2f1ee;" onclick="closeAdminModal()">
+            ← Back to Site
+          </button>
+          <button type="button" class="bo-btn bo-btn-danger" style="width:100%;" onclick="logoutAdminBackoffice()">
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      <!-- MAIN WORKSPACE -->
+      <main class="bo-main">
+        <header class="bo-topbar">
+          <h1 style="font-size:18px;font-weight:800;color:#071d1a;margin:0;">${activeTitle}</h1>
+
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button type="button" class="bo-btn" style="background:#eefaf3;border-color:#a7f3d0;color:#065f46;" onclick="pullCloudDatabaseSync(false)" title="Sync live accounts & listings from Cloud (/api/sync)">
+              ● Cloud Sync (${cloudSyncLastState.lastSyncAt}) ↻
+            </button>
+
+            <input type="search" id="adminListingSearchInput" class="input-light"
+              style="width:240px;height:38px;font-size:13px;background:#f4f8f7;"
+              placeholder="Search user, email, ID, city..."
+              value="${adminListingSearchQuery.replace(/"/g, '&quot;')}"
+              oninput="onAdminSearchInput(this.value)" />
+
+            <select class="input-light" style="width:94px;height:38px;font-size:12.5px;font-weight:700;" onchange="setCurrency(this.value, true); renderAdminModalContent();">
+              ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${c.code === currentCurrency ? 'selected' : ''}>${c.code}</option>`).join("")}
+            </select>
+
+            <button type="button" class="bo-btn" onclick="closeAdminModal()">✕ Close</button>
+          </div>
+        </header>
+
+        <div class="bo-content-scroll">
+          <div class="bo-kpi-grid">
+            <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminUsersFilter('all'); switchAdminTab('users');">
+              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">Registered Users</span>
+              <strong style="display:block;font-size:24px;color:#071d1a;margin:4px 0 0;">${accountsList.length}</strong>
+            </div>
+
+            <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminListingsFilter('all'); switchAdminTab('listings');">
+              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">Active Listings</span>
+              <strong style="display:block;font-size:24px;color:#071d1a;margin:4px 0 0;">${offers.length}</strong>
+            </div>
+
+            <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminListingsFilter('all'); switchAdminTab('listings');">
+              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">Catalog Volume</span>
+              <strong style="display:block;font-size:22px;color:#071d1a;margin:4px 0 0;">~${totalGmvFormatted}</strong>
+            </div>
+
+            <div class="bo-kpi-card" style="cursor:pointer;" onclick="switchAdminTab('billing');">
+              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">PRO & Paid Plans</span>
+              <strong style="display:block;font-size:24px;color:#071d1a;margin:4px 0 0;">${proAccountsCount + packAccountsCount}</strong>
+            </div>
+
+            <div class="bo-kpi-card" style="cursor:pointer;" onclick="switchAdminTab('proposals');">
+              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">Swap Proposals</span>
+              <strong style="display:block;font-size:24px;color:#071d1a;margin:4px 0 0;">${swapProposals.length}</strong>
+            </div>
+          </div>
+
+          ${mainModuleHtml}
+        </div>
+      </main>
+    </div>
+  `;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  ensurePlatformAccountsAndTestRegistrations();
+  initCloudSyncEngine();
+  updateAdminHeaderButtonsVisibility();
   initLanguageDropdown();
   initCurrencyDropdown();
   initWorldMap();

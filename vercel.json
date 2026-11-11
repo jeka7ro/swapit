@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/((?!styles\\.css|app\\.js|i18n\\.js|data\\.js|favicon\\.ico).*)",
+      "source": "/((?!api/|styles\\.css|tahoe-skin\\.css|app\\.js|i18n\\.js|data\\.js|favicon\\.ico).*)",
       "destination": "/index.html"
     }
   ]
