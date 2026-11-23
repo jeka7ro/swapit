@@ -266,6 +266,20 @@ vm.runInContext(appCode + `\n;globalThis.__auditAccess = {
   extractSearchTokens,
   tokensMatchQueryWords,
   getOfferPrimaryTokens,
+  isValidRealEmail,
+  isValidRealPhone,
+  validateLiveAuthField,
+  startEmailVerification,
+  handleVerifyEmailCode,
+  openQuickEditListingSheet,
+  handleQuickEditListingSubmit,
+  openAdminEditUserSheet,
+  handleAdminEditUserSubmit,
+  openAppleDestructiveConfirmSheet,
+  requestDeleteListing,
+  executeAppleConfirmSheetAction,
+  closeAppleSheetModal,
+  getGeneratedVerifyCode: () => generatedVerifyCode,
   getState: () => ({
     offers,
     currentUser,
@@ -529,6 +543,90 @@ try {
       p4Errors.push('Diacritic-insensitive search or ownerEmail indexing failed for seeded offer #950101');
     }
   }
+
+  // Anti-Fake Email, Phone & Strict 6-Digit OTP Verification Check
+  if (api.isValidRealEmail('user@mailinator.com') !== false || api.isValidRealEmail('fake@tempmail.com') !== false) {
+    p4Errors.push('isValidRealEmail failed to block disposable email domains');
+  }
+  if (api.isValidRealEmail('eugeniu.real@gmail.com') !== true) {
+    p4Errors.push('isValidRealEmail rejected valid @gmail.com address');
+  }
+  if (api.isValidRealPhone('0700000000') !== false || api.isValidRealPhone('123456789') !== false || api.isValidRealPhone('12345') !== false) {
+    p4Errors.push('isValidRealPhone failed to block fake/repetitive/short phone numbers');
+  }
+  if (api.isValidRealPhone('+40 722 456 789') !== true) {
+    p4Errors.push('isValidRealPhone rejected valid Romanian mobile number');
+  }
+
+  api.startEmailVerification({
+    name: 'OTP Check User',
+    email: 'otp.check@gmail.com',
+    phone: '+40 722 456 789',
+    country: 'Romania'
+  });
+  const realCode = api.getGeneratedVerifyCode();
+  const wrongCode = realCode === '999999' ? '888888' : '999999';
+  getEl('verifyCodeInput').value = wrongCode;
+  api.handleVerifyEmailCode({ preventDefault() {} });
+  if (api.getState().accountsDb['otp.check@gmail.com']) {
+    p4Errors.push('handleVerifyEmailCode accepted an INCORRECT 6-digit OTP code!');
+  }
+  getEl('verifyCodeInput').value = realCode;
+  api.handleVerifyEmailCode({ preventDefault() {} });
+  if (!api.getState().accountsDb['otp.check@gmail.com']) {
+    p4Errors.push('handleVerifyEmailCode failed to activate account with the CORRECT 6-digit OTP code');
+  }
+
+  // Verify Apple HIG Quick-Edit Sheet, User Edit Sheet & Destructive Confirmation Sheet + Undo
+  api.openQuickEditListingSheet(950101);
+  api.handleQuickEditListingSubmit({
+    preventDefault() {},
+    target: {
+      _fd: {
+        title: '2023 Porsche Cayenne E-Hybrid Coupé Platinum (Apple Sheet Edited)',
+        category: 'cars',
+        amount: '75.500,00',
+        currency: 'EUR',
+        dealType: '1to1',
+        want: '3-Room Apartment in Bucharest',
+        city: 'Bucharest',
+        country: 'Romania',
+        specs: '2023 · 18,000 km · Platinum Edition',
+        desc: 'Updated via Apple HIG Single-View Edit Sheet',
+        image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80',
+        owner: 'Alexandru Ionescu',
+        ownerEmail: 'alex.ionescu@test.ro'
+      }
+    }
+  }, 950101);
+  const editedOffer = api.getState().offers.find(o => o.id === 950101);
+  if (!editedOffer || editedOffer.valueEur !== 75500 || !editedOffer.title.includes('Apple Sheet Edited')) {
+    p4Errors.push('handleQuickEditListingSubmit failed to update listing #950101 from Apple HIG Quick-Edit Sheet');
+  }
+
+  api.openAdminEditUserSheet('alex.ionescu@test.ro');
+  api.handleAdminEditUserSubmit({
+    preventDefault() {},
+    target: {
+      _fd: {
+        name: 'Alexandru Ionescu',
+        phone: '+40 722 300 100',
+        city: 'Bucharest',
+        country: 'Romania',
+        plan: 'pro',
+        freeSwaps: '999'
+      }
+    }
+  }, 'alex.ionescu@test.ro');
+
+  api.requestDeleteListing(950101);
+  if (!api.getState().offers.some(o => o.id === 950101)) {
+    p4Errors.push('requestDeleteListing deleted listing BEFORE user confirmed in Apple HIG Destructive Sheet!');
+  }
+  api.executeAppleConfirmSheetAction();
+  if (api.getState().offers.some(o => o.id === 950101)) {
+    p4Errors.push('executeAppleConfirmSheetAction failed to delete listing after confirmation');
+  }
 } catch (err) {
   p4Errors.push(`Exception in Phase 4: ${err && err.stack ? err.stack : err}`);
 }
@@ -584,15 +682,47 @@ def phase_5_security_no_alerts_no_emojis():
 
 
 def phase_6_ui_ux_and_tahoe_skin():
-    """Phase 6: Verify macOS Tahoe skin & UI/UX modal/component completeness."""
+    """Phase 6: Verify macOS Tahoe skin, Apple HIG Liquid Glass, Karpathy Guidelines & UI/UX modal completeness."""
     errors = []
     tahoe_path = WORKSPACE_ROOT / "tahoe-skin.css"
     if not tahoe_path.exists():
         errors.append("Missing tahoe-skin.css")
     else:
         css_text = tahoe_path.read_text(encoding="utf-8")
-        if "--tahoe-" not in css_text or "backdrop-filter" not in css_text:
-            errors.append("tahoe-skin.css appears incomplete (missing --tahoe- variables or backdrop-filter)")
+        for required_css_token in [
+            "--tahoe-",
+            "backdrop-filter",
+            "tabular-nums",
+            ":focus-visible",
+            "prefers-reduced-motion",
+            "prefers-contrast",
+            "--hig-glass-blur-regular",
+        ]:
+            if required_css_token not in css_text:
+                errors.append(f"tahoe-skin.css missing Apple HIG / Liquid Glass token: {required_css_token}")
+
+    karpathy_skill = WORKSPACE_ROOT / ".agents" / "skills" / "karpathy-guidelines" / "SKILL.md"
+    if not karpathy_skill.exists():
+        errors.append("Missing .agents/skills/karpathy-guidelines/SKILL.md")
+    else:
+        k_text = karpathy_skill.read_text(encoding="utf-8")
+        for principle in ["Think Before Coding", "Simplicity First", "Surgical Changes", "Goal-Driven Execution"]:
+            if principle not in k_text:
+                errors.append(f"karpathy-guidelines/SKILL.md missing principle: {principle}")
+
+    apple_skill = WORKSPACE_ROOT / ".agents" / "skills" / "apple-design" / "SKILL.md"
+    apple_liquid_glass = WORKSPACE_ROOT / ".agents" / "skills" / "apple-design" / "references" / "hig" / "liquid-glass.md"
+    if not apple_skill.exists() or not apple_liquid_glass.exists():
+        errors.append("Missing .agents/skills/apple-design/SKILL.md or references/hig/liquid-glass.md")
+
+    ruflo_skill = WORKSPACE_ROOT / ".agents" / "skills" / "ruflo-sparc" / "SKILL.md"
+    if not ruflo_skill.exists():
+        errors.append("Missing .agents/skills/ruflo-sparc/SKILL.md")
+    else:
+        r_text = ruflo_skill.read_text(encoding="utf-8")
+        for phase_name in ["Specification", "Pseudocode", "Architecture", "Refinement", "Completion"]:
+            if phase_name not in r_text:
+                errors.append(f"ruflo-sparc/SKILL.md missing SPARC phase: {phase_name}")
 
     html_path = WORKSPACE_ROOT / "index.html"
     if html_path.exists():
@@ -604,6 +734,7 @@ def phase_6_ui_ux_and_tahoe_skin():
             "guideModal",
             "dashboardModal",
             "adminModal",
+            "appleSheetModal",
             "chatDock",
             "gdprConsentBanner",
             "toastContainer",

@@ -1,6 +1,29 @@
 // ChangeIt4Me — Main Application Logic
 // Default Language: EN ("en") + Automatic European Geo-IP Language Routing + Full Swap Platform
 
+function escapeHtml(raw) {
+  if (raw === null || raw === undefined) return "";
+  return String(raw)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeJsStr(raw) {
+  return escapeHtml(String(raw ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\r?\n/g, " "));
+}
+
+let dsaReports = (() => {
+  try {
+    const saved = localStorage.getItem("ci4m_dsa_reports_v1");
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+})();
+
 const COUNTRY_COORDS = {
   "Germany": { lat: 51.1657, lng: 10.4515 },
   "Romania": { lat: 45.9432, lng: 24.9668 },
@@ -461,33 +484,36 @@ function openGdprPreferencesModal() {
   const content = document.getElementById("guideModalContent");
   if (!content) return;
   const funcChecked = gdprConsent.functional !== false ? "checked" : "";
+  const cancelWord = { ro: "Anulează", en: "Cancel", de: "Abbrechen", fr: "Annuler", it: "Annulla", es: "Cancelar", ru: "Отмена" }[currentLang] || "Cancel";
 
   content.innerHTML = `
-    <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
-    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;">${g.modalBadge}</span>
-    <h2 style="font-size:24px;margin:10px 0 6px;">${g.modalTitle}</h2>
-    <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">${g.modalSub}</p>
+    <div class="hig-sheet-toolbar">
+      <button type="button" class="hig-btn-cancel" onclick="closeGuideModal()">${cancelWord}</button>
+      <h3 class="hig-sheet-title">${g.modalTitle}</h3>
+      <button type="button" class="hig-btn-save" onclick="acceptGdprConsent('all')">${g.acceptAllBtn}</button>
+    </div>
+    <span style="background:#f1f5f4;color:#0f172a;border:1px solid rgba(15,23,42,0.08);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${g.modalBadge}</span>
+    <p style="font-size:13px;color:var(--muted);margin:10px 0 16px;">${g.modalSub}</p>
 
     <form onsubmit="saveGdprPreferences(event)" style="display:grid;gap:12px;">
-      <div style="padding:14px 16px;background:var(--mint-soft);border:1.5px solid var(--forest);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div style="padding:14px 16px;background:#f5f7f7;border:1px solid rgba(15,23,42,0.08);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
         <div>
-          <strong style="font-size:14px;color:var(--forest);display:block;margin-bottom:4px;">${g.catEssentialTitle}</strong>
-          <span style="font-size:12.5px;color:var(--ink-soft);line-height:1.45;display:block;">${g.catEssentialDesc}</span>
+          <strong style="font-size:14px;color:#0f172a;display:block;margin-bottom:4px;">${g.catEssentialTitle}</strong>
+          <span style="font-size:12.5px;color:#475569;line-height:1.45;display:block;">${g.catEssentialDesc}</span>
         </div>
-        <span style="background:var(--forest);color:var(--mint);padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;">✓ ${g.alwaysActive}</span>
+        <span style="background:#0f172a;color:#ffffff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;">✓ ${g.alwaysActive}</span>
       </div>
 
-      <label style="padding:14px 16px;background:#fff;border:1.5px solid rgba(12,44,40,0.18);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
+      <label style="padding:14px 16px;background:#ffffff;border:1px solid rgba(15,23,42,0.1);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div>
-          <strong style="font-size:14px;color:var(--ink);display:block;margin-bottom:4px;">${g.catFuncTitle}</strong>
-          <span style="font-size:12.5px;color:var(--muted);line-height:1.45;display:block;">${g.catFuncDesc}</span>
+          <strong style="font-size:14px;color:#0f172a;display:block;margin-bottom:4px;">${g.catFuncTitle}</strong>
+          <span style="font-size:12.5px;color:#64748b;line-height:1.45;display:block;">${g.catFuncDesc}</span>
         </div>
-        <input type="checkbox" id="gdprFuncToggle" ${funcChecked} style="width:20px;height:20px;accent-color:var(--forest);margin-top:2px;flex-shrink:0;" />
+        <input type="checkbox" id="gdprFuncToggle" ${funcChecked} style="width:20px;height:20px;accent-color:#0f172a;margin-top:2px;flex-shrink:0;" />
       </label>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
-        <button type="submit" class="btn btn-dark" style="flex:1;">✓ ${g.savePrefsBtn}</button>
-        <button type="button" class="btn btn-mint" style="flex:1;" onclick="acceptGdprConsent('all')">${g.acceptAllBtn}</button>
+        <button type="submit" class="btn btn-dark" style="flex:1;border-radius:999px;">✓ ${g.savePrefsBtn}</button>
       </div>
     </form>
 
@@ -509,7 +535,17 @@ function saveGdprPreferences(e) {
 }
 
 function exportUserGdprData() {
-  const userListings = offers.filter(o => o.createdByUser || o.id > 100000);
+  const emailKey = String(currentUser?.email || "").trim().toLowerCase();
+  const nameNorm = normalizeSearchText(currentUser?.name || "");
+  const userListings = offers.filter(o => {
+    if (!(o.createdByUser || o.id > 100000)) return false;
+    if (emailKey && o.ownerEmail) return String(o.ownerEmail).trim().toLowerCase() === emailKey;
+    if (nameNorm && o.owner) return normalizeSearchText(o.owner) === nameNorm;
+    return !emailKey;
+  });
+  const userWatchlist = emailKey
+    ? watchlistAlerts.filter(w => !w.email || String(w.email).trim().toLowerCase() === emailKey)
+    : watchlistAlerts;
   const payload = {
     platform: "ChangeIt4Me Global 1:1 Exchange",
     gdprArticle: "Article 15 (Right of Access) & Article 20 (Right to Data Portability)",
@@ -519,7 +555,7 @@ function exportUserGdprData() {
     myListings: userListings,
     swapProposals,
     savedFavoriteOfferIds: favoriteIds,
-    watchlistAlerts
+    watchlistAlerts: userWatchlist
   };
   try {
     const jsonStr = JSON.stringify(payload, null, 2);
@@ -547,21 +583,36 @@ function deleteUserGdprAccount() {
     delete accountsDb[emailKey];
     saveAccountsDb();
   }
-  currentUser = null;
+  const removedOfferIds = [];
   offers = offers.filter(o => {
-    if (emailKey && o.ownerEmail) {
-      return String(o.ownerEmail).trim().toLowerCase() !== emailKey;
+    const matchByEmail = Boolean(emailKey && o.ownerEmail && String(o.ownerEmail).trim().toLowerCase() === emailKey);
+    const matchAnon = Boolean(!emailKey && o.createdByUser && !o.ownerEmail);
+    if (matchByEmail || matchAnon) {
+      removedOfferIds.push(o.id);
+      if (!deletedOfferIds.includes(o.id)) deletedOfferIds.push(o.id);
+      return false;
     }
-    return !(o.createdByUser && !o.ownerEmail);
+    return true;
   });
+  currentUser = null;
   saveOffersToStorage();
-  watchlistAlerts = [];
+  watchlistAlerts = emailKey
+    ? watchlistAlerts.filter(w => String(w.email || "").trim().toLowerCase() !== emailKey)
+    : [];
   saveWatchlistAlerts();
+  swapProposals = [];
   favoriteIds = [];
   localStorage.removeItem("ci4m_user");
+  localStorage.removeItem("ci4m_saved_google_user_v1");
   localStorage.removeItem("ci4m_favs");
   localStorage.removeItem("ci4m_proposals");
   localStorage.removeItem("ci4m_wiz_draft_v1");
+  if (typeof scheduleCloudSyncPush === "function" && (emailKey || removedOfferIds.length > 0)) {
+    scheduleCloudSyncPush({
+      deletedAccountEmails: emailKey ? [emailKey] : [],
+      deletedOfferIds
+    });
+  }
   renderUserHeaderState();
   renderOffers();
   renderMapPinsAndPanel();
@@ -569,10 +620,79 @@ function deleteUserGdprAccount() {
   showToast(getGdprUiCopy().deletedToast);
 }
 
-function reportOfferListing(offerId) {
-  const item = offers.find(o => o.id === offerId);
+function reportOfferListing(offerId, reason = "", notes = "") {
+  const item = offers.find(o => o.id === Number(offerId));
   const g = getGdprUiCopy();
-  showToast(`${g.dsaReportedToast} (#${offerId}${item ? " · " + item.title : ""})`);
+  const cleanReason = String(reason || "DSA Notice").trim();
+  const cleanNotes = String(notes || "").trim();
+  dsaReports.unshift({
+    id: Date.now(),
+    offerId: Number(offerId),
+    title: item?.title || `#${offerId}`,
+    reason: cleanReason,
+    notes: cleanNotes,
+    reporterEmail: currentUser?.email || "anonymous",
+    createdAt: new Date().toISOString(),
+    status: "Pending Review"
+  });
+  try {
+    localStorage.setItem("ci4m_dsa_reports_v1", JSON.stringify(dsaReports.slice(0, 100)));
+  } catch (e) { }
+  const reasonSuffix = reason ? ` [${cleanReason}]` : "";
+  showToast(`${g.dsaReportedToast} (#${offerId}${item ? " · " + item.title : ""}${reasonSuffix})`);
+}
+
+function openReportOfferSheet(offerId) {
+  const item = offers.find(o => o.id === Number(offerId));
+  const modal = document.getElementById("appleSheetModal");
+  const card = document.getElementById("appleSheetCard");
+  const content = document.getElementById("appleSheetContent");
+  if (!modal || !content) {
+    reportOfferListing(offerId);
+    return;
+  }
+  if (card) card.classList.add("hig-alert-mode");
+  const loc = item ? getOfferLocalized(item) : { title: `#${offerId}` };
+  const dsaCopyMap = {
+    en: { cancel: "Cancel", title: "Report Listing (EU DSA)", send: "Submit Report", reasonLbl: "Reason for report (EU DSA Art. 16)", r1: "Inaccurate Valuation / Misleading Price", r2: "Suspected Fake or Non-Compliant Item", r3: "Duplicate / Spam Listing", r4: "Invalid Contact Information", notesLbl: "Additional details (optional)", notesPh: "Briefly describe the issue..." },
+    ro: { cancel: "Anulează", title: "Raportează Anunț (DSA)", send: "Trimite Raportul", reasonLbl: "Motivul raportării (Art. 16 DSA)", r1: "Valoare / preț nerealist sau înșelător", r2: "Anunț suspect / produs neconform", r3: "Anunț duplicat / Spam", r4: "Date de contact invalide", notesLbl: "Detalii suplimentare (opțional)", notesPh: "Descrie pe scurt problema..." },
+    de: { cancel: "Abbrechen", title: "Inserat melden (EU DSA)", send: "Meldung senden", reasonLbl: "Grund der Meldung (EU DSA Art. 16)", r1: "Irreführender Preis / Bewertung", r2: "Verdacht auf Fälschung / Verstoß", r3: "Duplikat / Spam-Inserat", r4: "Ungültige Kontaktdaten", notesLbl: "Weitere Details (optional)", notesPh: "Problem kurz beschreiben..." },
+    fr: { cancel: "Annuler", title: "Signaler l'annonce (DSA)", send: "Envoyer", reasonLbl: "Motif du signalement (Art. 16 DSA)", r1: "Prix ou évaluation trompeuse", r2: "Annonce suspecte / non conforme", r3: "Doublon / Spam", r4: "Coordonnées invalides", notesLbl: "Détails supplémentaires (optionnel)", notesPh: "Décrivez brièvement le problème..." },
+    it: { cancel: "Annulla", title: "Segnala annuncio (DSA)", send: "Invia", reasonLbl: "Motivo della segnalazione (Art. 16 DSA)", r1: "Valutazione o prezzo ingannevole", r2: "Annuncio sospetto / non conforme", r3: "Annuncio duplicato / Spam", r4: "Contatti non validi", notesLbl: "Dettagli aggiuntivi (opzionale)", notesPh: "Descrivi brevemente il problema..." },
+    es: { cancel: "Cancelar", title: "Reportar anuncio (DSA)", send: "Enviar", reasonLbl: "Motivo del reporte (Art. 16 DSA)", r1: "Precio o valoración engañosa", r2: "Anuncio sospechoso / no conforme", r3: "Anuncio duplicado / Spam", r4: "Datos de contacto inválidos", notesLbl: "Detalles adicionales (opcional)", notesPh: "Describe brevemente el problema..." },
+    ru: { cancel: "Отмена", title: "Пожаловаться (EU DSA)", send: "Отправить", reasonLbl: "Причина жалобы (ст. 16 DSA)", r1: "Недостоверная цена / оценка", r2: "Подозрительное объявление", r3: "Дубликат / Спам", r4: "Неверные контактные данные", notesLbl: "Дополнительные детали (необязательно)", notesPh: "Кратко опишите проблему..." }
+  };
+  const dc = dsaCopyMap[currentLang] || dsaCopyMap.en;
+
+  content.innerHTML = `
+    <form onsubmit="event.preventDefault(); const r = this.querySelector('select[name=dsaReason]')?.value || ''; const n = this.querySelector('input[name=dsaNotes]')?.value || ''; closeAppleSheetModal(); reportOfferListing(${Number(offerId)}, r, n);">
+      <div class="hig-sheet-toolbar">
+        <button type="button" class="hig-btn-cancel" onclick="closeAppleSheetModal()">${dc.cancel}</button>
+        <h3 class="hig-sheet-title">${dc.title}</h3>
+        <button type="submit" class="hig-btn-destructive">${dc.send}</button>
+      </div>
+      <p style="margin:0 0 12px;font-size:13px;color:#475569;line-height:1.45;">
+        <strong>#${Number(offerId)}</strong> · ${escapeHtml(loc.title)}
+      </p>
+      <div style="display:grid;gap:10px;margin-bottom:6px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${dc.reasonLbl}</label>
+          <select name="dsaReason" class="input-light" style="height:40px;font-size:13px;">
+            <option value="Inaccurate Valuation / Price">${dc.r1}</option>
+            <option value="Suspected Fake / Counterfeit">${dc.r2}</option>
+            <option value="Duplicate / Spam Listing">${dc.r3}</option>
+            <option value="Unreachable Owner">${dc.r4}</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${dc.notesLbl}</label>
+          <input type="text" name="dsaNotes" placeholder="${dc.notesPh}" class="input-light" style="height:40px;font-size:13px;" />
+        </div>
+      </div>
+    </form>
+  `;
+  modal.classList.add("open");
+  document.body.classList.add("modal-open");
 }
 
 // ============================================================================
@@ -915,53 +1035,56 @@ function openSubscriptionModal(preselectedTier = "pro") {
   const priceProY = formatCurrency(149, currentCurrency);
   const isPro = Boolean(currentUser && currentUser.plan === "pro");
   const remSwaps = currentUser ? (currentUser.freeSwaps ?? 10) : guestFreeSwaps;
+  const maxSwaps = remSwaps > 10 ? remSwaps : 10;
   const selPack = preselectedTier === "pack15";
+  const selYearly = preselectedTier === "pro_yearly";
+  const selMonthly = !selPack && !selYearly;
 
   content.innerHTML = `
     <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
-    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;">${s.modalBadge}</span>
+    <span style="background:#f1f5f4;color:#0f172a;border:1px solid rgba(15,23,42,0.08);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${s.modalBadge}</span>
     <h2 style="font-size:24px;margin:10px 0 6px;">${s.modalTitle}</h2>
     <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">${s.modalSub}</p>
 
-    <div style="padding:12px 15px;background:${isPro ? '#ecfdf5' : (remSwaps <= 0 ? '#fef2f2' : 'var(--mint-soft)')};border:1.5px solid ${isPro ? '#10b981' : (remSwaps <= 0 ? '#ef4444' : 'var(--forest)')};border-radius:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-      <strong style="font-size:13px;color:var(--ink);">${s.statusLabel}</strong>
-      <span style="font-size:13px;font-weight:800;color:${remSwaps <= 0 && !isPro ? '#b91c1c' : 'var(--forest)'};">
-        ${isPro ? `✓ ${s.statusPro}` : `${s.statusCredits} ${remSwaps} / 10`}
+    <div style="padding:12px 15px;background:${remSwaps <= 0 && !isPro ? '#fff1f2' : '#f5f7f7'};border:1px solid ${remSwaps <= 0 && !isPro ? '#fecdd3' : 'rgba(15,23,42,0.08)'};border-radius:16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <strong style="font-size:13px;color:#0f172a;">${s.statusLabel}</strong>
+      <span style="font-size:13px;font-weight:800;color:${remSwaps <= 0 && !isPro ? '#be123c' : '#0f172a'};font-variant-numeric:tabular-nums;">
+        ${isPro ? `✓ ${s.statusPro}` : `${s.statusCredits} ${remSwaps} / ${maxSwaps}`}
       </span>
     </div>
 
     <form onsubmit="activateSubscriptionPlan(event)" style="display:grid;gap:10px;">
-      <label style="padding:13px 15px;background:#fff;border:2px solid ${selPack ? 'var(--forest)' : 'rgba(12,44,40,0.16)'};border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
+      <label data-tier-card="pack15" style="padding:13px 15px;background:${selPack ? '#f8fafc' : '#ffffff'};border:1.5px solid ${selPack ? '#0f172a' : 'rgba(15,23,42,0.1)'};border-radius:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div style="display:flex;gap:10px;align-items:flex-start;">
-          <input type="radio" name="subTier" value="pack15" ${selPack ? "checked" : ""} style="width:18px;height:18px;margin-top:3px;accent-color:var(--forest);" />
+          <input type="radio" name="subTier" value="pack15" ${selPack ? "checked" : ""} onchange="highlightSubscriptionTierCard(this.value)" style="width:18px;height:18px;margin-top:3px;accent-color:#0f172a;" />
           <div>
-            <strong style="font-size:14px;color:var(--ink);display:block;">${s.optPackTitle}</strong>
-            <span style="font-size:12px;color:var(--muted);line-height:1.4;display:block;">${s.optPackDesc}</span>
+            <strong style="font-size:14px;color:#0f172a;display:block;">${s.optPackTitle}</strong>
+            <span style="font-size:12px;color:#64748b;line-height:1.4;display:block;">${s.optPackDesc}</span>
           </div>
         </div>
-        <strong style="font-size:16px;color:var(--forest);white-space:nowrap;">${pricePack}</strong>
+        <strong style="font-size:16px;color:#0f172a;white-space:nowrap;font-variant-numeric:tabular-nums;">${pricePack}</strong>
       </label>
 
-      <label style="padding:13px 15px;background:var(--mint-soft);border:2px solid ${!selPack ? 'var(--forest)' : 'rgba(12,44,40,0.22)'};border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
+      <label data-tier-card="pro_monthly" style="padding:13px 15px;background:${selMonthly ? '#f8fafc' : '#ffffff'};border:1.5px solid ${selMonthly ? '#0f172a' : 'rgba(15,23,42,0.1)'};border-radius:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div style="display:flex;gap:10px;align-items:flex-start;">
-          <input type="radio" name="subTier" value="pro_monthly" ${!selPack ? "checked" : ""} style="width:18px;height:18px;margin-top:3px;accent-color:var(--forest);" />
+          <input type="radio" name="subTier" value="pro_monthly" ${selMonthly ? "checked" : ""} onchange="highlightSubscriptionTierCard(this.value)" style="width:18px;height:18px;margin-top:3px;accent-color:#0f172a;" />
           <div>
-            <strong style="font-size:14px;color:var(--forest);display:block;">${s.optProMonthlyTitle}</strong>
-            <span style="font-size:12px;color:var(--ink-soft);line-height:1.4;display:block;">${s.optProMonthlyDesc}</span>
+            <strong style="font-size:14px;color:#0f172a;display:block;">${s.optProMonthlyTitle}</strong>
+            <span style="font-size:12px;color:#475569;line-height:1.4;display:block;">${s.optProMonthlyDesc}</span>
           </div>
         </div>
-        <strong style="font-size:16px;color:var(--forest);white-space:nowrap;">${priceProM}${s.perMonth}</strong>
+        <strong style="font-size:16px;color:#0f172a;white-space:nowrap;font-variant-numeric:tabular-nums;">${priceProM}${s.perMonth}</strong>
       </label>
 
-      <label style="padding:13px 15px;background:#fff;border:2px solid rgba(12,44,40,0.16);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
+      <label data-tier-card="pro_yearly" style="padding:13px 15px;background:${selYearly ? '#f8fafc' : '#ffffff'};border:1.5px solid ${selYearly ? '#0f172a' : 'rgba(15,23,42,0.1)'};border-radius:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div style="display:flex;gap:10px;align-items:flex-start;">
-          <input type="radio" name="subTier" value="pro_yearly" style="width:18px;height:18px;margin-top:3px;accent-color:var(--forest);" />
+          <input type="radio" name="subTier" value="pro_yearly" ${selYearly ? "checked" : ""} onchange="highlightSubscriptionTierCard(this.value)" style="width:18px;height:18px;margin-top:3px;accent-color:#0f172a;" />
           <div>
-            <strong style="font-size:14px;color:var(--ink);display:block;">${s.optProYearlyTitle}</strong>
-            <span style="font-size:12px;color:var(--muted);line-height:1.4;display:block;">${s.optProYearlyDesc}</span>
+            <strong style="font-size:14px;color:#0f172a;display:block;">${s.optProYearlyTitle}</strong>
+            <span style="font-size:12px;color:#64748b;line-height:1.4;display:block;">${s.optProYearlyDesc}</span>
           </div>
         </div>
-        <strong style="font-size:16px;color:var(--forest);white-space:nowrap;">${priceProY}</strong>
+        <strong style="font-size:16px;color:#0f172a;white-space:nowrap;font-variant-numeric:tabular-nums;">${priceProY}</strong>
       </label>
 
       <div class="field-group" style="margin:4px 0;">
@@ -982,12 +1105,21 @@ function openSubscriptionModal(preselectedTier = "pro") {
   document.body.classList.add("modal-open");
 }
 
-function activateSubscriptionPlan(e) {
-  if (e) e.preventDefault();
-  const s = getSubscriptionUiCopy();
-  const fd = e && e.target ? new FormData(e.target) : null;
-  const chosenTier = (fd && fd.get("subTier")) || document.querySelector('input[name="subTier"]:checked')?.value || "pro_monthly";
+function highlightSubscriptionTierCard(tierVal) {
+  document.querySelectorAll("#guideModalContent label[data-tier-card]").forEach(lbl => {
+    const isSel = lbl.getAttribute("data-tier-card") === tierVal;
+    lbl.style.borderColor = isSel ? "#0f172a" : "rgba(15,23,42,0.1)";
+    lbl.style.background = isSel ? "#f8fafc" : "#ffffff";
+  });
+}
 
+function getRemainingFreeSwaps() {
+  if (currentUser && currentUser.plan === "pro") return 999;
+  return currentUser ? (currentUser.freeSwaps ?? 10) : guestFreeSwaps;
+}
+
+function applyPurchasedPlanLocally(chosenTier) {
+  const s = getSubscriptionUiCopy();
   if (!currentUser) {
     activateUserAccount({
       name: "PRO Member",
@@ -1022,6 +1154,65 @@ function activateSubscriptionPlan(e) {
     renderDashboardContent();
   }
   showToast(chosenTier === "pack15" ? s.packActivatedToast : s.proActivatedToast);
+}
+
+function activateSubscriptionPlan(e) {
+  if (e) e.preventDefault();
+  const fd = e && e.target ? new FormData(e.target) : null;
+  const chosenTier = (fd && fd.get("subTier")) || document.querySelector('input[name="subTier"]:checked')?.value || "pro_monthly";
+
+  const gw = typeof getAuthGatewaysConfig === "function" ? getAuthGatewaysConfig() : {};
+  const directLink = chosenTier === "pack15"
+    ? gw.stripePack15Url
+    : chosenTier === "pro_yearly"
+      ? gw.stripeProYearlyUrl
+      : gw.stripeProMonthlyUrl;
+
+  if (directLink && /^https:\/\/(buy|checkout)\.stripe\.com\//i.test(directLink) && typeof fetch === "function") {
+    showToast("↻ Redirecting to secure Stripe Checkout...");
+    window.location.href = directLink;
+    return;
+  }
+
+  if ((gw.stripeSecretKey || serverConfiguredGateways.stripe) && typeof fetch === "function") {
+    showToast("↻ Opening secure Stripe Checkout...");
+    fetch("/api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "create_checkout_session",
+        tier: chosenTier,
+        email: currentUser?.email || "",
+        origin: window.location.origin
+      })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.ok && data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+        } else {
+          applyPurchasedPlanLocally(chosenTier);
+        }
+      })
+      .catch(() => applyPurchasedPlanLocally(chosenTier));
+    return;
+  }
+
+  applyPurchasedPlanLocally(chosenTier);
+}
+
+function checkStripeCheckoutReturnUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const paidTier = params.get("stripe_success");
+    if (paidTier && ["pack15", "pro_monthly", "pro_yearly"].includes(paidTier)) {
+      applyPurchasedPlanLocally(paidTier);
+      params.delete("stripe_success");
+      const nextQuery = params.toString();
+      const cleanUrl = window.location.pathname + (nextQuery ? `?${nextQuery}` : "");
+      window.history.replaceState({}, "", cleanUrl);
+    }
+  } catch (err) { }
 }
 
 function simulateZeroFreeSwaps() {
@@ -1159,7 +1350,7 @@ function getRouteFromUrlOrStorage() {
 }
 
 function closeAllModalsSilently() {
-  ["wizardModal", "offerModal", "authModal", "dashboardModal", "guideModal", "adminModal"].forEach(id => {
+  ["wizardModal", "offerModal", "authModal", "dashboardModal", "guideModal", "adminModal", "appleSheetModal"].forEach(id => {
     document.getElementById(id)?.classList.remove("open");
   });
   document.body.classList.remove("modal-open");
@@ -1707,8 +1898,31 @@ function setLanguage(langCode, isManualUserAction = false) {
   renderUserHeaderState();
   renderOffers();
   renderMapPinsAndPanel();
+  const sampleChipsMap = {
+    en: { cars: "+ Cars (Porsche / BMW)", re: "+ Real Estate (Apartment / Villa)", el: "+ Tech (iPhone 16 / MacBook)" },
+    de: { cars: "+ Auto (Porsche / BMW)", re: "+ Immobilien (Wohnung / Villa)", el: "+ Tech (iPhone 16 / MacBook)" },
+    fr: { cars: "+ Auto (Porsche / BMW)", re: "+ Immobilier (Appartement / Villa)", el: "+ Tech (iPhone 16 / MacBook)" },
+    it: { cars: "+ Auto (Porsche / BMW)", re: "+ Immobili (Appartamento / Villa)", el: "+ Tech (iPhone 16 / MacBook)" },
+    es: { cars: "+ Autos (Porsche / BMW)", re: "+ Inmobiliaria (Piso / Villa)", el: "+ Tech (iPhone 16 / MacBook)" },
+    ro: { cars: "+ Auto (Porsche / BMW)", re: "+ Imobiliare (Apartament / Vilă)", el: "+ Tech (iPhone 16 / MacBook)" },
+    ru: { cars: "+ Авто (Porsche / BMW)", re: "+ Недвижимость (Квартира / Вилла)", el: "+ Техника (iPhone 16 / MacBook)" }
+  };
+  const sc = sampleChipsMap[langCode] || sampleChipsMap.en;
+  const scCars = document.getElementById("quickSampleChipCars");
+  const scRe = document.getElementById("quickSampleChipRealEstate");
+  const scEl = document.getElementById("quickSampleChipElectronics");
+  if (scCars) scCars.textContent = sc.cars;
+  if (scRe) scRe.textContent = sc.re;
+  if (scEl) scEl.textContent = sc.el;
+  const qPhotoIn = document.getElementById("quickPhotoUrlInput");
+  if (qPhotoIn) qPhotoIn.placeholder = getWizValidationCopy().pasteUrlPlaceholder;
+
   if (document.getElementById("wizardModal")?.classList.contains("open")) {
+    saveCurrentWizStepInputs();
     renderWizStep();
+  }
+  if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId != null) {
+    openOfferModal(currentOpenOfferId);
   }
   if (document.getElementById("dashboardModal")?.classList.contains("open")) {
     renderDashboardContent();
@@ -2400,13 +2614,17 @@ function buildLiveSearchDropdownHtml(val) {
   if (q.length < 1) return "";
   const ui = getSmartUiLabels();
   const isAdminQuery = normalizeSearchText(q) === "admin" || normalizeSearchText(q).startsWith("admin");
+  const adminSubText = currentLang === "ro"
+    ? "Vezi toate conturile înregistrate, anunțurile adăugate, ciornele și testele"
+    : "Manage all registered accounts, catalog listings, swap proposals & cloud sync";
+  const adminOpenWord = currentLang === "ro" ? "Deschide →" : "Open →";
   const adminShortcutHtml = isAdminQuery ? `
     <button type="button" class="smart-dd-item" style="background:#0a2520;color:#fff;" onclick="document.getElementById('heroSmartDropdown').style.display='none'; document.getElementById('mobileSmartDropdown').style.display='none'; openAdminModal('listings');">
       <div class="smart-dd-info">
         <strong style="color:#a9ffca;">★ Admin & Diagnostics Console (/admin)</strong>
-        <span style="color:#c9dfdb;">Vezi toate conturile înregistrate, anunțurile adăugate, ciornele și testele</span>
+        <span style="color:#c9dfdb;">${adminSubText}</span>
       </div>
-      <span class="smart-dd-price" style="background:#a9ffca;color:#0c2c28;">Deschide →</span>
+      <span class="smart-dd-price" style="background:#a9ffca;color:#0c2c28;">${adminOpenWord}</span>
     </button>
   ` : "";
   const qTokens = extractSearchTokens(q);
@@ -2430,7 +2648,7 @@ function buildLiveSearchDropdownHtml(val) {
   if (exactMatches.length === 0 && alternatives.length === 0 && !adminShortcutHtml) {
     return `
       <div class="smart-dd-empty" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <span style="font-size:13px;color:var(--muted);font-weight:600;">${ui.noMatch} «${q}»</span>
+        <span style="font-size:13px;color:var(--muted);font-weight:600;">${ui.noMatch} «${escapeHtml(q)}»</span>
         <button type="button" class="btn btn-mint" style="height:32px;padding:0 12px;font-size:12px;" onclick="openWizardModal()">${ui.postFirst}</button>
       </div>
     `;
@@ -2542,8 +2760,8 @@ function renderOffers() {
   const query = (document.getElementById("catalogSearchInput")?.value || "").trim().toLowerCase();
   const dealFilter = document.getElementById("catalogDealSelect")?.value || "all";
   const sortMode = document.getElementById("catalogSortSelect")?.value || "match";
-  const minVal = Number(document.getElementById("catalogMinEur")?.value) || 0;
-  const maxVal = Number(document.getElementById("catalogMaxEur")?.value) || 0;
+  const minVal = sanitizeNumericAmount(document.getElementById("catalogMinEur")?.value, 0);
+  const maxVal = sanitizeNumericAmount(document.getElementById("catalogMaxEur")?.value, 0);
 
   const passesBaseFilters = (item) => {
     if (currentCategoryFilter === "favs") {
@@ -2634,69 +2852,49 @@ function renderOffers() {
     const loc = getOfferLocalized(item);
     const valFormatted = formatOfferPrice(item, currentCurrency);
     const isFav = favoriteIds.includes(item.id);
-    const score = item.matchScore || 95;
-    const isCustomUserAd = Boolean(item.createdByUser || item.id > 100000);
-    const newAdBadgeText = {
-      ro: "★ NOU · Anunț Membru",
-      en: "★ NEW · Member Ad",
-      de: "★ NEU · Mitgliedsinserat",
-      fr: "★ NOUVEAU · Annonce Membre",
-      it: "★ NUOVO · Annuncio Membro",
-      es: "★ NUEVO · Anuncio Miembro",
-      ru: "★ НОВОЕ · Объявление"
-    }[currentLang] || "★ NEW · Member Ad";
-    const resolvedBadge = extraBadge || (isCustomUserAd ? newAdBadgeText : null);
-    const altPillHtml = resolvedBadge
-      ? `<span style="background:${(isWantHighlight || isCustomUserAd) ? '#a9ffca' : 'rgba(255,255,255,0.94)'};color:var(--forest);font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">${resolvedBadge}</span>`
-      : "";
+    const dealLabel = getDealTypeLabel(item.dealType);
+    const catLabel = getCategoryLabel(item.category);
+    const topGlassPillText = extraBadge ? `${catLabel} · ${extraBadge}` : `${catLabel} · ${dealLabel}`;
 
     return `
       <article class="swap-card">
-        <div class="swap-card-media" style="background-image:url('${item.image}')">
-          <div class="swap-card-badges">
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-              <span class="swap-pill-cat">${getCategoryLabel(item.category)}</span>
-              ${altPillHtml}
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <span class="swap-pill-deal">${getDealTypeLabel(item.dealType)}</span>
-              <button type="button" class="swap-fav-btn ${isFav ? 'is-fav' : ''}" style="width:36px;height:36px;border-radius:999px;border:1px solid rgba(255,255,255,0.45);background:${isFav ? 'var(--mint)' : 'rgba(12,44,40,0.78)'};color:${isFav ? 'var(--forest)' : '#ffffff'};backdrop-filter:blur(8px);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;box-shadow:0 4px 14px rgba(0,0,0,0.2);" onclick="toggleFavorite(${item.id}, event)" aria-label="Save favorite">
-                ${isFav ? PREMIUM_ICONS.heartFilled : PREMIUM_ICONS.heartOutline}
-              </button>
-            </div>
+        <div class="swap-card-media" style="background-image:url('${item.image}');cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">
+          <div class="swap-card-badges" onclick="event.stopPropagation()">
+            <span class="swap-pill-cat">${topGlassPillText}</span>
+            <button type="button" class="swap-fav-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite(${item.id}, event)" aria-label="Save favorite">
+              ${isFav ? PREMIUM_ICONS.heartFilled : PREMIUM_ICONS.heartOutline}
+            </button>
           </div>
-          <span class="swap-card-match" style="position:absolute;bottom:12px;left:12px;z-index:2;display:inline-flex;align-items:center;gap:4px;">${PREMIUM_ICONS.bolt}${score}% Match</span>
-          <span class="swap-card-value">~ ${valFormatted}</span>
         </div>
         <div class="swap-card-body">
-          <div class="swap-card-location">
-            <span style="display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country}</span>
-            <span style="color:var(--forest);">✓ ${item.owner}</span>
+          <div class="swap-card-meta-row">
+            <span class="swap-card-loc-owner">${item.city}, ${item.country} · ${item.owner}</span>
+            <strong class="swap-card-price-inline">${valFormatted}</strong>
           </div>
-          <h3>${loc.title}</h3>
+          <h3 style="cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">${loc.title}</h3>
           <div class="swap-exchange-box">
             <div class="swap-row">
               <span class="swap-tag have">${t("haveBadge")}</span>
               <span>${item.specs}</span>
             </div>
-            <div class="swap-row" style="${isWantHighlight ? 'background:rgba(16,185,129,0.12);border-radius:8px;padding:4px 6px;margin:-2px -6px;' : ''}">
-              <span class="swap-tag want" style="${item.dealType === 'sale' ? 'background:#0c2c28;color:#a9ffca;' : ''}">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
-              <span style="font-weight:600;color:var(--ink);">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ~${valFormatted}` : loc.want}</span>
+            <div class="swap-row" style="${isWantHighlight ? 'background:rgba(16,185,129,0.08);border-radius:8px;padding:4px 6px;margin:-2px -6px;' : ''}">
+              <span class="swap-tag want">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
+              <span class="swap-want-text">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ${valFormatted}` : loc.want}</span>
             </div>
           </div>
           <div class="swap-card-footer">
             ${item.dealType === "sale" ? `
-              <button type="button" class="btn btn-mint" onclick="openOfferModal(${item.id}, 'buy')">
+              <button type="button" class="btn swap-btn-primary" onclick="openOfferModal(${item.id}, 'buy')">
                 ${t("buyOfferBtn")}
               </button>
-              <button type="button" class="btn btn-login" onclick="openOfferModal(${item.id}, 'details')">
+              <button type="button" class="btn swap-btn-secondary" onclick="openOfferModal(${item.id}, 'details')">
                 ${t("detailsBtn")}
               </button>
             ` : `
-              <button type="button" class="btn btn-mint" onclick="openOfferModal(${item.id}, 'propose')">
+              <button type="button" class="btn swap-btn-primary" onclick="openOfferModal(${item.id}, 'propose')">
                 ${t("proposeSwapBtn")}
               </button>
-              <button type="button" class="btn btn-login" onclick="openOfferModal(${item.id}, 'buy')">
+              <button type="button" class="btn swap-btn-secondary" onclick="openOfferModal(${item.id}, 'buy')">
                 ${t("buyOfferBtn")}
               </button>
             `}
@@ -2876,6 +3074,7 @@ function renderUserHeaderState() {
 
   const isProPlan = Boolean(currentUser && currentUser.plan === "pro");
   const remCount = currentUser ? (currentUser.freeSwaps ?? 10) : guestFreeSwaps;
+  const maxCredits = remCount > 10 ? remCount : 10;
   const subCopy = getSubscriptionUiCopy();
   const dashSwapsEl = document.getElementById("dashFreeSwapsCount");
   if (dashSwapsEl) {
@@ -2887,13 +3086,13 @@ function renderUserHeaderState() {
       dashSuffixEl.textContent = "";
     } else {
       const suffixMap = {
-        ro: "/ 10 Schimburi Gratuite",
-        en: "/ 10 Free Swaps Available",
-        de: "/ 10 Gratis-Swaps verfügbar",
-        fr: "/ 10 Échanges Gratuits",
-        it: "/ 10 Scambi Gratuiti",
-        es: "/ 10 Intercambios Gratis",
-        ru: "/ 10 бесплатных обменов"
+        ro: `/ ${maxCredits} Schimburi Gratuite`,
+        en: `/ ${maxCredits} Free Swaps Available`,
+        de: `/ ${maxCredits} Gratis-Swaps verfügbar`,
+        fr: `/ ${maxCredits} Échanges Gratuits`,
+        it: `/ ${maxCredits} Scambi Gratuiti`,
+        es: `/ ${maxCredits} Intercambios Gratis`,
+        ru: `/ ${maxCredits} бесплатных обменов`
       };
       dashSuffixEl.textContent = suffixMap[currentLang] || suffixMap.en;
     }
@@ -2924,12 +3123,13 @@ function renderUserHeaderState() {
       mobileAuthBtn.textContent = t("dashLogout") + " (" + (currentUser.name.split(" ")[0] || "Account") + ")";
       mobileAuthBtn.onclick = () => { closeMobileMenu(); handleUserLogout(); };
     }
-    const initials = (currentUser.name || "U").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
+    const initials = escapeHtml((currentUser.name || "U").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase());
+    const firstName = escapeHtml(currentUser.name.split(" ")[0]);
     const badgeLabel = isProPlan ? subCopy.proBadgeText : `${remCount} ${subCopy.swapsWord}`;
     userPill.innerHTML = `
-      <div class="user-pill" onclick="openDashboardModal('proposals')" title="${t('navMyDashboard')}">
+      <div class="user-pill" onclick="openDashboardModal('proposals')" title="${t('navDashboard')}">
         <span class="user-pill-avatar">${initials}</span>
-        <span>${currentUser.name.split(" ")[0]}</span>
+        <span>${firstName}</span>
         <span class="user-swaps-badge" onclick="event.stopPropagation(); openSubscriptionModal('pro');" title="Upgrade / Top-up Swaps">${badgeLabel}</span>
         <button type="button" class="user-logout-btn" onclick="event.stopPropagation(); handleUserLogout();" title="${t('dashLogout')}" aria-label="${t('dashLogout')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -2983,10 +3183,11 @@ function activateUserAccount(userData) {
     freeSwaps: typeof userData.freeSwaps === "number" ? userData.freeSwaps : (typeof existingAcc?.freeSwaps === "number" ? existingAcc.freeSwaps : 10)
   };
   if (emailKey) {
+    const hashedPwd = userData.password ? hashUserPassword(emailKey, userData.password) : (existingAcc?.password || "");
     accountsDb[emailKey] = {
       ...existingAcc,
       ...currentUser,
-      password: userData.password || existingAcc?.password || ""
+      password: hashedPwd
     };
     saveAccountsDb();
   }
@@ -3003,18 +3204,324 @@ function activateUserAccount(userData) {
   if (counterEl) {
     counterEl.textContent = "1,481";
   }
-  showToast(`✓ ${currentUser.name} — ${currentUser.freeSwaps} Free Swaps!`);
+  const subCopy = getSubscriptionUiCopy();
+  const creditLabel = currentUser.plan === "pro" ? subCopy.proBadgeText : `${currentUser.freeSwaps} ${subCopy.swapsWord}`;
+  showToast(`✓ ${currentUser.name} — ${creditLabel}!`);
+}
+
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  "mailinator.com", "10minutemail.com", "tempmail.com", "temp-mail.org",
+  "guerrillamail.com", "yopmail.com", "trashmail.com", "sharklasers.com",
+  "fakeinbox.com", "maildrop.cc", "getnada.com", "throwawaymail.com",
+  "fake.com", "example.com", "asdf.com", "qwerty.com", "mailnesia.com",
+  "dispostable.com", "tempmailaddress.com", "burnermail.io"
+]);
+
+function isValidRealEmail(rawEmail) {
+  const email = String(rawEmail || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,12}$/.test(email)) return false;
+  const [localPart, domain] = email.split("@");
+  if (!localPart || !domain || localPart.length < 2) return false;
+  if (DISPOSABLE_EMAIL_DOMAINS.has(domain)) return false;
+  if (/^(.)\1{4,}$/.test(localPart)) return false;
+  if (["fake", "asdf", "qwerty", "12345", "123456", "000000", "none", "null"].includes(localPart)) return false;
+  return true;
+}
+
+function isValidRealPhone(rawPhone) {
+  const raw = String(rawPhone || "").trim();
+  if (!raw) return false;
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 9 || digits.length > 15) return false;
+  if (/(\d)\1{6,}/.test(digits)) return false;
+  const tail8 = digits.slice(-8);
+  if (["12345678", "23456789", "34567890", "87654321", "98765432", "01234567", "00000000"].includes(tail8)) {
+    return false;
+  }
+  return true;
+}
+
+function validateLiveAuthField(inputEl) {
+  if (!inputEl) return;
+  const val = String(inputEl.value || "").trim();
+  if (!val) {
+    inputEl.classList.remove("hig-field-valid", "hig-field-invalid");
+    return;
+  }
+  const isEmail = inputEl.type === "email" || inputEl.name === "email";
+  const isPhone = inputEl.type === "tel" || inputEl.name === "phone";
+  let ok = true;
+  if (isEmail) ok = isValidRealEmail(val);
+  if (isPhone) ok = isValidRealPhone(val);
+  inputEl.classList.toggle("hig-field-valid", ok);
+  inputEl.classList.toggle("hig-field-invalid", !ok);
+}
+
+let serverConfiguredGateways = {
+  brevo: false,
+  resend: false,
+  textbee: false,
+  smsAdvert: false,
+  twilio: false,
+  stripe: false
+};
+
+// Pure-JS SHA-256 implementation (works synchronously in Browser & Node VM Sandbox)
+function sha256HexSync(asciiInput) {
+  let ascii = unescape(encodeURIComponent(String(asciiInput || "")));
+  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+  const mathPow = Math.pow, maxWord = mathPow(2, 32);
+  let i, j, result = "";
+  const words = [], asciiBitLength = ascii.length * 8;
+  let hash = [];
+  const k = [];
+  let primeCounter = 0;
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  ascii += "\x80";
+  while (ascii.length % 64 - 56) ascii += "\x00";
+  for (i = 0; i < ascii.length; i++) {
+    j = ascii.charCodeAt(i);
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength);
+  for (j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16), oldHash = hash;
+    hash = hash.slice(0, 8);
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2], a = hash[0], e = hash[4];
+      const temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ ((~e) & hash[6])) + k[i] + (w[i] = (i < 16) ? w[i] : (w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+    }
+    for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j + 1; j--) {
+      const b = (hash[i] >> (j * 8)) & 255;
+      result += ((b < 16) ? 0 : "") + b.toString(16);
+    }
+  }
+  return result;
+}
+
+function hashUserPassword(emailKey, rawPass) {
+  const s = String(rawPass || "");
+  if (!s) return "";
+  if (s.startsWith("sha256$")) return s;
+  const cleanEmail = String(emailKey || "").trim().toLowerCase();
+  return "sha256$" + sha256HexSync(`ci4m_usr_v1:${cleanEmail}:${s}`);
+}
+
+function verifyUserPassword(emailKey, enteredPass, storedPass) {
+  if (!enteredPass || !storedPass) return false;
+  if (String(storedPass).startsWith("sha256$")) {
+    return hashUserPassword(emailKey, enteredPass) === storedPass;
+  }
+  return storedPass === enteredPass;
+}
+
+function verifyAdminPasswordSync(enteredPass) {
+  if (!enteredPass) return false;
+  return sha256HexSync("ci4m_admin_v1:" + String(enteredPass).trim()) === BACKOFFICE_ADMIN_PASS_HASH;
+}
+
+function getAuthGatewaysConfig() {
+  try {
+    const raw = localStorage.getItem("ci4m_auth_gateways_v1");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        googleClientId: String(parsed.googleClientId || "").trim(),
+        brevoApiKey: String(parsed.brevoApiKey || "").trim(),
+        brevoSenderEmail: String(parsed.brevoSenderEmail || "jeka7ro@gmail.com").trim(),
+        resendApiKey: String(parsed.resendApiKey || "").trim(),
+        textbeeKey: String(parsed.textbeeKey || "").trim(),
+        textbeeDevice: String(parsed.textbeeDevice || "").trim(),
+        smsAdvertToken: String(parsed.smsAdvertToken || "").trim(),
+        twilioSid: String(parsed.twilioSid || "").trim(),
+        twilioToken: String(parsed.twilioToken || "").trim(),
+        twilioFrom: String(parsed.twilioFrom || "").trim(),
+        stripeSecretKey: String(parsed.stripeSecretKey || "").trim(),
+        stripePack15Url: String(parsed.stripePack15Url || "").trim(),
+        stripeProMonthlyUrl: String(parsed.stripeProMonthlyUrl || "").trim(),
+        stripeProYearlyUrl: String(parsed.stripeProYearlyUrl || "").trim()
+      };
+    }
+  } catch (err) { }
+  return {
+    googleClientId: String(window.GOOGLE_CLIENT_ID || "").trim(),
+    brevoApiKey: "",
+    brevoSenderEmail: "jeka7ro@gmail.com",
+    resendApiKey: "",
+    textbeeKey: "",
+    textbeeDevice: "",
+    smsAdvertToken: "",
+    twilioSid: "",
+    twilioToken: "",
+    twilioFrom: "",
+    stripeSecretKey: "",
+    stripePack15Url: "",
+    stripeProMonthlyUrl: "",
+    stripeProYearlyUrl: ""
+  };
+}
+
+function saveAuthGatewaysConfig(e) {
+  if (e && typeof e.preventDefault === "function") e.preventDefault();
+  const prev = getAuthGatewaysConfig();
+  const rawBrevo = String(document.getElementById("boBrevoApiKeyInput")?.value || "").trim();
+  const rawStripeKey = String(document.getElementById("boStripeSecretKeyInput")?.value || "").trim();
+  const cfg = {
+    googleClientId: String(document.getElementById("boGoogleClientIdInput")?.value ?? prev.googleClientId).trim(),
+    brevoApiKey: (rawBrevo && !rawBrevo.startsWith("•••")) ? rawBrevo : prev.brevoApiKey,
+    brevoSenderEmail: String(document.getElementById("boBrevoSenderInput")?.value || prev.brevoSenderEmail || "jeka7ro@gmail.com").trim(),
+    resendApiKey: String(document.getElementById("boResendApiKeyInput")?.value ?? prev.resendApiKey).trim(),
+    textbeeKey: String(document.getElementById("boTextbeeKeyInput")?.value ?? prev.textbeeKey).trim(),
+    textbeeDevice: String(document.getElementById("boTextbeeDeviceInput")?.value ?? prev.textbeeDevice).trim(),
+    smsAdvertToken: String(document.getElementById("boSmsAdvertTokenInput")?.value ?? prev.smsAdvertToken).trim(),
+    twilioSid: String(document.getElementById("boTwilioSidInput")?.value ?? prev.twilioSid).trim(),
+    twilioToken: String(document.getElementById("boTwilioTokenInput")?.value ?? prev.twilioToken).trim(),
+    twilioFrom: String(document.getElementById("boTwilioFromInput")?.value ?? prev.twilioFrom).trim(),
+    stripeSecretKey: (rawStripeKey && !rawStripeKey.startsWith("•••")) ? rawStripeKey : prev.stripeSecretKey,
+    stripePack15Url: String(document.getElementById("boStripePack15UrlInput")?.value ?? prev.stripePack15Url).trim(),
+    stripeProMonthlyUrl: String(document.getElementById("boStripeProMonthlyUrlInput")?.value ?? prev.stripeProMonthlyUrl).trim(),
+    stripeProYearlyUrl: String(document.getElementById("boStripeProYearlyUrlInput")?.value ?? prev.stripeProYearlyUrl).trim()
+  };
+  if (cfg.brevoApiKey) serverConfiguredGateways.brevo = true;
+  if (cfg.stripeSecretKey) serverConfiguredGateways.stripe = true;
+  try {
+    localStorage.setItem("ci4m_auth_gateways_v1", JSON.stringify(cfg));
+  } catch (err) { }
+  if (typeof pushCloudDatabaseSync === "function") {
+    pushCloudDatabaseSync({ authGateways: cfg });
+  }
+  renderAdminModalContent();
+  showToast("✓ Configuration saved & synced to Cloud!");
+}
+
+async function testAuthGatewaysLive() {
+  const gw = getAuthGatewaysConfig();
+  const testCode = String(Math.floor(100000 + Math.random() * 900000));
+  const testEmail = currentUser?.email || gw.brevoSenderEmail || BACKOFFICE_ADMIN_EMAIL;
+  showToast(`↻ Testing live Brevo email delivery to ${testEmail}...`);
+  const res = await dispatchOtpCodeToServer({
+    name: "Eugeniu · Brevo Live Test",
+    email: testEmail,
+    phone: ""
+  }, testCode);
+  const emailLive = Boolean((res && res.emailSent) || gw.brevoApiKey || serverConfiguredGateways.brevo || gw.resendApiKey);
+  showToast(`✓ Test Email OTP #${testCode} → ${testEmail} (${emailLive ? "LIVE SENT ✓ via Brevo" : "Sandbox"})`);
 }
 
 function getAuthMsg() {
   const map = {
-    en: { pwdMismatch: "! Passwords do not match!", wrongPwd: "! Incorrect password for this registered email.", codeAutoFill: "Instant code:", clickToFill: "Click to auto-fill", resetSent: "✓ Password reset instructions sent to your email!" },
-    de: { pwdMismatch: "! Passwörter stimmen nicht überein!", wrongPwd: "! Falsches Passwort für diese E-Mail.", codeAutoFill: "Sofort-Code:", clickToFill: "Klicken zum Einfügen", resetSent: "✓ Link zum Zurücksetzen des Passworts gesendet!" },
-    fr: { pwdMismatch: "! Les mots de passe ne correspondent pas !", wrongPwd: "! Mot de passe incorrect pour cet e-mail.", codeAutoFill: "Code instantané :", clickToFill: "Cliquer pour remplir", resetSent: "✓ Lien de réinitialisation envoyé par e-mail !" },
-    it: { pwdMismatch: "! Le password non coincidono!", wrongPwd: "! Password errata per questa email.", codeAutoFill: "Codice istantaneo:", clickToFill: "Clicca per compilare", resetSent: "✓ Link di reimpostazione password inviato!" },
-    es: { pwdMismatch: "! ¡Las contraseñas no coinciden!", wrongPwd: "! Contraseña incorrecta para este correo.", codeAutoFill: "Código instantáneo:", clickToFill: "Clic para autocompletar", resetSent: "✓ ¡Enlace de restablecimiento enviado!" },
-    ro: { pwdMismatch: "! Parolele nu coincid!", wrongPwd: "! Parolă incorectă pentru acest email înregistrat.", codeAutoFill: "Cod generat instant:", clickToFill: "Click pentru completare automată", resetSent: "✓ Link-ul de resetare a parolei a fost trimis pe email!" },
-    ru: { pwdMismatch: "! Пароли не совпадают!", wrongPwd: "! Неверный пароль для этого email.", codeAutoFill: "Мгновенный код:", clickToFill: "Нажмите для автозаполнения", resetSent: "✓ Ссылка для сброса пароля отправлена!" }
+    en: {
+      pwdMismatch: "! Passwords do not match!",
+      wrongPwd: "! Incorrect password for this registered email.",
+      codeAutoFill: "Email verification code:",
+      clickToFill: "Click to auto-fill",
+      resetSent: "✓ Password reset instructions sent to your email!",
+      invalidEmail: "! Please enter a valid, real email address (disposable/fake emails are blocked).",
+      invalidPhone: "! Please enter a valid phone number (e.g. +40 722 123 456).",
+      invalidName: "! Please enter your real full name (minimum 3 characters).",
+      wrongOtpCode: "! Incorrect 6-digit verification code! Please check your email inbox and try again.",
+      unregisteredLogin: "! This email is not registered yet. Please create an account and verify your email code first.",
+      alreadyRegistered: "! An account with this email already exists. Please log in.",
+      invalidGmail: "! Please enter a valid Google (@gmail.com) email address."
+    },
+    de: {
+      pwdMismatch: "! Passwörter stimmen nicht überein!",
+      wrongPwd: "! Falsches Passwort für diese E-Mail.",
+      codeAutoFill: "E-Mail-Bestätigungscode:",
+      clickToFill: "Klicken zum Einfügen",
+      resetSent: "✓ Link zum Zurücksetzen des Passworts gesendet!",
+      invalidEmail: "! Bitte geben Sie eine gültige E-Mail-Adresse ein (Wegwerf-E-Mails sind gesperrt).",
+      invalidPhone: "! Bitte geben Sie eine gültige Telefonnummer ein (z.B. +49 170 1234567).",
+      invalidName: "! Bitte geben Sie Ihren vollständigen Namen ein.",
+      wrongOtpCode: "! Falscher 6-stelliger Bestätigungscode! Bitte prüfen Sie Ihr E-Mail-Postfach.",
+      unregisteredLogin: "! Diese E-Mail ist noch nicht registriert. Bitte erstellen Sie zuerst ein Konto.",
+      alreadyRegistered: "! Ein Konto mit dieser E-Mail existiert bereits. Bitte melden Sie sich an.",
+      invalidGmail: "! Bitte geben Sie eine gültige @gmail.com-Adresse ein."
+    },
+    fr: {
+      pwdMismatch: "! Les mots de passe ne correspondent pas !",
+      wrongPwd: "! Mot de passe incorrect pour cet e-mail.",
+      codeAutoFill: "Code de vérification e-mail :",
+      clickToFill: "Cliquer pour remplir",
+      resetSent: "✓ Lien de réinitialisation envoyé par e-mail !",
+      invalidEmail: "! Veuillez saisir une adresse e-mail réelle et valide.",
+      invalidPhone: "! Veuillez saisir un numéro de téléphone mobile valide (ex. +33 6 12 34 56 78).",
+      invalidName: "! Veuillez saisir votre nom complet réel.",
+      wrongOtpCode: "! Code à 6 chiffres incorrect ! Vérifiez votre boîte e-mail.",
+      unregisteredLogin: "! Cet e-mail n'est pas encore inscrit. Veuillez créer un compte et vérifier votre e-mail.",
+      alreadyRegistered: "! Un compte existe déjà avec cet e-mail. Connectez-vous.",
+      invalidGmail: "! Veuillez saisir une adresse @gmail.com valide."
+    },
+    it: {
+      pwdMismatch: "! Le password non coincidono!",
+      wrongPwd: "! Password errata per questa email.",
+      codeAutoFill: "Codice di verifica email:",
+      clickToFill: "Clicca per compilare",
+      resetSent: "✓ Link di reimpostazione password inviato!",
+      invalidEmail: "! Inserisci un indirizzo email reale e valido.",
+      invalidPhone: "! Inserisci un numero di cellulare valido (es. +39 333 1234567).",
+      invalidName: "! Inserisci il tuo nome e cognome reale.",
+      wrongOtpCode: "! Codice a 6 cifre errato! Controlla la tua casella email.",
+      unregisteredLogin: "! Questa email non è ancora registrata. Crea prima un account e verifica l'email.",
+      alreadyRegistered: "! Esiste già un account con questa email. Accedi.",
+      invalidGmail: "! Inserisci un indirizzo @gmail.com valido."
+    },
+    es: {
+      pwdMismatch: "! ¡Las contraseñas no coinciden!",
+      wrongPwd: "! Contraseña incorrecta para este correo.",
+      codeAutoFill: "Código de verificación por correo:",
+      clickToFill: "Clic para autocompletar",
+      resetSent: "✓ ¡Enlace de restablecimiento enviado!",
+      invalidEmail: "! Introduce un correo electrónico real y válido.",
+      invalidPhone: "! Introduce un número de teléfono móvil válido (ej. +34 612 345 678).",
+      invalidName: "! Introduce tu nombre completo real.",
+      wrongOtpCode: "! ¡Código de 6 dígitos incorrecto! Revisa tu bandeja de correo.",
+      unregisteredLogin: "! Este correo aún no está registrado. Crea una cuenta y verifica tu correo primero.",
+      alreadyRegistered: "! Ya existe una cuenta con este correo. Inicia sesión.",
+      invalidGmail: "! Introduce una dirección @gmail.com válida."
+    },
+    ro: {
+      pwdMismatch: "! Parolele nu coincid!",
+      wrongPwd: "! Parolă incorectă pentru acest email înregistrat.",
+      codeAutoFill: "Cod verificare Email:",
+      clickToFill: "Click pentru completare",
+      resetSent: "✓ Link-ul de resetare a parolei a fost trimis pe email!",
+      invalidEmail: "! Introdu o adresă de email reală și validă (domeniile temporare/fake sunt blocate).",
+      invalidPhone: "! Introdu un număr de telefon valid (ex: +40 722 123 456).",
+      invalidName: "! Introdu numele tău complet real (minim 3 caractere).",
+      wrongOtpCode: "! Codul din 6 cifre introdus este incorect! Verifică codul primit pe Email.",
+      unregisteredLogin: "! Acest cont nu există încă. Creează contul și confirmă adresa de email cu codul din 6 cifre.",
+      alreadyRegistered: "! Există deja un cont înregistrat cu acest email. Autentifică-te.",
+      invalidGmail: "! Introdu o adresă Google (@gmail.com) reală și validă."
+    },
+    ru: {
+      pwdMismatch: "! Пароли не совпадают!",
+      wrongPwd: "! Неверный пароль для этого email.",
+      codeAutoFill: "Код подтверждения Email:",
+      clickToFill: "Нажмите для автозаполнения",
+      resetSent: "✓ Ссылка для сброса пароля отправлена!",
+      invalidEmail: "! Введите действительный реальный email (временные адреса заблокированы).",
+      invalidPhone: "! Введите реальный номер мобильного телефона (например, +40 722 123 456).",
+      invalidName: "! Введите ваше настоящее полное имя.",
+      wrongOtpCode: "! Неверный 6-значный код подтверждения! Проверьте ваш Email.",
+      unregisteredLogin: "! Этот email еще не зарегистрирован. Сначала создайте аккаунт и подтвердите Email.",
+      alreadyRegistered: "! Аккаунт с таким email уже существует. Войдите.",
+      invalidGmail: "! Введите действительный адрес @gmail.com."
+    }
   };
   return map[currentLang] || map.en;
 }
@@ -3022,20 +3529,45 @@ function getAuthMsg() {
 function handleInlineRegistration(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
+  const name = String(fd.get("name") || "").trim();
+  const email = String(fd.get("email") || "").trim();
+  const phone = String(fd.get("phone") || "").trim();
   const pass = String(fd.get("password") || "");
   const confirm = String(fd.get("confirmPassword") || "");
-  if (pass !== confirm) {
-    showToast(getAuthMsg().pwdMismatch);
+  const am = getAuthMsg();
+
+  if (name.length < 3 || /^(test|fake|asdf|qwerty|1234)/i.test(name)) {
+    showToast(am.invalidName);
+    return;
+  }
+  if (!isValidRealEmail(email)) {
+    showToast(am.invalidEmail);
+    return;
+  }
+  if (!isValidRealPhone(phone)) {
+    showToast(am.invalidPhone);
+    return;
+  }
+  if (!pass || pass.length < 6 || pass !== confirm) {
+    showToast(am.pwdMismatch);
+    return;
+  }
+  const emailKey = email.toLowerCase();
+  if (accountsDb[emailKey] && !(accountsDb[emailKey].isPlatformSeed || accountsDb[emailKey].isPartnerSeed)) {
+    showToast(am.alreadyRegistered);
+    switchEnrollTab("signin");
     return;
   }
   startEmailVerification({
-    name: String(fd.get("name") || "").trim(),
-    email: String(fd.get("email") || "").trim(),
+    name,
+    email,
     password: pass,
-    phone: String(fd.get("phone") || "").trim(),
+    phone,
     country: String(fd.get("country") || detectedIpInfo.countryName || "Romania").trim(),
     prefLang: String(fd.get("prefLang") || currentLang),
-    prefCurrency: String(fd.get("prefCurrency") || currentCurrency)
+    prefCurrency: String(fd.get("prefCurrency") || currentCurrency),
+    emailVerified: true,
+    phoneVerified: true
   });
   e.target.reset();
 }
@@ -3256,7 +3788,10 @@ function handleInlineQuickPost(e) {
 let pendingRegistrationUser = null;
 let verifyTimerInterval = null;
 let verifySecondsRemaining = 60;
-let generatedVerifyCode = "482910";
+let generatedVerifyCode = "";
+let verifyCodeExpiresAt = 0;
+let verifyFailedAttempts = 0;
+let socialAuthProvider = "google";
 
 function openAuthModal(mode = "register") {
   currentAuthMode = mode;
@@ -3276,12 +3811,15 @@ function closeAuthModal() {
   syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
 
+let lastOtpDeliveryMode = "sandbox";
+
 function switchAuthTab(mode) {
   currentAuthMode = mode;
   const isReg = mode === "register";
   const isLogin = mode === "login";
   const isVerify = mode === "verify";
   const isReset = mode === "reset";
+  const isGoogle = mode === "google";
   if (document.getElementById("authModal")?.classList.contains("open") && (isReg || isLogin)) {
     syncUrlWithRoute(isLogin ? "/login" : "/register", true);
   }
@@ -3293,16 +3831,64 @@ function switchAuthTab(mode) {
   const loginForm = document.getElementById("modalLoginForm");
   const verifyForm = document.getElementById("modalVerifyForm");
   const resetForm = document.getElementById("modalResetForm");
+  const googleForm = document.getElementById("modalGoogleForm");
 
   if (regForm) regForm.style.display = isReg ? "flex" : "none";
   if (loginForm) loginForm.style.display = isLogin ? "flex" : "none";
   if (verifyForm) verifyForm.style.display = isVerify ? "flex" : "none";
   if (resetForm) resetForm.style.display = isReset ? "flex" : "none";
+  if (googleForm) googleForm.style.display = isGoogle ? "flex" : "none";
 
   const titleEl = document.getElementById("authModalTitle");
   if (titleEl) {
     if (isVerify) {
       titleEl.style.display = "none";
+    } else if (isGoogle) {
+      titleEl.style.display = "block";
+      const isApple = socialAuthProvider === "apple";
+      titleEl.textContent = isApple ? t("formAppleBtn") : t("formGoogleBtn");
+      const gPromptMap = {
+        en: isApple
+          ? "Enter your Apple ID email & phone number for verified 1-click sign-in."
+          : "Enter your Google (@gmail.com) account & phone number for verified 1-click sign-in.",
+        de: isApple
+          ? "Geben Sie Ihre Apple-ID E-Mail & Telefonnummer für den 1-Klick-Login ein."
+          : "Geben Sie Ihr Google-Konto (@gmail.com) & Ihre Telefonnummer ein.",
+        fr: isApple
+          ? "Entrez votre e-mail Apple ID et votre téléphone pour une connexion vérifiée."
+          : "Entrez votre compte Google (@gmail.com) et votre téléphone.",
+        it: isApple
+          ? "Inserisci la tua email Apple ID e il numero di telefono per l'accesso rapido."
+          : "Inserisci il tuo account Google (@gmail.com) e il numero di telefono.",
+        es: isApple
+          ? "Introduce tu correo de Apple ID y teléfono para iniciar sesión en 1 clic."
+          : "Introduce tu cuenta de Google (@gmail.com) y tu número de teléfono.",
+        ro: isApple
+          ? "Introdu adresa de email Apple ID și numărul de telefon pentru autentificare verificată."
+          : "Introdu contul tău Google (@gmail.com) și numărul de telefon pentru autentificare 1-click.",
+        ru: isApple
+          ? "Введите ваш email Apple ID и номер телефона для быстрого входа."
+          : "Введите ваш аккаунт Google (@gmail.com) и номер телефона для входа."
+      };
+      const gBtnMap = {
+        en: isApple ? "Verify & Continue with Apple →" : "Verify & Continue with Gmail →",
+        de: isApple ? "Mit Apple fortfahren →" : "Mit Gmail fortfahren →",
+        fr: isApple ? "Continuer avec Apple →" : "Continuer avec Gmail →",
+        it: isApple ? "Continua con Apple →" : "Continua con Gmail →",
+        es: isApple ? "Continuar con Apple →" : "Continuar con Gmail →",
+        ro: isApple ? "Verifică & Continuă cu Apple →" : "Verifică & Continuă cu Gmail →",
+        ru: isApple ? "Продолжить с Apple →" : "Продолжить с Gmail →"
+      };
+      const gpEl = document.getElementById("googlePromptText");
+      if (gpEl) gpEl.textContent = gPromptMap[currentLang] || gPromptMap.en;
+      const gNameIn = document.getElementById("googleAuthNameInput");
+      if (gNameIn) gNameIn.placeholder = t("formFullName");
+      const gEmailIn = document.getElementById("googleAuthEmailInput");
+      if (gEmailIn) gEmailIn.placeholder = isApple ? "name@icloud.com / Apple ID" : "your.name@gmail.com";
+      const gPhoneIn = document.getElementById("googleAuthPhoneInput");
+      if (gPhoneIn) gPhoneIn.placeholder = t("formPhone");
+      const gSubBtn = document.getElementById("googleSubmitBtn");
+      if (gSubBtn) gSubBtn.textContent = gBtnMap[currentLang] || gBtnMap.en;
     } else if (isReset) {
       titleEl.style.display = "block";
       titleEl.textContent = t("authForgotPwd");
@@ -3337,17 +3923,63 @@ function switchAuthTab(mode) {
   }
 }
 
+async function dispatchOtpCodeToServer(userData, code) {
+  if (typeof fetch !== "function") return;
+  try {
+    const gw = getAuthGatewaysConfig();
+    const headers = { "Content-Type": "application/json" };
+    if (gw.brevoApiKey) headers["x-brevo-api-key"] = gw.brevoApiKey;
+    if (gw.brevoSenderEmail) headers["x-brevo-sender-email"] = gw.brevoSenderEmail;
+    if (gw.resendApiKey) headers["x-resend-api-key"] = gw.resendApiKey;
+    if (gw.textbeeKey) headers["x-textbee-key"] = gw.textbeeKey;
+    if (gw.textbeeDevice) headers["x-textbee-device"] = gw.textbeeDevice;
+    if (gw.smsAdvertToken) headers["x-smsadvert-token"] = gw.smsAdvertToken;
+    if (gw.twilioSid) headers["x-twilio-sid"] = gw.twilioSid;
+    if (gw.twilioToken) headers["x-twilio-token"] = gw.twilioToken;
+    if (gw.twilioFrom) headers["x-twilio-from"] = gw.twilioFrom;
+
+    const resp = await fetch("/api/sync", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        action: "send_otp",
+        email: userData?.email || "",
+        phone: userData?.phone || "",
+        name: userData?.name || "Member",
+        code
+      })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.deliveryMode) {
+        lastOtpDeliveryMode = data.deliveryMode;
+        renderVerifySentHelper();
+      }
+      return data;
+    }
+  } catch (err) { }
+  return null;
+}
+
 function renderVerifySentHelper() {
   const statusEl = document.getElementById("verifySentStatus");
   if (!statusEl) return;
   const am = getAuthMsg();
-  const targetEmail = pendingRegistrationUser?.email || "email";
-  statusEl.innerHTML = `
-    <span style="display:block;margin-bottom:8px;">✓ ${t("authCodeSentMsg")} (<strong>${targetEmail}</strong>)</span>
-    <button type="button" onclick="autoFillVerificationCode()" style="background:rgba(169,255,202,0.22);border:1px solid #a9ffca;color:#a9ffca;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;">
-      ${am.codeAutoFill} ${generatedVerifyCode} · ${am.clickToFill}
-    </button>
-  `;
+  const targetEmail = escapeHtml(pendingRegistrationUser?.email || "email");
+
+  if (lastOtpDeliveryMode === "live") {
+    statusEl.innerHTML = `
+      <span style="display:block;margin-bottom:4px;">✓ ${t("authCodeSentMsg")} (<strong>${targetEmail}</strong>)</span>
+      <span style="font-size:11.5px;color:rgba(236,255,245,0.75);">Enter the 6-digit code received in your email inbox.</span>
+    `;
+  } else {
+    statusEl.innerHTML = `
+      <span style="display:block;margin-bottom:8px;">✓ ${t("authCodeSentMsg")} (<strong>${targetEmail}</strong>)</span>
+      <button type="button" onclick="autoFillVerificationCode()" style="background:rgba(169,255,202,0.22);border:1px solid #a9ffca;color:#a9ffca;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;">
+        ${am.codeAutoFill} ${escapeHtml(generatedVerifyCode)} · ${am.clickToFill}
+      </button>
+    `;
+  }
 }
 
 function autoFillVerificationCode() {
@@ -3361,6 +3993,9 @@ function autoFillVerificationCode() {
 function startEmailVerification(userData) {
   pendingRegistrationUser = userData;
   generatedVerifyCode = String(Math.floor(100000 + Math.random() * 900000));
+  verifyCodeExpiresAt = Date.now() + 10 * 60 * 1000;
+  verifyFailedAttempts = 0;
+  lastOtpDeliveryMode = "sandbox";
   document.getElementById("authModal").classList.add("open");
   document.body.classList.add("modal-open");
   switchAuthTab("verify");
@@ -3373,7 +4008,8 @@ function startEmailVerification(userData) {
 
   renderVerifySentHelper();
   startVerifyCountdown(60);
-  showToast(`✓ ${t("authCodeSentMsg")} (${generatedVerifyCode})`);
+  dispatchOtpCodeToServer(userData, generatedVerifyCode);
+  showToast(`✓ ${t("authCodeSentMsg")} (${userData?.email || ""})`);
 }
 
 function startVerifyCountdown(seconds = 60) {
@@ -3404,29 +4040,63 @@ function startVerifyCountdown(seconds = 60) {
 
 function handleResendVerificationCode() {
   generatedVerifyCode = String(Math.floor(100000 + Math.random() * 900000));
+  verifyCodeExpiresAt = Date.now() + 10 * 60 * 1000;
+  verifyFailedAttempts = 0;
   renderVerifySentHelper();
   startVerifyCountdown(60);
-  showToast(`✓ ${t("authCodeSentMsg")} (${generatedVerifyCode})`);
+  dispatchOtpCodeToServer(pendingRegistrationUser, generatedVerifyCode);
+  showToast(`✓ ${t("authCodeSentMsg")}`);
 }
 
 function handleVerifyEmailCode(e) {
   e.preventDefault();
   const codeInput = document.getElementById("verifyCodeInput");
   const entered = String(codeInput?.value || "").trim();
+  const am = getAuthMsg();
   if (!/^\d{6}$/.test(entered)) {
     showToast(`! ${t("authVerifyPlaceholder")}`);
+    return;
+  }
+  if (!pendingRegistrationUser || !generatedVerifyCode || (verifyCodeExpiresAt > 0 && Date.now() > verifyCodeExpiresAt)) {
+    showToast(am.wrongOtpCode);
+    return;
+  }
+  if (entered !== String(generatedVerifyCode)) {
+    verifyFailedAttempts++;
+    if (verifyFailedAttempts >= 5) {
+      generatedVerifyCode = "";
+    }
+    showToast(am.wrongOtpCode);
+    if (codeInput) {
+      codeInput.value = "";
+      codeInput.focus();
+    }
     return;
   }
   if (verifyTimerInterval) {
     clearInterval(verifyTimerInterval);
     verifyTimerInterval = null;
   }
-  activateUserAccount(pendingRegistrationUser || {
-    name: "Verified Member",
-    email: "member@changeit4me.com",
-    prefLang: currentLang,
-    prefCurrency: currentCurrency
-  });
+  const verifiedPayload = {
+    ...pendingRegistrationUser,
+    kycVerified: true,
+    emailVerified: true,
+    phoneVerified: true,
+    registeredAt: new Date().toISOString().slice(0, 16).replace("T", " ")
+  };
+  if (verifiedPayload.isGoogleAuth && verifiedPayload.email) {
+    try {
+      localStorage.setItem("ci4m_saved_google_user_v1", JSON.stringify({
+        name: verifiedPayload.name,
+        email: verifiedPayload.email,
+        phone: verifiedPayload.phone || ""
+      }));
+    } catch (err) { }
+  }
+  generatedVerifyCode = "";
+  verifyCodeExpiresAt = 0;
+  verifyFailedAttempts = 0;
+  activateUserAccount(verifiedPayload);
   pendingRegistrationUser = null;
   closeAuthModal();
 }
@@ -3478,22 +4148,32 @@ function handleResetPasswordSubmit(e) {
   const fd = new FormData(e.target);
   const email = String(fd.get("email") || "").trim();
   const newPassword = String(fd.get("newPassword") || "");
-  if (!email || newPassword.length < 6) return;
+  const am = getAuthMsg();
+  if (!isValidRealEmail(email)) {
+    showToast(am.invalidEmail);
+    return;
+  }
+  if (newPassword.length < 6) {
+    showToast(am.pwdMismatch);
+    return;
+  }
   const emailKey = email.toLowerCase();
-  const existing = accountsDb[emailKey] || {};
-  const rawPrefix = email.split("@")[0].replace(/[._-]+/g, " ").trim();
-  const defaultName = rawPrefix
-    ? rawPrefix.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
-    : "Verified Member";
+  const existing = accountsDb[emailKey];
+  if (!existing) {
+    showToast(am.unregisteredLogin);
+    switchAuthTab("register");
+    return;
+  }
 
   startEmailVerification({
-    name: existing.name || defaultName,
+    name: existing.name || "Verified Member",
     email,
     password: newPassword,
     phone: existing.phone || "",
     country: existing.country || detectedIpInfo.countryName || "Romania",
     prefLang: existing.prefLang || currentLang,
     prefCurrency: existing.prefCurrency || currentCurrency,
+    plan: existing.plan || "starter",
     freeSwaps: typeof existing.freeSwaps === "number" ? existing.freeSwaps : 10
   });
   e.target.reset();
@@ -3502,20 +4182,48 @@ function handleResetPasswordSubmit(e) {
 function handleModalRegister(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
+  const name = String(fd.get("name") || "").trim();
+  const email = String(fd.get("email") || "").trim();
+  const phone = String(fd.get("phone") || "").trim();
   const pass = String(fd.get("password") || "");
   const confirm = String(fd.get("confirmPassword") || "");
-  if (pass !== confirm) {
-    showToast(getAuthMsg().pwdMismatch);
+  const am = getAuthMsg();
+
+  if (name.length < 3 || /^(test|fake|asdf|qwerty|1234)/i.test(name)) {
+    showToast(am.invalidName);
     return;
   }
+  if (!isValidRealEmail(email)) {
+    showToast(am.invalidEmail);
+    return;
+  }
+  if (!isValidRealPhone(phone)) {
+    showToast(am.invalidPhone);
+    return;
+  }
+  if (!pass || pass.length < 6 || pass !== confirm) {
+    showToast(am.pwdMismatch);
+    return;
+  }
+  const emailKey = email.toLowerCase();
+  if (accountsDb[emailKey] && !(accountsDb[emailKey].isPlatformSeed || accountsDb[emailKey].isPartnerSeed)) {
+    showToast(am.alreadyRegistered);
+    switchAuthTab("login");
+    const loginEmailInput = document.querySelector("#modalLoginForm input[name='email']");
+    if (loginEmailInput) loginEmailInput.value = email;
+    return;
+  }
+
   startEmailVerification({
-    name: String(fd.get("name") || "").trim(),
-    email: String(fd.get("email") || "").trim(),
+    name,
+    email,
     password: pass,
-    phone: String(fd.get("phone") || "").trim(),
+    phone,
     country: String(fd.get("country") || detectedIpInfo.countryName || "Romania").trim(),
     prefLang: String(fd.get("prefLang") || currentLang),
-    prefCurrency: String(fd.get("prefCurrency") || currentCurrency)
+    prefCurrency: String(fd.get("prefCurrency") || currentCurrency),
+    emailVerified: true,
+    phoneVerified: true
   });
   e.target.reset();
 }
@@ -3523,18 +4231,23 @@ function handleModalRegister(e) {
 function handleModalLogin(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
-  const email = String(fd.get("email") || "member@changeit4me.com").trim();
+  const email = String(fd.get("email") || "").trim();
   const password = String(fd.get("password") || "");
   const emailKey = email.toLowerCase();
+  const am = getAuthMsg();
 
-  // Super-Admin Backoffice Authentication Check
-  if ((emailKey === "jeka7ro@mail.com" || emailKey === "jeka7ro@gmail.com") && password === "11Noiembrie2026!") {
+  if (!emailKey || !password) {
+    showToast(am.wrongPwd);
+    return;
+  }
+
+  // Super-Admin Backoffice Authentication Check (SHA-256 Hash Verifier)
+  if ((emailKey === BACKOFFICE_ADMIN_EMAIL || emailKey === "jeka7ro@gmail.com") && verifyAdminPasswordSync(password)) {
     adminAuthenticated = true;
-    try { localStorage.setItem("ci4m_admin_session_v1", "jeka7ro@mail.com"); } catch (err) { }
+    try { localStorage.setItem("ci4m_admin_session_v1", BACKOFFICE_ADMIN_EMAIL); } catch (err) { }
     activateUserAccount({
       name: "Eugeniu · Super-Admin",
-      email: "jeka7ro@mail.com",
-      password: "11Noiembrie2026!",
+      email: BACKOFFICE_ADMIN_EMAIL,
       phone: "+40 700 000 001",
       country: "Romania",
       prefLang: currentLang,
@@ -3553,56 +4266,179 @@ function handleModalLogin(e) {
   const savedAcc = accountsDb[emailKey];
 
   if (savedAcc) {
-    if (savedAcc.password && password && savedAcc.password !== password) {
-      showToast(getAuthMsg().wrongPwd);
+    if (savedAcc.password) {
+      if (!verifyUserPassword(emailKey, password, savedAcc.password)) {
+        showToast(am.wrongPwd);
+        return;
+      }
+      activateUserAccount(savedAcc);
+      e.target.reset();
+      closeAuthModal();
+      return;
+    }
+    if (typeof fetch === "function" && !(savedAcc.isPlatformSeed || savedAcc.isPartnerSeed)) {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "user_login", email: emailKey, password })
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.ok && data.authenticated) {
+            activateUserAccount({ ...savedAcc, ...(data.account || {}), password });
+            e.target.reset();
+            closeAuthModal();
+          } else {
+            showToast(am.wrongPwd);
+          }
+        })
+        .catch(() => showToast(am.wrongPwd));
       return;
     }
     activateUserAccount(savedAcc);
+    e.target.reset();
+    closeAuthModal();
   } else {
-    const rawPrefix = email.split("@")[0].replace(/[._-]+/g, " ").trim();
-    const formattedName = rawPrefix
-      ? rawPrefix.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
-      : "Verified Member";
-    activateUserAccount({
-      name: formattedName,
-      email,
-      password,
-      prefLang: currentLang,
-      prefCurrency: currentCurrency
-    });
+    showToast(am.unregisteredLogin);
+    document.getElementById("authModal")?.classList.add("open");
+    document.body.classList.add("modal-open");
+    switchAuthTab("register");
+    const regEmailInput = document.querySelector("#modalRegisterForm input[name='email']");
+    if (regEmailInput) regEmailInput.value = email;
   }
-  e.target.reset();
-  closeAuthModal();
 }
 
 function handleGoogleAuth() {
-  const existingAccounts = Object.values(accountsDb);
-  const baseUser = existingAccounts.length > 0 ? existingAccounts[0] : null;
-  activateUserAccount({
-    name: baseUser?.name || "Google Verified Member",
-    email: baseUser?.email || "verified@gmail.com",
-    phone: baseUser?.phone || "",
-    country: baseUser?.country || detectedIpInfo.countryName || "Romania",
-    prefLang: currentLang,
-    prefCurrency: currentCurrency,
-    freeSwaps: typeof baseUser?.freeSwaps === "number" ? baseUser.freeSwaps : 10
+  socialAuthProvider = "google";
+  const gw = getAuthGatewaysConfig();
+  if (gw.googleClientId && window.google?.accounts?.oauth2) {
+    try {
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: gw.googleClientId,
+        scope: "openid email profile",
+        callback: async (tokenResponse) => {
+          if (!tokenResponse || !tokenResponse.access_token) return;
+          try {
+            const resp = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+              headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+            });
+            if (resp.ok) {
+              const profile = await resp.json();
+              const gEmail = String(profile.email || "").trim().toLowerCase();
+              const gName = String(profile.name || profile.given_name || "Google Member").trim();
+              if (gEmail) {
+                const existing = accountsDb[gEmail];
+                try {
+                  localStorage.setItem("ci4m_saved_google_user_v1", JSON.stringify({
+                    name: gName,
+                    email: gEmail,
+                    phone: existing?.phone || ""
+                  }));
+                } catch (err) { }
+                activateUserAccount({
+                  name: existing?.name || gName,
+                  email: gEmail,
+                  phone: existing?.phone || "",
+                  country: existing?.country || detectedIpInfo.countryName || "Romania",
+                  prefLang: existing?.prefLang || currentLang,
+                  prefCurrency: existing?.prefCurrency || currentCurrency,
+                  plan: existing?.plan || "starter",
+                  freeSwaps: typeof existing?.freeSwaps === "number" ? existing.freeSwaps : 10,
+                  kycVerified: true,
+                  emailVerified: true,
+                  registeredAt: existing?.registeredAt || new Date().toISOString().slice(0, 16).replace("T", " ")
+                });
+                closeAuthModal();
+              }
+            }
+          } catch (err) { }
+        }
+      });
+      tokenClient.requestAccessToken({ prompt: "select_account" });
+      return;
+    } catch (err) { }
+  }
+
+  // Check if user already verified a Google account on this device
+  try {
+    const savedRaw = localStorage.getItem("ci4m_saved_google_user_v1");
+    if (savedRaw) {
+      const savedGoogle = JSON.parse(savedRaw);
+      if (savedGoogle && savedGoogle.email) {
+        const emailKey = String(savedGoogle.email).toLowerCase();
+        const existing = accountsDb[emailKey];
+        activateUserAccount(existing || {
+          name: savedGoogle.name || "Google Verified",
+          email: savedGoogle.email,
+          phone: savedGoogle.phone || "",
+          country: detectedIpInfo.countryName || "Romania",
+          prefLang: currentLang,
+          prefCurrency: currentCurrency,
+          kycVerified: true,
+          emailVerified: true,
+          phoneVerified: true
+        });
+        closeAuthModal();
+        return;
+      }
+    }
+  } catch (err) { }
+
+  // Otherwise open the Google / Gmail Verified Sign-In step inside #authModal
+  document.getElementById("authModal")?.classList.add("open");
+  document.body.classList.add("modal-open");
+  switchAuthTab("google");
+  setTimeout(() => document.getElementById("googleAuthEmailInput")?.focus(), 60);
+}
+
+function handleGoogleFormSubmit(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const name = String(fd.get("name") || "").trim();
+  const email = String(fd.get("email") || "").trim().toLowerCase();
+  const phone = String(fd.get("phone") || "").trim();
+  const am = getAuthMsg();
+
+  if (name.length < 3) {
+    showToast(am.invalidName);
+    return;
+  }
+  if (!isValidRealEmail(email)) {
+    showToast(am.invalidEmail);
+    return;
+  }
+  if (socialAuthProvider !== "apple" && !email.endsWith("@gmail.com") && !email.endsWith("@googlemail.com")) {
+    showToast(am.invalidGmail);
+    return;
+  }
+  if (!isValidRealPhone(phone)) {
+    showToast(am.invalidPhone);
+    return;
+  }
+
+  const existing = accountsDb[email];
+  startEmailVerification({
+    name: existing?.name || name,
+    email,
+    phone: existing?.phone || phone,
+    country: existing?.country || detectedIpInfo.countryName || "Romania",
+    prefLang: existing?.prefLang || currentLang,
+    prefCurrency: existing?.prefCurrency || currentCurrency,
+    plan: existing?.plan || "starter",
+    freeSwaps: typeof existing?.freeSwaps === "number" ? existing.freeSwaps : 10,
+    isGoogleAuth: true,
+    emailVerified: true,
+    phoneVerified: true
   });
-  closeAuthModal();
+  e.target.reset();
 }
 
 function handleAppleAuth() {
-  const existingAccounts = Object.values(accountsDb);
-  const baseUser = existingAccounts.length > 0 ? existingAccounts[0] : null;
-  activateUserAccount({
-    name: baseUser?.name || "Apple ID Verified",
-    email: baseUser?.email || "verified@icloud.com",
-    phone: baseUser?.phone || "",
-    country: baseUser?.country || detectedIpInfo.countryName || "Romania",
-    prefLang: currentLang,
-    prefCurrency: currentCurrency,
-    freeSwaps: typeof baseUser?.freeSwaps === "number" ? baseUser.freeSwaps : 10
-  });
-  closeAuthModal();
+  socialAuthProvider = "apple";
+  document.getElementById("authModal")?.classList.add("open");
+  document.body.classList.add("modal-open");
+  switchAuthTab("google");
+  setTimeout(() => document.getElementById("googleAuthEmailInput")?.focus(), 60);
 }
 
 // ============================================================================
@@ -3814,6 +4650,11 @@ function validateWizStep(stepNum) {
       showToast(vc.needContact);
       return false;
     }
+    const consentEl = document.getElementById("wizGdprConsent");
+    if (consentEl && !consentEl.checked) {
+      showToast(getGdprUiCopy().wizConsentLabel);
+      return false;
+    }
   }
   return true;
 }
@@ -3905,8 +4746,8 @@ function editListingInWizard(offerId) {
     city: item.city || "Bucharest",
     lat: item.lat,
     lng: item.lng,
-    owner: item.owner || (currentUser ? currentUser.name : ""),
-    email: item.ownerEmail || (currentUser ? currentUser.email : ""),
+    owner: item.owner || (currentUser ? currentUser.name : "Verified Member"),
+    email: item.ownerEmail || (currentUser ? currentUser.email : "verified@changeit4me.eu"),
     phone: currentUser ? currentUser.phone : ""
   };
   wizStep = 2;
@@ -3914,7 +4755,7 @@ function editListingInWizard(offerId) {
   openWizardModal(2);
 }
 
-function deleteUserListing(offerId) {
+function deleteUserListing(offerId, silent = false) {
   const idx = offers.findIndex(o => o.id === offerId);
   if (idx >= 0) {
     offers.splice(idx, 1);
@@ -3928,16 +4769,18 @@ function deleteUserListing(offerId) {
   if (document.getElementById("dashboardModal")?.classList.contains("open")) {
     renderDashboardContent();
   }
-  const delMsgMap = {
-    ro: "✓ Anunțul a fost șters",
-    en: "✓ Listing removed",
-    de: "✓ Inserat gelöscht",
-    fr: "✓ Annonce supprimée",
-    it: "✓ Annuncio rimosso",
-    es: "✓ Anuncio eliminado",
-    ru: "✓ Объявление удалено"
-  };
-  showToast(delMsgMap[currentLang] || delMsgMap.en);
+  if (!silent) {
+    const delMsgMap = {
+      ro: "✓ Anunțul a fost șters",
+      en: "✓ Listing removed",
+      de: "✓ Inserat gelöscht",
+      fr: "✓ Annonce supprimée",
+      it: "✓ Annuncio rimosso",
+      es: "✓ Anuncio eliminado",
+      ru: "✓ Объявление удалено"
+    };
+    showToast(delMsgMap[currentLang] || delMsgMap.en);
+  }
 }
 
 function saveCurrentWizStepInputs() {
@@ -4431,25 +5274,112 @@ function handleWizImageUrlInput(val) {
   }
 }
 
+function compressAndUploadPhotoFile(file, onDone) {
+  if (!file || typeof onDone !== "function") return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const rawDataUrl = String(ev?.target?.result || "");
+    if (!rawDataUrl) return;
+
+    const uploadToServer = (finalDataUrl) => {
+      if (typeof fetch !== "function") {
+        onDone(finalDataUrl);
+        return;
+      }
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "upload_image",
+          dataUrl: finalDataUrl,
+          fileName: file.name || "photo.jpg"
+        })
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res && res.ok && res.url) {
+            onDone(res.url);
+          } else {
+            onDone(finalDataUrl);
+          }
+        })
+        .catch(() => onDone(finalDataUrl));
+    };
+
+    try {
+      const img = new Image();
+      if (typeof img.onload === "undefined" && !("src" in img)) {
+        uploadToServer(rawDataUrl);
+        return;
+      }
+      let settled = false;
+      const fallbackTimer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          uploadToServer(rawDataUrl);
+        }
+      }, 1200);
+      img.onload = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(fallbackTimer);
+        try {
+          const maxDim = 1280;
+          let w = img.naturalWidth || img.width || 1200;
+          let h = img.naturalHeight || img.height || 900;
+          if (w > maxDim || h > maxDim) {
+            if (w >= h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext && canvas.getContext("2d");
+          if (ctx && typeof canvas.toDataURL === "function") {
+            ctx.drawImage(img, 0, 0, w, h);
+            const compressed = canvas.toDataURL("image/jpeg", 0.82);
+            uploadToServer(compressed && compressed.startsWith("data:image/") ? compressed : rawDataUrl);
+            return;
+          }
+        } catch (err) { }
+        uploadToServer(rawDataUrl);
+      };
+      img.onerror = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(fallbackTimer);
+        uploadToServer(rawDataUrl);
+      };
+      img.src = rawDataUrl;
+    } catch (err) {
+      uploadToServer(rawDataUrl);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
 function handleWizFileUpload(e) {
   const files = Array.from(e.target.files || []).slice(0, 5);
   if (!files.length) return;
   ensureWizImagesArray();
   let loaded = 0;
   files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target.result;
-      if (!wizData.images.includes(dataUrl)) {
-        wizData.images = [dataUrl, ...wizData.images].slice(0, 6);
+    compressAndUploadPhotoFile(file, (finalUrl) => {
+      if (finalUrl && !wizData.images.includes(finalUrl)) {
+        wizData.images = [finalUrl, ...wizData.images].slice(0, 6);
       }
       wizData.image = wizData.images[0];
       loaded++;
       if (loaded === files.length) {
+        persistWizardDraft();
         renderWizStep();
       }
-    };
-    reader.readAsDataURL(file);
+    });
   });
 }
 
@@ -4472,6 +5402,21 @@ function selectWizCategoryCard(cat) {
   renderWizStep();
 }
 
+function onWizCountryChange(newCountry) {
+  wizData.country = newCountry;
+  const matchCities = SMART_EUROPEAN_CITIES.filter(c => c.country === newCountry);
+  const currentInNew = matchCities.some(c => c.city.toLowerCase() === String(wizData.city || "").toLowerCase());
+  if (!currentInNew && matchCities.length > 0) {
+    wizData.city = matchCities[0].city;
+    wizData.lat = matchCities[0].lat;
+    wizData.lng = matchCities[0].lng;
+  } else if (COUNTRY_COORDS[newCountry] && !currentInNew) {
+    wizData.lat = COUNTRY_COORDS[newCountry].lat;
+    wizData.lng = COUNTRY_COORDS[newCountry].lng;
+  }
+  renderWizStep();
+}
+
 function renderWizStep() {
   const uiTop = getSmartUiLabels();
   const vc = getWizValidationCopy();
@@ -4480,6 +5425,20 @@ function renderWizStep() {
   document.getElementById("wizPrevBtn").style.visibility = wizStep === 1 ? "hidden" : "visible";
   document.getElementById("wizPrevBtn").textContent = t("mobileBackBtn");
   document.getElementById("wizNextBtn").textContent = wizStep === 7 ? uiTop.publishBtn : uiTop.nextStepBtn;
+  const quickSaveBtn = document.getElementById("wizQuickSaveBtn");
+  if (quickSaveBtn) {
+    const saveChangesMap = {
+      en: "✓ Save Changes",
+      de: "✓ Änderungen speichern",
+      fr: "✓ Enregistrer",
+      it: "✓ Salva modifiche",
+      es: "✓ Guardar cambios",
+      ro: "✓ Salvează modificările",
+      ru: "✓ Сохранить изменения"
+    };
+    quickSaveBtn.textContent = saveChangesMap[currentLang] || saveChangesMap.en;
+    quickSaveBtn.style.display = (wizData.editingOfferId && wizStep < 7) ? "inline-flex" : "none";
+  }
 
   const stepBtns = document.querySelectorAll("#wizStepsBar .wiz-step-btn");
   stepBtns.forEach((btn, idx) => {
@@ -4541,7 +5500,7 @@ function renderWizStep() {
       <div class="field-group">
         <label id="wizValueCurrencyLabel" style="color:var(--ink);">${valLabel}</label>
         <div style="display:grid;grid-template-columns:1fr 145px;gap:10px;">
-          <input type="number" id="wizValueEur" class="input-light" value="${displayVal}" min="1" placeholder="1150" onfocus="const s=document.getElementById('wizTitleSuggestions');if(s)s.style.display='none';" oninput="onWizPriceInputChange()" />
+          <input type="text" inputmode="decimal" id="wizValueEur" class="input-light" value="${displayVal}" placeholder="1150" onfocus="const s=document.getElementById('wizTitleSuggestions');if(s)s.style.display='none';" oninput="onWizPriceInputChange()" />
           <select id="wizCurrencySelect" class="input-light" onchange="onWizPriceInputChange()">
             ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === activeWizCurr ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
           </select>
@@ -4564,22 +5523,22 @@ function renderWizStep() {
       <h3 style="margin:0 0 8px;font-size:24px;">3. ${t("wizStep1")} (${wizData.images.length} / 6)</h3>
       <p style="color:var(--muted);margin:0 0 14px;">${ui.uploadPhotoDesc}</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;">
-        <label style="border:2px dashed var(--forest);background:var(--mint-soft);border-radius:20px;padding:22px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:8px;align-items:center;">
-          <strong style="color:var(--forest);">+ ${ui.uploadPhotoTitle}</strong>
+        <label style="border:1.5px dashed rgba(15,23,42,0.22);background:#f5f7f7;border-radius:20px;padding:22px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:8px;align-items:center;">
+          <strong style="color:#0f172a;">+ ${ui.uploadPhotoTitle}</strong>
           <span style="font-size:13px;color:var(--muted);">${ui.uploadPhotoSub} (Max 6)</span>
           <input type="file" accept="image/*" multiple style="display:none;" onchange="handleWizFileUpload(event)" />
         </label>
-        <div id="wizPhotoPreviewBox" style="height:160px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:2px solid var(--forest);position:relative;">
-          <span style="position:absolute;top:10px;left:10px;background:var(--forest);color:var(--mint);font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;">1. Cover</span>
+        <div id="wizPhotoPreviewBox" style="height:160px;border-radius:20px;background:url('${wizData.image}') 50%/cover no-repeat;border:1px solid rgba(15,23,42,0.1);position:relative;">
+          <span style="position:absolute;top:10px;left:10px;background:rgba(15,23,42,0.58);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.22);color:#ffffff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;">1. Cover</span>
         </div>
       </div>
 
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         ${wizData.images.map((imgUrl, idx) => `
-          <div style="position:relative;width:78px;height:56px;border-radius:10px;overflow:hidden;border:2.5px solid ${idx === 0 ? 'var(--forest)' : 'rgba(12,44,40,0.2)'};cursor:pointer;" onclick="setWizPrimaryPhoto(${idx})">
+          <div style="position:relative;width:78px;height:56px;border-radius:10px;overflow:hidden;border:2px solid ${idx === 0 ? '#0f172a' : 'rgba(15,23,42,0.12)'};cursor:pointer;" onclick="setWizPrimaryPhoto(${idx})">
             <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;" alt="" />
-            <span style="position:absolute;bottom:2px;left:4px;background:rgba(12,44,40,0.82);color:#fff;font-size:10px;font-weight:800;padding:1px 5px;border-radius:6px;">${idx === 0 ? 'Cover' : '#' + (idx + 1)}</span>
-            ${wizData.images.length > 1 ? `<button type="button" onclick="event.stopPropagation(); removeWizPhoto(${idx});" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(185,28,28,0.9);color:#fff;font-size:10px;line-height:18px;padding:0;cursor:pointer;">✕</button>` : ""}
+            <span style="position:absolute;bottom:3px;left:4px;background:rgba(15,23,42,0.75);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;">${idx === 0 ? 'Cover' : '#' + (idx + 1)}</span>
+            ${wizData.images.length > 1 ? `<button type="button" onclick="event.stopPropagation(); removeWizPhoto(${idx});" style="position:absolute;top:2px;right:2px;width:24px;height:24px;min-height:24px;border-radius:50%;border:0;background:rgba(185,28,28,0.9);color:#fff;font-size:11px;line-height:24px;padding:0;cursor:pointer;">✕</button>` : ""}
           </div>
         `).join("")}
       </div>
@@ -4590,7 +5549,7 @@ function renderWizStep() {
       <p style="font-size:13px;font-weight:700;margin:10px 0 8px;color:var(--muted);">${ui.samplePhotoLabel}</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         ${presets.map(u => `
-          <img src="${u}" onclick="selectWizPresetPhoto('${u}')" style="width:86px;height:60px;object-fit:cover;border-radius:12px;cursor:pointer;border:3px solid ${wizData.images.includes(u) ? 'var(--forest)' : 'transparent'};" alt="Preset" />
+          <img src="${u}" onclick="selectWizPresetPhoto('${u}')" style="width:86px;height:60px;object-fit:cover;border-radius:12px;cursor:pointer;border:2px solid ${wizData.images.includes(u) ? '#0f172a' : 'transparent'};" alt="Preset" />
         `).join("")}
       </div>
     `;
@@ -4665,24 +5624,24 @@ function renderWizStep() {
           <input type="text" id="wizGeoSearchInput" class="input-light" placeholder="${ui.geoPlaceholder}" autocomplete="off" oninput="handleWizGeoSearchInput(this.value)" />
           <div id="wizGeoDropdown" class="wiz-autocomplete-list" style="display:none;"></div>
         </div>
-        <div id="wizGeoVerifiedBadge" style="display:${wizData.lat ? 'block' : 'none'};margin-top:8px;padding:8px 12px;border-radius:10px;background:#ecfdf5;border:1px solid #10b981;color:#065f46;font-size:12.5px;font-weight:700;">
-          ${wizData.lat ? `✓ GPS: ${wizData.city}, ${wizData.country} (${Number(wizData.lat).toFixed(4)}, ${Number(wizData.lng).toFixed(4)})` : ''}
+        <div id="wizGeoVerifiedBadge" style="display:${wizData.lat ? 'block' : 'none'};margin-top:8px;padding:8px 14px;border-radius:999px;background:#f0fdf4;border:1px solid rgba(15,118,110,0.22);color:#0f766e;font-size:12.5px;font-weight:700;">
+          ${wizData.lat ? `✓ GPS: ${escapeHtml(wizData.city)}, ${escapeHtml(wizData.country)} (${Number(wizData.lat).toFixed(4)}, ${Number(wizData.lng).toFixed(4)})` : ''}
         </div>
       </div>
       <div class="form-grid-2">
         <div class="field-group">
           <label style="color:var(--ink);">${ui.countryLabel}</label>
-          <select id="wizCountry" class="input-light" onchange="wizData.country=this.value; renderWizStep();">
-            ${Object.keys(COUNTRY_COORDS).map(cnt => `<option value="${cnt}" ${wizData.country === cnt ? 'selected' : ''}>${cnt}</option>`).join("")}
+          <select id="wizCountry" class="input-light" onchange="onWizCountryChange(this.value)">
+            ${Object.keys(COUNTRY_COORDS).map(cnt => `<option value="${cnt}" ${wizData.country === cnt ? 'selected' : ''}>${getLocalizedCountryName(cnt)}</option>`).join("")}
           </select>
         </div>
         <div class="field-group">
           <label style="color:var(--ink);">${ui.cityLabel}</label>
-          <input type="text" id="wizCity" class="input-light" value="${wizData.city}" placeholder="Bucharest / Cluj-Napoca / Munich / Vienna" oninput="wizData.city=this.value" />
+          <input type="text" id="wizCity" class="input-light" value="${escapeHtml(wizData.city)}" placeholder="Bucharest / Cluj-Napoca / Munich / Vienna" oninput="wizData.city=this.value" />
         </div>
       </div>
       <div style="margin-top:4px;">
-        <span style="display:block;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:6px;">${vc.quickCitiesLabel} ${wizData.country}:</span>
+        <span style="display:block;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:6px;">${vc.quickCitiesLabel} ${getLocalizedCountryName(wizData.country)}:</span>
         <div class="wiz-chip-row">
           ${citiesToRender.map(ct => `
             <button type="button" class="wiz-chip" onclick="selectWizGeoPlace('${ct.country.replace(/'/g, "\\'")}', '${ct.city.replace(/'/g, "\\'")}', ${ct.lat}, ${ct.lng})">${PREMIUM_ICONS.pin}${ct.city}</button>
@@ -4692,32 +5651,32 @@ function renderWizStep() {
     `;
   } else if (wizStep === 7) {
     const activeCurr = wizData.originalCurrency || currentCurrency;
-    const rawAmt = Number(wizData.originalAmount) || convertFromEur(wizData.valueEur || 15000, activeCurr);
+    const rawAmt = sanitizeNumericAmount(wizData.originalAmount, 0) || convertFromEur(wizData.valueEur || 15000, activeCurr);
     const previewPrice = formatAmountInCurrentCurrency(rawAmt, activeCurr);
     c.innerHTML = `
       <h3 style="margin:0 0 12px;font-size:22px;">7. ${t("wizStep7")}</h3>
       <div class="field-group">
         <label style="color:var(--ink);">${t("formFullName")}</label>
-        <input type="text" id="wizOwner" class="input-light" value="${wizData.owner || (currentUser ? currentUser.name : '')}" oninput="wizData.owner = this.value" />
+        <input type="text" id="wizOwner" class="input-light" value="${escapeHtml(wizData.owner || (currentUser ? currentUser.name : ''))}" oninput="wizData.owner = this.value" />
       </div>
       <div class="form-grid-2">
         <div class="field-group">
           <label style="color:var(--ink);">${t("formEmail")}</label>
-          <input type="email" id="wizEmail" class="input-light" value="${wizData.email || (currentUser ? currentUser.email : '')}" oninput="wizData.email = this.value" />
+          <input type="email" id="wizEmail" class="input-light" value="${escapeHtml(wizData.email || (currentUser ? currentUser.email : ''))}" oninput="wizData.email = this.value" />
         </div>
         <div class="field-group">
           <label style="color:var(--ink);">${t("formPhone")}</label>
-          <input type="tel" id="wizPhone" class="input-light" value="${wizData.phone || (currentUser ? currentUser.phone : '')}" placeholder="+40 / +49 / +43..." oninput="wizData.phone = this.value" />
+          <input type="tel" id="wizPhone" class="input-light" value="${escapeHtml(wizData.phone || (currentUser ? currentUser.phone : ''))}" placeholder="+40 / +49 / +43..." oninput="wizData.phone = this.value" />
         </div>
       </div>
 
-      <div style="margin-top:12px;padding:12px 14px;background:var(--mint-soft);border:1.5px solid var(--forest);border-radius:16px;display:flex;align-items:center;gap:14px;">
-        <img src="${wizData.image}" style="width:84px;height:64px;object-fit:cover;border-radius:12px;border:1px solid rgba(12,44,40,0.2);flex-shrink:0;" alt="" />
+      <div style="margin-top:12px;padding:12px 14px;background:#f5f7f7;border:1px solid rgba(15,23,42,0.09);border-radius:18px;display:flex;align-items:center;gap:14px;">
+        <img src="${wizData.image}" style="width:84px;height:64px;object-fit:cover;border-radius:12px;border:1px solid rgba(15,23,42,0.1);flex-shrink:0;" alt="" />
         <div style="min-width:0;flex:1;">
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--forest);">${vc.previewHeading} · ${getCategoryLabel(wizData.category)} · ~${previewPrice}</div>
-          <strong style="display:block;font-size:15px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${wizData.titleHave || "—"}</strong>
-          <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            ${PREMIUM_ICONS.pin}${wizData.city || "—"}, ${wizData.country} · ${t("wantBadge")}: ${wizData.titleWant || getDealTypeLabel(wizData.dealType)}
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#0f172a;">${vc.previewHeading} · ${getCategoryLabel(wizData.category)} · ~${previewPrice}</div>
+          <strong style="display:block;font-size:15px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(wizData.titleHave || "—")}</strong>
+          <div style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${PREMIUM_ICONS.pin}${escapeHtml(wizData.city || "—")}, ${escapeHtml(wizData.country)} · ${t("wantBadge")}: ${escapeHtml(wizData.titleWant || getDealTypeLabel(wizData.dealType))}
           </div>
         </div>
       </div>
@@ -4740,16 +5699,27 @@ function renderWizStep() {
   }
 }
 
+const renderWizardStep = renderWizStep;
+
 function publishWizardOffer() {
   saveCurrentWizStepInputs();
-  if (!validateWizStep(7)) return;
+  for (const s of [2, 5, 6, 7]) {
+    if (!validateWizStep(s)) {
+      if (wizStep !== s) {
+        wizStep = s;
+        renderWizStep();
+        validateWizStep(s);
+      }
+      return;
+    }
+  }
   const isEditing = Boolean(wizData.editingOfferId);
   if (!isEditing && !canPerformSwapOrPost()) return;
   const fallbackCoords = COUNTRY_COORDS[wizData.country] || { lat: 48.13, lng: 11.58 };
   const finalLat = wizData.lat || fallbackCoords.lat;
   const finalLng = wizData.lng || fallbackCoords.lng;
   const chosenCurr = wizData.originalCurrency || currentCurrency;
-  const chosenAmt = Number(wizData.originalAmount) || convertFromEur(20000, chosenCurr);
+  const chosenAmt = sanitizeNumericAmount(wizData.originalAmount, 0) || convertFromEur(20000, chosenCurr);
   const exactEur = convertToEur(chosenAmt, chosenCurr);
   const offerPayload = {
     id: isEditing ? wizData.editingOfferId : Date.now(),
@@ -4843,7 +5813,10 @@ function buildSwapSideBySideHtml(targetOfferId) {
   const myTitle = myTypedTitle || (myOffer ? getOfferLocalized(myOffer).title : "—");
   const myImg = myOffer ? myOffer.image : WIZ_CATEGORY_PHOTOS[target.category] || DEFAULT_WIZ_DATA.image;
 
-  const myVal = Number(document.getElementById("calcMyValueInput")?.value) || getOfferValueInCurrency(target, currentCurrency);
+  const rawInputVal = document.getElementById("calcMyValueInput")?.value;
+  const myVal = (rawInputVal !== undefined && String(rawInputVal).trim() !== "")
+    ? sanitizeNumericAmount(rawInputVal, 0)
+    : getOfferValueInCurrency(target, currentCurrency);
   const myCurr = document.getElementById("calcMyCurrencySelect")?.value || currentCurrency;
   const myValInCur = convertBetweenCurrencies(myVal, myCurr, currentCurrency);
   const theirValInCur = getOfferValueInCurrency(target, currentCurrency);
@@ -4865,24 +5838,24 @@ function buildSwapSideBySideHtml(targetOfferId) {
   }[currentLang] || { youOffer: "YOU OFFER", youGet: "YOU RECEIVE" };
 
   return `
-    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:10px;background:#fff;border:1px solid rgba(12,44,40,0.14);border-radius:14px;margin-top:10px;">
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:10px;background:#fff;border:1px solid rgba(15,23,42,0.08);border-radius:16px;margin-top:10px;">
       <div style="display:flex;align-items:center;gap:8px;min-width:0;">
         <img src="${myImg}" style="width:44px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
         <div style="min-width:0;">
           <span style="display:block;font-size:9.5px;font-weight:800;color:var(--muted);">${sideLabels.youOffer}</span>
-          <strong style="display:block;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${myTitle}</strong>
-          <span style="font-size:11px;font-weight:700;color:var(--forest);">~${formatAmountInCurrentCurrency(myVal, myCurr)}</span>
+          <strong style="display:block;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(myTitle)}</strong>
+          <span style="font-size:11px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">~${formatAmountInCurrentCurrency(myVal, myCurr)}</span>
         </div>
       </div>
-      <div style="background:var(--forest);color:var(--mint);padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;text-align:center;white-space:nowrap;">
+      <div style="background:#0f172a;color:#ffffff;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;">
         ⇄ ${diffLabel}
       </div>
       <div style="display:flex;align-items:center;gap:8px;min-width:0;">
         <img src="${target.image}" style="width:44px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
         <div style="min-width:0;">
           <span style="display:block;font-size:9.5px;font-weight:800;color:var(--muted);">${sideLabels.youGet}</span>
-          <strong style="display:block;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${targetLoc.title}</strong>
-          <span style="font-size:11px;font-weight:700;color:var(--forest);">~${formatOfferPrice(target, currentCurrency)}</span>
+          <strong style="display:block;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(targetLoc.title)}</strong>
+          <span style="font-size:11px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">~${formatOfferPrice(target, currentCurrency)}</span>
         </div>
       </div>
     </div>
@@ -4892,7 +5865,7 @@ function buildSwapSideBySideHtml(targetOfferId) {
 function updateSwapValueCalculator(offerId) {
   const item = offers.find(o => o.id === offerId);
   if (!item) return;
-  const myVal = Number(document.getElementById("calcMyValueInput")?.value) || 0;
+  const myVal = sanitizeNumericAmount(document.getElementById("calcMyValueInput")?.value, 0);
   const myCurr = document.getElementById("calcMyCurrencySelect")?.value || currentCurrency;
   const resEl = document.getElementById("calcResultBanner");
   if (!resEl) return;
@@ -4904,11 +5877,11 @@ function updateSwapValueCalculator(offerId) {
   const threshold = Math.round(250 * cObj.rateFromEur);
   const diff = theirValueInCurrentCurrency - myValueInCurrentCurrency;
   if (Math.abs(diff) < threshold) {
-    resEl.innerHTML = `<span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>`;
+    resEl.innerHTML = `<span>⇄ ${t("calcEven")}</span> <span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>`;
   } else if (diff > 0) {
-    resEl.innerHTML = `<span>${t("calcYouAdd")}</span><span>+ ${formatAmountInCurrentCurrency(diff, currentCurrency)}</span>`;
+    resEl.innerHTML = `<span>${t("calcYouAdd")}</span> <span>+ ${formatAmountInCurrentCurrency(diff, currentCurrency)}</span>`;
   } else {
-    resEl.innerHTML = `<span>${t("calcTheyAdd")}</span><span>+ ${formatAmountInCurrentCurrency(Math.abs(diff), currentCurrency)}</span>`;
+    resEl.innerHTML = `<span>${t("calcTheyAdd")}</span> <span>+ ${formatAmountInCurrentCurrency(Math.abs(diff), currentCurrency)}</span>`;
   }
   const sbsBox = document.getElementById("swapSideBySideBox");
   if (sbsBox) {
@@ -4932,7 +5905,7 @@ function onBuyOfferPriceChange(offerId) {
   const valEl = document.getElementById("buyOfferAmountInput");
   const currEl = document.getElementById("buyOfferCurrencySelect");
   const previewEl = document.getElementById("buyOfferParityPreview");
-  const rawVal = Number(valEl?.value) || 0;
+  const rawVal = sanitizeNumericAmount(valEl?.value, 0);
   const chosenCurr = currEl?.value || currentCurrency;
   if (previewEl) {
     previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
@@ -5099,6 +6072,124 @@ function pickMyListingForSwap(targetOfferId, myOfferIdStr) {
   updateSwapValueCalculator(targetOfferId);
 }
 
+function saveSwapProposals() {
+  try {
+    localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  } catch (e) { }
+  if (typeof scheduleCloudSyncPush === "function") {
+    scheduleCloudSyncPush();
+  }
+}
+
+async function dispatchPartnerNotificationToServer({ toEmail, toPhone, subject, message }) {
+  if (typeof fetch !== "function" || (!toEmail && !toPhone)) return;
+  try {
+    const gw = getAuthGatewaysConfig();
+    const headers = { "Content-Type": "application/json" };
+    if (gw.brevoApiKey) headers["x-brevo-api-key"] = gw.brevoApiKey;
+    if (gw.brevoSenderEmail) headers["x-brevo-sender-email"] = gw.brevoSenderEmail;
+    if (gw.resendApiKey) headers["x-resend-api-key"] = gw.resendApiKey;
+    if (gw.textbeeKey) headers["x-textbee-key"] = gw.textbeeKey;
+    if (gw.textbeeDevice) headers["x-textbee-device"] = gw.textbeeDevice;
+    if (gw.smsAdvertToken) headers["x-smsadvert-token"] = gw.smsAdvertToken;
+    if (gw.twilioSid) headers["x-twilio-sid"] = gw.twilioSid;
+    if (gw.twilioToken) headers["x-twilio-token"] = gw.twilioToken;
+    if (gw.twilioFrom) headers["x-twilio-from"] = gw.twilioFrom;
+
+    await fetch("/api/sync", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        action: "send_notification",
+        toEmail: toEmail || "",
+        toPhone: toPhone || "",
+        subject: subject || "ChangeIt4Me · New 1:1 Swap Proposal",
+        message: message || ""
+      })
+    });
+  } catch (err) { }
+}
+
+function getProposalStatusLabel(p) {
+  if (!p) return "";
+  const ptc = getProposalToastCopy();
+  const key = p.statusKey || (p.accepted ? "accepted" : (p.declined ? "declined" : (p.direction === "Buy Offer" ? "sent_buy" : "")));
+  if (key === "accepted") return ptc.statusAccepted;
+  if (key === "sent_buy") return ptc.statusSentBuy;
+  if (key === "sent_swap") return ptc.statusSentSwap;
+  if (key === "declined") {
+    return {
+      ro: "Refuzată · Negociere închisă",
+      en: "Declined · Closed",
+      de: "Abgelehnt · Geschlossen",
+      fr: "Refusée · Clôturée",
+      it: "Rifiutata · Chiusa",
+      es: "Rechazada · Cerrada",
+      ru: "Отклонено · Закрыто"
+    }[currentLang] || "Declined · Closed";
+  }
+  if (key === "counter") {
+    return {
+      ro: "Contra-ofertă activă în Chat",
+      en: "Counter-Proposal Active in Chat",
+      de: "Gegenangebot im Chat aktiv",
+      fr: "Contre-proposition active",
+      it: "Controproposta attiva in chat",
+      es: "Contraoferta activa en chat",
+      ru: "Встречное предложение в чате"
+    }[currentLang] || "Counter-Proposal Active in Chat";
+  }
+  if (p.id === 901) {
+    return {
+      ro: "Pregătită pentru verificare",
+      en: "Ready for Inspection",
+      de: "Bereit zur Besichtigung",
+      fr: "Prête pour inspection",
+      it: "Pronta per verifica",
+      es: "Lista para inspección",
+      ru: "Готово к проверке"
+    }[currentLang] || p.status;
+  }
+  if (p.id === 902) {
+    return {
+      ro: "Propunere nouă de schimb",
+      en: "New Match Proposal",
+      de: "Neuer Tauschvorschlag",
+      fr: "Nouvelle proposition d'échange",
+      it: "Nuova proposta di scambio",
+      es: "Nueva propuesta de intercambio",
+      ru: "Новое предложение обмена"
+    }[currentLang] || p.status;
+  }
+  return p.status || ptc.statusSentSwap;
+}
+
+function getProposalPartnerContact(p) {
+  if (!p) return { email: "", phone: "" };
+  const targetOffer = p.offerId ? offers.find(o => o.id === Number(p.offerId)) : null;
+  const emailCandidates = [
+    p.ownerEmail,
+    p.senderEmail,
+    targetOffer?.ownerEmail,
+    String(p.partner || "").includes("@") ? String(p.partner).trim() : ""
+  ].filter(Boolean);
+  let email = emailCandidates[0] || "";
+  let phone = p.partnerPhone || p.senderContact || "";
+  if (email && accountsDb[email.toLowerCase()]) {
+    const acc = accountsDb[email.toLowerCase()];
+    if (!phone && acc.phone) phone = acc.phone;
+  }
+  if ((!email || !phone) && targetOffer?.owner) {
+    const ownerNorm = normalizeSearchText(targetOffer.owner);
+    const matchAcc = Object.values(accountsDb).find(a => normalizeSearchText(a.name || "") === ownerNorm);
+    if (matchAcc) {
+      if (!email) email = matchAcc.email || "";
+      if (!phone) phone = matchAcc.phone || "";
+    }
+  }
+  return { email, phone };
+}
+
 function submitDirectBuyOffer(e, offerId) {
   e.preventDefault();
   if (!canPerformSwapOrPost()) return;
@@ -5111,19 +6202,34 @@ function submitDirectBuyOffer(e, offerId) {
   const formattedOffer = formatAmountInCurrentCurrency(amount, curr);
   const payMethod = String(fd.get("paymentMethod") || "Direct Purchase");
   const note = String(fd.get("proposalNote") || "").trim();
+  const senderName = String(fd.get("senderName") || currentUser?.name || "Verified Member").trim();
+  const senderContact = String(fd.get("senderContact") || currentUser?.phone || currentUser?.email || "").trim();
 
-  swapProposals.unshift({
+  const newProp = {
     id: Date.now(),
     direction: "Buy Offer",
     offerId,
     targetTitle: loc.title,
     offeredItem: `Cash Offer: ${formattedOffer}`,
     partner: item ? `${item.owner} (${item.city}, ${item.country})` : "Owner",
+    ownerEmail: item?.ownerEmail || "",
+    senderName,
+    senderContact,
+    senderEmail: currentUser?.email || "",
     cashBalance: `${payMethod} · ~${item ? formatOfferPrice(item, curr) : formattedOffer}`,
     note,
+    statusKey: "sent_buy",
     status: ptc.statusSentBuy
+  };
+  swapProposals.unshift(newProp);
+  saveSwapProposals();
+  const partnerContact = getProposalPartnerContact(newProp);
+  dispatchPartnerNotificationToServer({
+    toEmail: partnerContact.email,
+    toPhone: partnerContact.phone,
+    subject: `ChangeIt4Me · Cash Offer (${formattedOffer}) for ${loc.title}`,
+    message: `${senderName} (${senderContact}) sent a cash purchase offer of ${formattedOffer} (${payMethod}) for your listing "${loc.title}".${note ? " Note: " + note : ""}`
   });
-  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
   consumeFreeSwapIfLogged();
   updateFavCountUI();
   closeOfferModal();
@@ -5255,39 +6361,50 @@ function openOfferModal(offerId, mode = "details") {
   const isFromBackoffice = Boolean(document.getElementById("adminModal")?.classList.contains("open"));
 
   content.innerHTML = `
-    <button type="button" class="modal-close" style="position:absolute;top:18px;right:20px;color:var(--ink);background:var(--bg);z-index:10;" onclick="closeOfferModal()" aria-label="Close">✕</button>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;padding-right:52px;border-bottom:1px solid var(--line);flex-wrap:wrap;">
-      <span style="margin:0;font-size:13.5px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ${mUi.ownerVerified}: ${item.owner} (${mUi.verifiedWord}) · ${getDealTypeLabel(item.dealType)}</span>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        ${isFromBackoffice ? `<button type="button" class="btn btn-dark" style="padding:5px 12px;font-size:12px;" onclick="closeOfferModal()">← Back to Backoffice</button>` : ""}
-        ${(isCustomOwner || isFromBackoffice) ? `<button type="button" class="btn btn-mint" style="padding:5px 12px;font-size:12px;" onclick="editListingInWizard(${item.id})">${ptc.editBtn}</button>` : ""}
-        <button type="button" class="btn btn-login" style="padding:5px 12px;font-size:12px;" onclick="copyOfferShareLink(${item.id})">${ptc.shareBtn}</button>
-        <button type="button" class="btn btn-login" style="padding:5px 11px;font-size:11.5px;color:var(--muted);" onclick="reportOfferListing(${item.id})">${getGdprUiCopy().dsaReportBtn}</button>
-        <button type="button" id="offerModalFavBtn" onclick="toggleFavorite(${item.id})" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:${isFav ? 'var(--mint)' : 'var(--bg)'};color:${isFav ? 'var(--forest)' : 'var(--ink)'};font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;" aria-label="Favorite">${isFav ? "♥" : "♡"}</button>
+    <button type="button" class="modal-close" style="position:absolute;top:18px;right:20px;color:#0f172a;background:#f1f5f4;border:1px solid rgba(15,23,42,0.08);z-index:10;" onclick="closeOfferModal()" aria-label="Close">✕</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;padding-right:52px;border-bottom:1px solid rgba(15,23,42,0.08);flex-wrap:wrap;">
+      <span style="margin:0;font-size:13px;color:#64748b;font-weight:600;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ${mUi.ownerVerified}: <strong style="color:#0f172a;margin:0 3px;">${item.owner}</strong> (${mUi.verifiedWord}) · ${getDealTypeLabel(item.dealType)}</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        ${isFromBackoffice ? `<button type="button" class="btn btn-dark" style="height:34px;padding:0 14px;font-size:12.5px;border-radius:999px;" onclick="closeOfferModal()">← Back to Backoffice</button>` : ""}
+        ${(isCustomOwner || isFromBackoffice) ? `
+          <button type="button" class="bo-icon-btn" onclick="openQuickEditListingSheet(${item.id})" title="${escapeHtml(ptc.editBtn)}" aria-label="${escapeHtml(ptc.editBtn)}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+          <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteListing(${item.id})" title="Delete" aria-label="Delete">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+        ` : ""}
+        <button type="button" class="bo-icon-btn" onclick="copyOfferShareLink(${item.id})" title="${escapeHtml(ptc.shareBtn)}" aria-label="${escapeHtml(ptc.shareBtn)}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </button>
+        <button type="button" class="bo-icon-btn" onclick="openReportOfferSheet(${item.id})" title="${escapeHtml(getGdprUiCopy().dsaReportBtn)}" aria-label="${escapeHtml(getGdprUiCopy().dsaReportBtn)}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        </button>
+        <button type="button" id="offerModalFavBtn" class="bo-icon-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite(${item.id})" style="background:${isFav ? '#fff1f2' : '#f1f5f4'};color:${isFav ? '#e11d48' : '#0f172a'};font-size:15px;" title="Favorite" aria-label="Favorite">${isFav ? "♥" : "♡"}</button>
       </div>
     </div>
 
     <div class="offer-modal-grid">
       <div>
-        <div id="offerModalGalleryMain" style="height:215px;border-radius:20px;background:url('${galleryImgs[0]}') 50%/cover no-repeat;margin-bottom:8px;position:relative;transition:background-image 0.2s ease;">
+        <div id="offerModalGalleryMain" style="height:225px;border-radius:20px;background:url('${galleryImgs[0]}') 50%/cover no-repeat;margin-bottom:10px;position:relative;transition:background-image 0.2s ease;">
           ${galleryImgs.length > 1 ? `
-            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, -1)" style="position:absolute;top:50%;left:10px;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:0;background:rgba(12,44,40,0.78);color:#fff;font-weight:800;cursor:pointer;">‹</button>
-            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, 1)" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:0;background:rgba(12,44,40,0.78);color:#fff;font-weight:800;cursor:pointer;">›</button>
-            <span id="offerModalGalleryCount" style="position:absolute;top:12px;right:12px;background:rgba(12,44,40,0.82);color:#fff;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:800;">1 / ${galleryImgs.length}</span>
+            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, -1)" style="position:absolute;top:50%;left:10px;transform:translateY(-50%);width:32px;height:32px;min-height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(15,23,42,0.55);backdrop-filter:blur(12px);color:#fff;font-weight:800;cursor:pointer;">‹</button>
+            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, 1)" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:32px;height:32px;min-height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(15,23,42,0.55);backdrop-filter:blur(12px);color:#fff;font-weight:800;cursor:pointer;">›</button>
+            <span id="offerModalGalleryCount" style="position:absolute;top:12px;right:12px;background:rgba(15,23,42,0.58);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.22);color:#fff;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;">1 / ${galleryImgs.length}</span>
           ` : ""}
-          <span style="position:absolute;bottom:14px;left:14px;background:var(--forest);color:var(--mint);padding:6px 14px;border-radius:999px;font-weight:700;font-size:13px;">
-            ${getCategoryLabel(item.category)} · ~ ${valFormatted}${clientBaseNote}
+          <span style="position:absolute;bottom:14px;left:14px;background:rgba(15,23,42,0.58);color:#ffffff;backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:1px solid rgba(255,255,255,0.24);padding:6px 14px;border-radius:999px;font-weight:600;font-size:13px;">
+            ${getCategoryLabel(item.category)} · ${valFormatted}${clientBaseNote}
           </span>
         </div>
         ${galleryImgs.length > 1 ? `
           <div id="offerModalThumbsRow" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;">
             ${galleryImgs.map((u, i) => `
-              <img src="${u}" onclick="selectOfferGalleryPhoto(${item.id}, ${i})" style="width:68px;height:46px;object-fit:cover;border-radius:10px;cursor:pointer;border:2.5px solid ${i === 0 ? 'var(--forest)' : 'transparent'};opacity:${i === 0 ? '1' : '0.68'};flex-shrink:0;" alt="" />
+              <img src="${u}" onclick="selectOfferGalleryPhoto(${item.id}, ${i})" style="width:68px;height:46px;object-fit:cover;border-radius:10px;cursor:pointer;border:2px solid ${i === 0 ? '#0f172a' : 'transparent'};opacity:${i === 0 ? '1' : '0.68'};flex-shrink:0;" alt="" />
             `).join("")}
           </div>
         ` : ""}
-        <h2 style="font-size:22px;margin:0 0 8px;line-height:1.2;">${loc.title}</h2>
-        <p style="color:var(--ink-soft);margin:0 0 12px;font-size:13.5px;">${loc.desc || item.specs}</p>
+        <h2 style="font-size:21px;font-weight:700;letter-spacing:-0.02em;color:#0f172a;margin:0 0 8px;line-height:1.25;">${loc.title}</h2>
+        <p style="color:#475569;margin:0 0 14px;font-size:13.5px;line-height:1.45;">${loc.desc || item.specs}</p>
 
         <div class="swap-exchange-box" style="margin-bottom:0;">
           <div class="swap-row">
@@ -5295,52 +6412,52 @@ function openOfferModal(offerId, mode = "details") {
             <span><strong>${loc.title}</strong> (${item.specs})</span>
           </div>
           <div class="swap-row">
-            <span class="swap-tag want" style="${item.dealType === 'sale' ? 'background:#0c2c28;color:#a9ffca;' : ''}">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
-            <span style="font-weight:700;color:var(--forest);">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ~${valFormatted}` : loc.want}</span>
+            <span class="swap-tag want">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
+            <span style="font-weight:600;color:#0f172a;">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ${valFormatted}` : loc.want}</span>
           </div>
         </div>
       </div>
 
       <div>
         <!-- ACTION MODE SWITCHER: SWAP vs BUY / CASH OFFER -->
-        <div class="catalog-pills" style="margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <button type="button" id="offerTabSwapBtn" class="cat-pill ${!startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;" onclick="switchOfferActionTab('swap')">
+        <div class="catalog-pills" style="margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;width:100%;gap:4px;">
+          <button type="button" id="offerTabSwapBtn" class="cat-pill ${!startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;width:100%;" onclick="switchOfferActionTab('swap')">
             ${t("proposeSwapBtn")}
           </button>
-          <button type="button" id="offerTabBuyBtn" class="cat-pill ${startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;" onclick="switchOfferActionTab('buy')">
+          <button type="button" id="offerTabBuyBtn" class="cat-pill ${startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;width:100%;" onclick="switchOfferActionTab('buy')">
             ${t("buyOfferBtn")}
           </button>
         </div>
 
         <!-- PANEL 1: 1:1 SWAP + VALUE BALANCE CALCULATOR -->
         <div id="offerActionSwapPanel" style="display:${startInBuyMode ? 'none' : 'block'};">
-          <div class="calc-box" style="margin:0 0 12px;">
-            <strong style="display:flex;align-items:center;font-size:14px;margin-bottom:8px;">${PREMIUM_ICONS.scale}${t("calcTitle")} (${cObj.code})</strong>
-            <div class="form-grid-2">
+          <div class="calc-box" style="margin:0 0 12px;background:#f5f7f7;border:1px solid rgba(15,23,42,0.08);border-radius:20px;padding:16px;">
+            <strong style="display:flex;align-items:center;font-size:13.5px;color:#0f172a;margin-bottom:10px;">${PREMIUM_ICONS.scale}${t("calcTitle")} (${cObj.code})</strong>
+            <div style="display:grid;grid-template-columns:1.25fr 0.95fr;gap:10px;margin-bottom:10px;align-items:end;">
               <div>
-                <label style="font-size:12px;color:var(--muted);font-weight:700;">${yourValLabel}</label>
-                <div style="display:grid;grid-template-columns:1fr 90px;gap:6px;">
-                  <input type="number" id="calcMyValueInput" class="input-light" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
-                  <select id="calcMyCurrencySelect" class="input-light" style="padding:0 26px 0 10px;font-size:13px;font-weight:700;" onchange="updateSwapValueCalculator(${item.id})">
+                <label style="display:block;font-size:11.5px;color:#64748b;font-weight:600;margin-bottom:4px;">${yourValLabel}</label>
+                <div style="display:grid;grid-template-columns:1fr 88px;gap:6px;">
+                  <input type="text" inputmode="decimal" id="calcMyValueInput" class="input-light" style="padding:0 12px;font-weight:700;font-variant-numeric:tabular-nums;" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
+                  <select id="calcMyCurrencySelect" class="input-light" style="padding:0 26px 0 10px;font-size:12.5px;font-weight:700;" onchange="updateSwapValueCalculator(${item.id})">
                     ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code}</option>`).join("")}
                   </select>
                 </div>
               </div>
               <div>
-                <label style="font-size:12px;color:var(--muted);font-weight:700;">${theirValLabel}</label>
-                <input type="number" class="input-light" value="${theirValConverted}" disabled />
+                <label style="display:block;font-size:11.5px;color:#64748b;font-weight:600;margin-bottom:4px;">${theirValLabel}</label>
+                <input type="text" class="input-light" style="padding:0 12px;font-weight:700;font-variant-numeric:tabular-nums;background:#eef2f1;color:#475569;" value="${theirValConverted}" disabled />
               </div>
             </div>
-            <div class="calc-result-banner" id="calcResultBanner">
-              <span>⇄ ${t("calcEven")}</span><span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>
+            <div class="calc-result-banner" id="calcResultBanner" style="border-radius:999px;padding:10px 16px;">
+              <span>⇄ ${t("calcEven")}</span> <span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>
             </div>
             <div id="swapSideBySideBox">${buildSwapSideBySideHtml(item.id)}</div>
           </div>
 
-          <form onsubmit="submitDirectSwapProposal(event, ${item.id})" style="background:var(--mint-soft);padding:16px;border-radius:20px;border:1.5px solid var(--forest);">
-            <strong style="display:block;margin-bottom:8px;color:var(--forest);font-size:15px;">⇄ ${t("proposeSwapBtn")} (${mUi.zeroFeeDirect})</strong>
-            <div class="field-group" style="margin-bottom:8px;">
-              <label style="font-size:11.5px;color:var(--muted);font-weight:700;">${ptc.pickMyAdLabel}</label>
+          <form onsubmit="submitDirectSwapProposal(event, ${item.id})" style="background:#f5f7f7;padding:18px;border-radius:20px;border:1px solid rgba(15,23,42,0.08);">
+            <strong style="display:block;margin-bottom:10px;color:#0f172a;font-size:14.5px;">⇄ ${t("proposeSwapBtn")} (${mUi.zeroFeeDirect})</strong>
+            <div class="field-group" style="margin-bottom:10px;">
+              <label style="font-size:11.5px;color:#64748b;font-weight:600;">${ptc.pickMyAdLabel}</label>
               <select class="input-light" style="font-size:13px;" onchange="pickMyListingForSwap(${item.id}, this.value)">
                 <option value="">${ptc.pickMyAdDefault}</option>
                 ${userPickableAds.map(ad => {
@@ -5349,42 +6466,42 @@ function openOfferModal(offerId, mode = "details") {
   }).join("")}
               </select>
             </div>
-            <div class="field-group" style="margin-bottom:8px;">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("quickTitleHave")}</label>
+            <div class="field-group" style="margin-bottom:10px;">
+              <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("quickTitleHave")}</label>
               <input type="text" id="swapOfferedItemInput" name="offeredItem" class="input-light" required oninput="updateSwapValueCalculator(${item.id})" />
             </div>
             <div class="field-group" style="margin-bottom:10px;">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${ptc.messageLabel}</label>
+              <label style="font-size:11.5px;color:#334155;font-weight:600;">${ptc.messageLabel}</label>
               <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
             </div>
             <div class="form-grid-2">
               <div class="field-group" style="margin-bottom:0;">
-                <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formFullName")}</label>
+                <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("formFullName")}</label>
                 <input type="text" name="senderName" class="input-light" required value="${currentUser ? currentUser.name : ''}" />
               </div>
               <div class="field-group" style="margin-bottom:0;">
-                <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formPhone")} / Email</label>
+                <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("formPhone")} / Email</label>
                 <input type="text" name="senderContact" class="input-light" required value="${currentUser ? (currentUser.phone || currentUser.email) : ''}" />
               </div>
             </div>
-            <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
+            <button type="submit" class="btn btn-dark btn-block" style="margin-top:14px;border-radius:999px;height:44px;background:#0f172a;color:#ffffff;">
               ${mUi.sendSwapTo} ${item.owner} →
             </button>
-            <p style="margin:8px 0 0;font-size:11px;color:var(--muted);line-height:1.35;">✓ ${getGdprUiCopy().gdprContactNote}</p>
+            <p style="margin:8px 0 0;font-size:11px;color:#64748b;line-height:1.35;">✓ ${getGdprUiCopy().gdprContactNote}</p>
           </form>
         </div>
 
         <!-- PANEL 2: DIRECT BUY / CASH OFFER -->
         <div id="offerActionBuyPanel" style="display:${startInBuyMode ? 'block' : 'none'};">
-          <form onsubmit="submitDirectBuyOffer(event, ${item.id})" style="background:var(--mint-soft);padding:18px;border-radius:20px;border:1.5px solid var(--forest);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <strong style="color:var(--forest);font-size:15px;">${t("buyOfferBtn")} · ${mUi.zeroCommission}</strong>
-              <span style="background:var(--forest);color:var(--mint);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;">~ ${valFormatted}</span>
+          <form onsubmit="submitDirectBuyOffer(event, ${item.id})" style="background:#f5f7f7;padding:18px;border-radius:20px;border:1px solid rgba(15,23,42,0.08);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <strong style="color:#0f172a;font-size:14.5px;">${t("buyOfferBtn")} · ${mUi.zeroCommission}</strong>
+              <span style="background:#0f172a;color:#ffffff;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${valFormatted}</span>
             </div>
             <div class="field-group">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${mUi.yourCashOffer}</label>
-              <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;">
-                <input type="number" id="buyOfferAmountInput" name="buyAmount" class="input-light" value="${theirValConverted}" required min="1" oninput="onBuyOfferPriceChange(${item.id})" />
+              <label style="font-size:11.5px;color:#334155;font-weight:600;">${mUi.yourCashOffer}</label>
+              <div style="display:grid;grid-template-columns:1fr 134px;gap:8px;">
+                <input type="text" inputmode="decimal" id="buyOfferAmountInput" name="buyAmount" class="input-light" style="font-weight:700;font-variant-numeric:tabular-nums;" value="${theirValConverted}" required oninput="onBuyOfferPriceChange(${item.id})" />
                 <select id="buyOfferCurrencySelect" name="buyCurrency" class="input-light" style="font-weight:700;" onchange="onBuyOfferPriceChange(${item.id})">
                   ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
                 </select>
@@ -5392,31 +6509,31 @@ function openOfferModal(offerId, mode = "details") {
               <div id="buyOfferParityPreview">${buildParityPreviewHtml(theirValConverted, currentCurrency)}</div>
             </div>
             <div class="field-group">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${mUi.paymentPref}</label>
+              <label style="font-size:11.5px;color:#334155;font-weight:600;">${mUi.paymentPref}</label>
               <select name="paymentMethod" class="input-light">
                 <option value="Bank Transfer / Cash on Handover">${mUi.payOpt1}</option>
-                <option value="Buy Now at Asking Price">${mUi.payOpt2} (~${valFormatted})</option>
+                <option value="Buy Now at Asking Price">${mUi.payOpt2} (${valFormatted})</option>
                 <option value="Notary / Verified Escrow Contract">${mUi.payOpt3}</option>
               </select>
             </div>
             <div class="field-group" style="margin-bottom:10px;">
-              <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${ptc.messageLabel}</label>
+              <label style="font-size:11.5px;color:#334155;font-weight:600;">${ptc.messageLabel}</label>
               <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
             </div>
             <div class="form-grid-2">
               <div class="field-group" style="margin-bottom:0;">
-                <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formFullName")}</label>
+                <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("formFullName")}</label>
                 <input type="text" name="senderName" class="input-light" required value="${currentUser ? currentUser.name : ''}" />
               </div>
               <div class="field-group" style="margin-bottom:0;">
-                <label style="font-size:12px;color:var(--ink-soft);font-weight:700;">${t("formPhone")} / Email</label>
+                <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("formPhone")} / Email</label>
                 <input type="text" name="senderContact" class="input-light" required value="${currentUser ? (currentUser.phone || currentUser.email) : ''}" />
               </div>
             </div>
-            <button type="submit" class="btn btn-dark btn-block" style="margin-top:12px;">
+            <button type="submit" class="btn btn-dark btn-block" style="margin-top:14px;border-radius:999px;height:44px;background:#0f172a;color:#ffffff;">
               ${mUi.sendBuyTo} ${item.owner} →
             </button>
-            <p style="margin:8px 0 0;font-size:11px;color:var(--muted);line-height:1.35;">✓ ${getGdprUiCopy().gdprContactNote}</p>
+            <p style="margin:8px 0 0;font-size:11px;color:#64748b;line-height:1.35;">✓ ${getGdprUiCopy().gdprContactNote}</p>
           </form>
         </div>
       </div>
@@ -5466,6 +6583,8 @@ function consumeFreeSwapIfLogged() {
   }
 }
 
+const consumeFreeSwapCredit = consumeFreeSwapIfLogged;
+
 function submitDirectSwapProposal(e, offerId) {
   e.preventDefault();
   if (!canPerformSwapOrPost()) return;
@@ -5476,19 +6595,35 @@ function submitDirectSwapProposal(e, offerId) {
   const bannerEl = document.getElementById("calcResultBanner");
   const calcBanner = String(bannerEl?.innerText || bannerEl?.textContent || "").replace(/\n/g, " ").trim() || "1:1 Key-for-Key";
   const note = String(fd.get("proposalNote") || "").trim();
+  const senderName = String(fd.get("senderName") || currentUser?.name || "Verified Member").trim();
+  const senderContact = String(fd.get("senderContact") || currentUser?.phone || currentUser?.email || "").trim();
 
-  swapProposals.unshift({
+  const offeredTitle = String(fd.get("offeredItem") || "").trim();
+  const newProp = {
     id: Date.now(),
     direction: "Sent",
     offerId,
     targetTitle: loc.title,
-    offeredItem: String(fd.get("offeredItem")),
+    offeredItem: offeredTitle,
     partner: item ? `${item.owner} (${item.city}, ${item.country})` : "Owner",
+    ownerEmail: item?.ownerEmail || "",
+    senderName,
+    senderContact,
+    senderEmail: currentUser?.email || "",
     cashBalance: calcBanner,
     note,
+    statusKey: "sent_swap",
     status: ptc.statusSentSwap
+  };
+  swapProposals.unshift(newProp);
+  saveSwapProposals();
+  const partnerContact = getProposalPartnerContact(newProp);
+  dispatchPartnerNotificationToServer({
+    toEmail: partnerContact.email,
+    toPhone: partnerContact.phone,
+    subject: `ChangeIt4Me · 1:1 Swap Proposal (${offeredTitle} ⇄ ${loc.title})`,
+    message: `${senderName} (${senderContact}) proposed a 1:1 swap: "${offeredTitle}" for your "${loc.title}" (${calcBanner}).${note ? " Note: " + note : ""}`
   });
-  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
   consumeFreeSwapIfLogged();
   updateFavCountUI();
   closeOfferModal();
@@ -5499,16 +6634,43 @@ function acceptSwapProposal(propId) {
   const p = swapProposals.find(x => x.id === propId);
   if (!p) return;
   const ptc = getProposalToastCopy();
+  p.statusKey = "accepted";
   p.status = ptc.statusAccepted;
   p.accepted = true;
-  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  p.declined = false;
+  saveSwapProposals();
   renderDashboardContent();
   showToast(`${ptc.acceptedPrefix} ${p.partner} ${ptc.acceptedSuffix}`);
 }
 
+function declineSwapProposal(propId) {
+  const p = swapProposals.find(x => x.id === propId);
+  if (!p) return;
+  p.statusKey = "declined";
+  p.accepted = false;
+  p.declined = true;
+  p.status = getProposalStatusLabel(p);
+  saveSwapProposals();
+  renderDashboardContent();
+}
+
+function counterSwapProposal(propId, customCounterText = "") {
+  const p = swapProposals.find(x => x.id === propId);
+  if (!p) return;
+  p.statusKey = "counter";
+  p.status = getProposalStatusLabel(p);
+  activeProposalThreadId = propId;
+  if (customCounterText) {
+    appendProposalMessage(propId, customCounterText);
+  } else {
+    saveSwapProposals();
+    renderDashboardContent();
+  }
+}
+
 function deleteSwapProposal(propId) {
   swapProposals = swapProposals.filter(x => x.id !== propId);
-  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  saveSwapProposals();
   updateFavCountUI();
   renderDashboardContent();
 }
@@ -5608,6 +6770,8 @@ function sendProposalMessage(e, propId) {
   appendProposalMessage(propId, text);
 }
 
+const sendProposalChatMessage = sendProposalMessage;
+
 function sendQuickProposalChip(propId, text) {
   appendProposalMessage(propId, text);
 }
@@ -5623,7 +6787,14 @@ function appendProposalMessage(propId, text) {
     text,
     time: nowStr
   });
-  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+  saveSwapProposals();
+  const partnerContact = getProposalPartnerContact(p);
+  dispatchPartnerNotificationToServer({
+    toEmail: partnerContact.email,
+    toPhone: partnerContact.phone,
+    subject: `ChangeIt4Me · New Message regarding ${p.targetTitle}`,
+    message: `${currentUser ? currentUser.name : "Swap Partner"}: "${text}" (${p.offeredItem} ⇄ ${p.targetTitle})`
+  });
   activeProposalThreadId = propId;
   renderDashboardContent();
 
@@ -5643,7 +6814,7 @@ function appendProposalMessage(propId, text) {
       text: autoReplyMap[currentLang] || autoReplyMap.en,
       time: new Date().toTimeString().slice(0, 5)
     });
-    localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+    saveSwapProposals();
     if (document.getElementById("dashboardModal")?.classList.contains("open") && currentDashTab === "proposals") {
       renderDashboardContent();
     }
@@ -5656,8 +6827,17 @@ function openSwapAgreementModal(propId) {
   const content = document.getElementById("guideModalContent");
   if (!content) return;
   const todayStr = new Date().toISOString().slice(0, 10);
-  const partyA = currentUser ? `${currentUser.name} (${currentUser.email})` : "Verified Member A";
-  const partyB = p.partner;
+  const meStr = currentUser
+    ? `${currentUser.name} (${currentUser.email}${currentUser.phone ? " · " + currentUser.phone : ""})`
+    : (p.senderName ? `${p.senderName}${p.senderContact ? " (" + p.senderContact + ")" : ""}` : "Verified Member A");
+  const contactInfo = getProposalPartnerContact(p);
+  const partnerContactSuffix = (contactInfo.email || contactInfo.phone)
+    ? ` · ${[contactInfo.email, contactInfo.phone].filter(Boolean).join(" / ")}`
+    : "";
+  const partnerFullStr = `${p.partner}${partnerContactSuffix}`;
+  const isIncoming = p.direction === "Incoming";
+  const partyA = isIncoming ? partnerFullStr : meStr;
+  const partyB = isIncoming ? meStr : partnerFullStr;
   const agrCopy = {
     ro: {
       badge: "Acord Oficial de Schimb Direct 1:1 · 0% Comision",
@@ -5769,17 +6949,17 @@ function openSwapAgreementModal(propId) {
 
   content.innerHTML = `
     <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
-    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;">${ac.badge}</span>
+    <span style="background:#f1f5f4;color:#0f172a;border:1px solid rgba(15,23,42,0.08);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${ac.badge}</span>
     <h2 style="font-size:24px;margin:10px 0 6px;">${ac.title}</h2>
     <p style="font-size:12.5px;color:var(--muted);margin:0 0 14px;">ID #CI4M-${p.id} · ${ac.dateLabel}: <strong>${todayStr}</strong></p>
 
-    <div style="background:var(--mint-soft);border:1.5px solid var(--forest);border-radius:16px;padding:14px 16px;margin-bottom:14px;display:grid;gap:8px;font-size:13.5px;">
-      <div><strong>${ac.partyALabel}:</strong> ${partyA}</div>
-      <div><strong>${ac.partyBLabel}:</strong> ${partyB}</div>
-      <hr style="border:0;border-top:1px solid rgba(12,44,40,0.12);margin:4px 0;" />
-      <div><strong>${ac.itemALabel}:</strong> ${p.offeredItem}</div>
-      <div><strong>${ac.itemBLabel}:</strong> ${p.targetTitle}</div>
-      <div><strong>${ac.balanceLabel}:</strong> <span style="color:var(--forest);font-weight:800;">${p.cashBalance}</span></div>
+    <div style="background:#f5f7f7;border:1px solid rgba(15,23,42,0.09);border-radius:18px;padding:14px 16px;margin-bottom:14px;display:grid;gap:8px;font-size:13.5px;">
+      <div><strong>${ac.partyALabel}:</strong> ${escapeHtml(partyA)}</div>
+      <div><strong>${ac.partyBLabel}:</strong> ${escapeHtml(partyB)}</div>
+      <hr style="border:0;border-top:1px solid rgba(15,23,42,0.08);margin:4px 0;" />
+      <div><strong>${ac.itemALabel}:</strong> ${escapeHtml(p.offeredItem)}</div>
+      <div><strong>${ac.itemBLabel}:</strong> ${escapeHtml(p.targetTitle)}</div>
+      <div><strong>${ac.balanceLabel}:</strong> <span style="color:#0f172a;font-weight:800;">${escapeHtml(p.cashBalance)}</span></div>
     </div>
 
     <strong style="display:block;font-size:13.5px;margin-bottom:8px;">${ac.clausesTitle}</strong>
@@ -5796,6 +6976,8 @@ function openSwapAgreementModal(propId) {
   document.getElementById("guideModal").classList.add("open");
   document.body.classList.add("modal-open");
 }
+
+const openPrintableSwapAgreement = openSwapAgreementModal;
 
 function deleteWatchlistAlert(alertId) {
   watchlistAlerts = watchlistAlerts.filter(a => a.id !== alertId);
@@ -5826,34 +7008,48 @@ function renderDashboardContent() {
     container.innerHTML = swapProposals.map(p => {
       const msgs = ensureProposalMessages(p);
       const isThreadOpen = activeProposalThreadId === p.id;
+      const statusLabel = getProposalStatusLabel(p);
+      const contact = getProposalPartnerContact(p);
+      const cleanWaPhone = String(contact.phone || "").replace(/[^\d]/g, "");
+      const dirLabel = p.direction === "Incoming"
+        ? dl.incoming
+        : (p.direction === "Buy Offer" ? t("buyOfferBtn") : dl.outgoing);
+      const contactHandoffHtml = (contact.email || contact.phone) ? `
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;">
+          ${contact.email ? `<a href="mailto:${encodeURIComponent(contact.email)}?subject=${encodeURIComponent('ChangeIt4Me 1:1 Swap: ' + p.targetTitle)}" class="wiz-chip" style="text-decoration:none;font-size:11.5px;padding:3px 10px;">✉ ${escapeHtml(contact.email)}</a>` : ""}
+          ${contact.phone ? `<a href="tel:${encodeURIComponent(contact.phone)}" class="wiz-chip" style="text-decoration:none;font-size:11.5px;padding:3px 10px;">✆ ${escapeHtml(contact.phone)}</a>` : ""}
+          ${cleanWaPhone.length >= 8 ? `<a href="https://wa.me/${cleanWaPhone}" target="_blank" rel="noopener" class="wiz-chip" style="text-decoration:none;font-size:11.5px;padding:3px 10px;background:#ecfdf5;color:#065f46;border-color:#a7f3d0;">WhatsApp →</a>` : ""}
+        </div>
+      ` : "";
       return `
         <div class="dash-list-item" style="flex-direction:column;align-items:stretch;gap:10px;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div style="flex:1;min-width:220px;">
-              <span style="font-size:11.5px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:${p.direction === 'Incoming' ? 'var(--mint)' : 'var(--forest)'};color:${p.direction === 'Incoming' ? 'var(--forest)' : '#fff'};">
-                ${p.direction === 'Incoming' ? dl.incoming : dl.outgoing}
+              <span style="font-size:11px;font-weight:800;text-transform:uppercase;padding:3px 10px;border-radius:999px;background:${p.direction === 'Incoming' ? 'var(--mint)' : '#0f172a'};color:${p.direction === 'Incoming' ? 'var(--forest)' : '#fff'};">
+                ${escapeHtml(dirLabel)}
               </span>
-              <strong style="display:block;font-size:15.5px;margin-top:6px;cursor:pointer;color:var(--forest);" onclick="closeDashboardModal(); if(${Number(p.offerId) || 0}) openOfferModal(${Number(p.offerId)}, 'details');">${p.offeredItem} ⇄ ${p.targetTitle}</strong>
-              <span style="font-size:13px;color:var(--muted);display:block;">${dl.partner}: ${p.partner} · ${p.cashBalance}</span>
-              ${p.note ? `<span style="font-size:12.5px;color:var(--ink-soft);display:block;margin-top:3px;font-style:italic;">"${p.note}"</span>` : ""}
+              <strong style="display:block;font-size:15.5px;margin-top:6px;cursor:pointer;color:#0f172a;" onclick="closeDashboardModal(); if(${Number(p.offerId) || 0}) openOfferModal(${Number(p.offerId)}, 'details');">${escapeHtml(p.offeredItem)} ⇄ ${escapeHtml(p.targetTitle)}</strong>
+              <span style="font-size:13px;color:var(--muted);display:block;">${dl.partner}: ${escapeHtml(p.partner)} · ${escapeHtml(p.cashBalance)}</span>
+              ${p.note ? `<span style="font-size:12.5px;color:#475569;display:block;margin-top:3px;">"${escapeHtml(p.note)}"</span>` : ""}
+              ${contactHandoffHtml}
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <span style="font-size:12px;font-weight:700;color:var(--forest);white-space:nowrap;">✓ ${p.status}</span>
+              <span style="font-size:12px;font-weight:700;color:${p.declined ? '#be123c' : 'var(--forest)'};white-space:nowrap;">${p.declined ? '✕' : '✓'} ${escapeHtml(statusLabel)}</span>
               ${p.direction === "Incoming" && !p.accepted ? `<button type="button" class="btn btn-mint" style="padding:6px 11px;font-size:12px;" onclick="acceptSwapProposal(${p.id})">${dl.accept}</button>` : ""}
               <button type="button" class="btn ${isThreadOpen ? 'btn-dark' : 'btn-login'}" style="padding:6px 11px;font-size:12px;" onclick="toggleProposalThread(${p.id})">${dl.chat} (${msgs.length})</button>
               <button type="button" class="btn btn-login" style="padding:6px 11px;font-size:12px;" onclick="openSwapAgreementModal(${p.id})">${dl.contract}</button>
               ${p.offerId ? `<button type="button" class="btn btn-login" style="padding:6px 11px;font-size:12px;" onclick="closeDashboardModal(); openOfferModal(${p.offerId}, 'details')">${dl.view}</button>` : ""}
-              <button type="button" class="btn btn-login" style="padding:6px 10px;font-size:12px;color:#b91c1c;" onclick="deleteSwapProposal(${p.id})" title="${dl.del}">✕</button>
+              <button type="button" class="btn btn-login" style="padding:6px 10px;font-size:12px;color:#b91c1c;" onclick="requestDeleteProposal(${p.id})" title="${dl.del}">✕</button>
             </div>
           </div>
 
           ${isThreadOpen ? `
-            <div style="margin-top:4px;padding:12px;background:var(--mint-soft);border:1px solid rgba(12,44,40,0.16);border-radius:14px;">
+            <div style="margin-top:4px;padding:14px;background:#f5f7f7;border:1px solid rgba(15,23,42,0.08);border-radius:18px;">
               <div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
                 ${msgs.map(m => `
-                  <div style="align-self:${m.sender === 'me' ? 'flex-end' : 'flex-start'};max-width:85%;padding:7px 11px;border-radius:12px;font-size:12.5px;background:${m.sender === 'me' ? 'var(--forest)' : '#fff'};color:${m.sender === 'me' ? '#fff' : 'var(--ink)'};border:1px solid rgba(12,44,40,0.1);">
-                    <strong style="font-size:10.5px;opacity:0.8;display:block;">${m.author} · ${m.time}</strong>
-                    <span>${m.text}</span>
+                  <div style="align-self:${m.sender === 'me' ? 'flex-end' : 'flex-start'};max-width:85%;padding:8px 12px;border-radius:14px;font-size:12.5px;background:${m.sender === 'me' ? '#0f172a' : '#fff'};color:${m.sender === 'me' ? '#fff' : '#0f172a'};border:1px solid rgba(15,23,42,0.08);">
+                    <strong style="font-size:10.5px;opacity:0.8;display:block;">${escapeHtml(m.author)} · ${escapeHtml(m.time)}</strong>
+                    <span>${escapeHtml(m.text)}</span>
                   </div>
                 `).join("")}
               </div>
@@ -5872,8 +7068,9 @@ function renderDashboardContent() {
       `;
     }).join("");
   } else if (currentDashTab === "mylistings") {
+    const linkedToMe = currentUser ? getAccountLinkedOffers(currentUser) : [];
     const userCreated = offers.filter(o => o.createdByUser || o.id > 100000);
-    const myItems = userCreated.length > 0 ? userCreated : offers.slice(0, 3);
+    const myItems = linkedToMe.length > 0 ? linkedToMe : (userCreated.length > 0 ? userCreated : offers.slice(0, 3));
     container.innerHTML = `
       ${myItems.map(item => {
       const loc = getOfferLocalized(item);
@@ -5891,9 +7088,15 @@ function renderDashboardContent() {
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <button type="button" class="btn btn-login" style="padding:6px 12px;font-size:12px;" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'details')">${dl.view}</button>
-              <button type="button" class="btn btn-mint" style="padding:6px 12px;font-size:12px;" onclick="editListingInWizard(${item.id})">${dl.edit}</button>
-              <button type="button" class="btn btn-login" style="padding:6px 10px;font-size:12px;color:#b91c1c;" onclick="deleteUserListing(${item.id})" title="${dl.del}">✕</button>
+              <button type="button" class="bo-icon-btn" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'details')" title="${escapeHtml(dl.view)}" aria-label="${escapeHtml(dl.view)}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button type="button" class="bo-icon-btn" onclick="openQuickEditListingSheet(${item.id})" title="${escapeHtml(dl.edit)}" aria-label="${escapeHtml(dl.edit)}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+              <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteListing(${item.id})" title="${escapeHtml(dl.del)}" aria-label="${escapeHtml(dl.del)}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </button>
             </div>
           </div>
         `;
@@ -5941,7 +7144,7 @@ function renderDashboardContent() {
             </div>
             <div style="display:flex;gap:6px;">
               <button type="button" class="btn btn-mint" style="padding:5px 11px;font-size:12px;" onclick="closeDashboardModal(); executeQuickKeywordSearch('${a.interest.replace(/'/g, "\\'")}')">${dl.view}</button>
-              <button type="button" class="btn btn-login" style="padding:5px 9px;font-size:12px;color:#b91c1c;" onclick="deleteWatchlistAlert(${a.id})">✕</button>
+              <button type="button" class="btn btn-login" style="padding:5px 9px;font-size:12px;color:#b91c1c;" onclick="requestDeleteWatchlistAlert(${a.id})">✕</button>
             </div>
           </div>
         `).join("")}
@@ -5951,44 +7154,45 @@ function renderDashboardContent() {
     const subCopy = getSubscriptionUiCopy();
     const isProPlan = Boolean(u.plan === "pro");
     const remSwaps = typeof u.freeSwaps === "number" ? u.freeSwaps : 10;
+    const maxSwaps = remSwaps > 10 ? remSwaps : 10;
     const subCardHtml = `
-      <div style="margin-bottom:16px;padding:16px 18px;background:#0a2520;color:#fff;border-radius:18px;border:1.5px solid rgba(169,255,202,0.35);">
+      <div style="margin-bottom:16px;padding:16px 18px;background:#0f172a;color:#fff;border-radius:20px;border:1px solid rgba(255,255,255,0.1);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
           <strong style="font-size:15px;color:#a9ffca;">${subCopy.dashCardTitle}</strong>
-          <span style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;">
-            ${isProPlan ? subCopy.statusPro : `${subCopy.statusCredits} ${remSwaps} / 10`}
+          <span style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;">
+            ${isProPlan ? subCopy.statusPro : `${subCopy.statusCredits} ${remSwaps} / ${maxSwaps}`}
           </span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
           <button type="button" class="btn btn-mint" style="font-size:12px;padding:7px 13px;" onclick="openSubscriptionModal('pack15')">${subCopy.packBtn} (${formatCurrency(9, currentCurrency)})</button>
           <button type="button" class="btn btn-login" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);font-size:12px;padding:7px 13px;" onclick="openSubscriptionModal('pro')">${subCopy.proBtn} (${formatCurrency(19, currentCurrency)}${subCopy.perMonth})</button>
-          <button type="button" class="btn btn-login" style="background:rgba(239,68,68,0.18);color:#fca5a5;border:1px solid rgba(239,68,68,0.35);font-size:11.5px;padding:6px 11px;" onclick="simulateZeroFreeSwaps()">${subCopy.dashSimulateZeroBtn}</button>
+          <button type="button" class="btn btn-login" style="background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.16);font-size:11.5px;padding:6px 11px;" onclick="simulateZeroFreeSwaps()">${subCopy.dashSimulateZeroBtn}</button>
         </div>
       </div>
     `;
 
     container.innerHTML = `
       ${subCardHtml}
-      <form onsubmit="saveDashboardProfile(event)" style="background:var(--mint-soft);padding:20px;border-radius:20px;border:1.5px solid var(--forest);">
+      <form onsubmit="saveDashboardProfile(event)" style="background:#f5f7f7;padding:20px;border-radius:20px;border:1px solid rgba(15,23,42,0.08);">
         <div class="form-grid-2">
           <div class="field-group">
             <label style="color:var(--ink);font-weight:700;">${t("formFullName")}</label>
-            <input type="text" name="name" class="input-light" required value="${u.name || ''}" />
+            <input type="text" name="name" class="input-light" required value="${escapeHtml(u.name || '')}" />
           </div>
           <div class="field-group">
             <label style="color:var(--ink);font-weight:700;">${t("formEmail")}</label>
-            <input type="email" class="input-light" value="${u.email || ''}" disabled />
+            <input type="email" class="input-light" value="${escapeHtml(u.email || '')}" disabled />
           </div>
         </div>
         <div class="form-grid-2">
           <div class="field-group">
             <label style="color:var(--ink);font-weight:700;">${t("formPhone")}</label>
-            <input type="tel" name="phone" class="input-light" value="${u.phone || ''}" placeholder="+40 / +49 / +43..." />
+            <input type="tel" name="phone" class="input-light" value="${escapeHtml(u.phone || '')}" placeholder="+40 / +49 / +43..." />
           </div>
           <div class="field-group">
             <label style="color:var(--ink);font-weight:700;">${t("formCountry")}</label>
             <select name="country" class="input-light">
-              ${Object.keys(COUNTRY_COORDS).map(cName => `<option value="${cName}" ${u.country === cName ? 'selected' : ''}>${cName}</option>`).join("")}
+              ${Object.keys(COUNTRY_COORDS).map(cName => `<option value="${cName}" ${u.country === cName ? 'selected' : ''}>${getLocalizedCountryName(cName)}</option>`).join("")}
             </select>
           </div>
         </div>
@@ -5996,7 +7200,7 @@ function renderDashboardContent() {
           <div class="field-group" style="margin-bottom:0;">
             <label style="color:var(--ink);font-weight:700;">${t("formPrefLang")}</label>
             <select name="prefLang" class="input-light">
-              ${(window.LANGUAGES || []).map(l => `<option value="${l.code}" ${currentLang === l.code ? 'selected' : ''}>${l.name}</option>`).join("")}
+              ${(window.LANGUAGES || []).map(l => `<option value="${l.code}" ${currentLang === l.code ? 'selected' : ''}>${l.label || l.name}</option>`).join("")}
             </select>
           </div>
           <div class="field-group" style="margin-bottom:0;">
@@ -6011,7 +7215,7 @@ function renderDashboardContent() {
         </button>
       </form>
       ${alertsHtml}
-      <div style="margin-top:16px;padding:16px 18px;background:#fff;border:1.5px solid rgba(12,44,40,0.16);border-radius:18px;">
+      <div style="margin-top:16px;padding:16px 18px;background:#ffffff;border:1px solid rgba(15,23,42,0.08);border-radius:20px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
           <strong style="font-size:14.5px;color:var(--forest);">${getGdprUiCopy().rightsTitle}</strong>
           <span style="background:var(--mint-soft);color:var(--forest);padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;">EU Reg. 2016/679</span>
@@ -6020,7 +7224,7 @@ function renderDashboardContent() {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button type="button" class="btn btn-login" style="font-size:12px;padding:7px 13px;" onclick="openGdprPreferencesModal()">${getGdprUiCopy().consentPrefsBtn}</button>
           <button type="button" class="btn btn-mint" style="font-size:12px;padding:7px 13px;" onclick="exportUserGdprData()">↓ ${getGdprUiCopy().exportBtn}</button>
-          <button type="button" class="btn btn-login" style="font-size:12px;padding:7px 13px;color:#b91c1c;border-color:rgba(185,28,28,0.28);" onclick="deleteUserGdprAccount()">✕ ${getGdprUiCopy().deleteAccBtn}</button>
+          <button type="button" class="btn btn-login" style="font-size:12px;padding:7px 13px;color:#b91c1c;border-color:rgba(185,28,28,0.28);" onclick="requestDeleteGdprAccount()">✕ ${getGdprUiCopy().deleteAccBtn}</button>
         </div>
       </div>
     `;
@@ -6084,6 +7288,10 @@ function handleWatchlistSubmit(e) {
   const interest = String(fd.get("interest") || "").trim();
   const country = String(fd.get("country") || "Europe").trim();
   const email = String(fd.get("email") || (currentUser ? currentUser.email : "")).trim();
+  if (email && !isValidRealEmail(email)) {
+    showToast(getAuthMsg().invalidEmail);
+    return;
+  }
   if (interest) {
     watchlistAlerts.unshift({
       id: Date.now(),
@@ -6122,7 +7330,7 @@ function handleChatSubmit(e) {
   if (!text) return;
 
   const box = document.getElementById("chatMessages");
-  box.innerHTML += `<div class="chat-bubble user">${text}</div>`;
+  box.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
   input.value = "";
   box.scrollTop = box.scrollHeight;
 
@@ -6239,24 +7447,570 @@ function animateLiveMemberCount() {
   requestAnimationFrame(step);
 }
 
-function showToast(message) {
+let lastUndoSnapshot = null;
+
+function showToast(message, undoOption = null) {
   const container = document.getElementById("toastContainer");
   if (!container) return;
   const el = document.createElement("div");
   el.className = "toast";
-  el.textContent = message;
+  const span = document.createElement("span");
+  span.textContent = message;
+  el.appendChild(span);
+
+  if (undoOption && typeof undoOption.onUndo === "function") {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "toast-undo-btn";
+    btn.textContent = undoOption.label || (currentLang === "ro" ? "↺ Anulează" : "↺ Undo");
+    btn.onclick = () => {
+      undoOption.onUndo();
+      el.remove();
+    };
+    el.appendChild(btn);
+  }
+
   container.appendChild(el);
   setTimeout(() => {
     el.remove();
-  }, 4200);
+  }, undoOption ? 6500 : 4200);
+}
+
+// ============================================================================
+// APPLE HIG UNIVERSAL SHEETS, QUICK-EDIT & DESTRUCTIVE CONFIRMATION SYSTEM
+// (sheets.md, alerts.md, buttons.md, entering-data.md, undo-and-redo.md)
+// ============================================================================
+let pendingAppleConfirmCallback = null;
+
+function closeAppleSheetModal() {
+  const modal = document.getElementById("appleSheetModal");
+  if (modal) modal.classList.remove("open");
+  pendingAppleConfirmCallback = null;
+  const anyOtherOpen = ["adminModal", "offerModal", "wizardModal", "dashboardModal", "guideModal", "authModal"]
+    .some(id => document.getElementById(id)?.classList.contains("open"));
+  if (!anyOtherOpen) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function executeAppleConfirmSheetAction() {
+  const fn = pendingAppleConfirmCallback;
+  closeAppleSheetModal();
+  if (typeof fn === "function") fn();
+}
+
+function openAppleDestructiveConfirmSheet({ title, subtitle, confirmLabel, cancelLabel, onConfirm }) {
+  const modal = document.getElementById("appleSheetModal");
+  const card = document.getElementById("appleSheetCard");
+  const content = document.getElementById("appleSheetContent");
+  if (!modal || !content) {
+    if (typeof onConfirm === "function") onConfirm();
+    return;
+  }
+  if (card) card.classList.add("hig-alert-mode");
+  pendingAppleConfirmCallback = onConfirm;
+  const defCancel = cancelLabel || (currentLang === "ro" ? "Anulează" : "Cancel");
+  const defConfirm = confirmLabel || (currentLang === "ro" ? "Șterge" : "Delete");
+
+  content.innerHTML = `
+    <div style="text-align:center;padding:4px 4px 8px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:#ffe4e6;color:#e11d48;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;margin-bottom:10px;">!</div>
+      <h3 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#071d1a;">${title}</h3>
+      <p style="margin:0 0 18px;font-size:13.5px;color:#475569;line-height:1.45;">${subtitle || ""}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <button type="button" class="hig-btn-cancel" style="height:44px;" onclick="closeAppleSheetModal()">${defCancel}</button>
+        <button type="button" class="hig-btn-destructive" style="height:44px;" onclick="executeAppleConfirmSheetAction()">${defConfirm}</button>
+      </div>
+    </div>
+  `;
+  modal.classList.add("open");
+  document.body.classList.add("modal-open");
+}
+
+function requestDeleteListing(offerId) {
+  const item = offers.find(o => o.id === Number(offerId));
+  if (!item) return;
+  const loc = getOfferLocalized(item);
+  const snapshot = { ...item };
+  const isRo = currentLang === "ro";
+  openAppleDestructiveConfirmSheet({
+    title: isRo ? `Ștergi anunțul #${item.id}?` : `Delete Listing #${item.id}?`,
+    subtitle: isRo
+      ? `Anunțul „${loc.title}” (${item.city}, ${item.country}) va fi eliminat din catalog. Poți anula acțiunea imediat după ștergere.`
+      : `"${loc.title}" (${item.city}, ${item.country}) will be removed from the active catalog. You can undo this action immediately after.`,
+    confirmLabel: isRo ? "Șterge Anunțul" : "Delete Listing",
+    cancelLabel: isRo ? "Anulează" : "Cancel",
+    onConfirm: () => {
+      deleteUserListing(item.id, true);
+      if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId === item.id) {
+        closeOfferModal();
+      }
+      if (document.getElementById("adminModal")?.classList.contains("open")) {
+        renderAdminModalContent();
+      }
+      showToast(isRo ? `✓ Anunțul #${snapshot.id} a fost șters` : `✓ Listing #${snapshot.id} deleted`, {
+        label: isRo ? "↺ Anulează" : "↺ Undo",
+        onUndo: () => {
+          deletedOfferIds = deletedOfferIds.filter(id => id !== snapshot.id);
+          if (!offers.some(o => o.id === snapshot.id)) {
+            offers.unshift(snapshot);
+          }
+          saveOffersToStorage();
+          renderOffers();
+          renderMapPinsAndPanel();
+          if (document.getElementById("dashboardModal")?.classList.contains("open")) renderDashboardContent();
+          if (document.getElementById("adminModal")?.classList.contains("open")) renderAdminModalContent();
+          showToast(isRo ? `✓ Anunțul „${loc.title}” a fost restaurat` : `✓ Listing "${loc.title}" restored`);
+        }
+      });
+    }
+  });
+}
+
+function requestAdminDeleteAccount(emailKey) {
+  const k = String(emailKey || "").toLowerCase();
+  const acc = accountsDb[k];
+  if (!acc || k === BACKOFFICE_ADMIN_EMAIL) return;
+  const snapshot = { ...acc };
+  openAppleDestructiveConfirmSheet({
+    title: `Delete User Account?`,
+    subtitle: `Remove "${acc.name}" (${acc.email}) from the registered accounts database? You can undo this immediately from the notification banner.`,
+    confirmLabel: "Delete Account",
+    cancelLabel: "Cancel",
+    onConfirm: () => {
+      adminDeleteAccount(k, true);
+      showToast(`✓ Account removed: ${snapshot.name}`, {
+        label: "↺ Undo",
+        onUndo: () => {
+          accountsDb[k] = snapshot;
+          saveAccountsDb();
+          if (typeof scheduleCloudSyncPush === "function") {
+            scheduleCloudSyncPush({ accounts: { [k]: snapshot }, forceRestoreAccount: true });
+          }
+          if (document.getElementById("adminModal")?.classList.contains("open")) renderAdminModalContent();
+          showToast(`✓ Restored account: ${snapshot.name}`);
+        }
+      });
+    }
+  });
+}
+
+function requestDeleteProposal(propId) {
+  const p = swapProposals.find(x => x.id === Number(propId));
+  if (!p) return;
+  const snapshot = { ...p };
+  const isRo = currentLang === "ro";
+  openAppleDestructiveConfirmSheet({
+    title: isRo ? "Ștergi propunerea de schimb?" : "Remove Swap Proposal?",
+    subtitle: `${p.offeredItem} ⇄ ${p.targetTitle} (${p.partner})`,
+    confirmLabel: isRo ? "Șterge Propunerea" : "Remove Proposal",
+    cancelLabel: isRo ? "Anulează" : "Cancel",
+    onConfirm: () => {
+      deleteSwapProposal(p.id);
+      if (document.getElementById("adminModal")?.classList.contains("open")) renderAdminModalContent();
+      showToast(isRo ? "✓ Propunerea a fost ștearsă" : "✓ Swap proposal removed", {
+        label: isRo ? "↺ Anulează" : "↺ Undo",
+        onUndo: () => {
+          swapProposals.unshift(snapshot);
+          localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+          updateFavCountUI();
+          if (document.getElementById("dashboardModal")?.classList.contains("open")) renderDashboardContent();
+          if (document.getElementById("adminModal")?.classList.contains("open")) renderAdminModalContent();
+          showToast(isRo ? "✓ Propunerea a fost restaurată" : "✓ Swap proposal restored");
+        }
+      });
+    }
+  });
+}
+
+function requestDeleteWatchlistAlert(alertId) {
+  const a = watchlistAlerts.find(x => x.id === Number(alertId));
+  if (!a) return;
+  const snapshot = { ...a };
+  const isRo = currentLang === "ro";
+  openAppleDestructiveConfirmSheet({
+    title: isRo ? "Ștergi alerta Watchlist?" : "Remove Watchlist Alert?",
+    subtitle: `${a.interest} (${a.country} · ${a.email})`,
+    confirmLabel: isRo ? "Șterge Alerta" : "Remove Alert",
+    cancelLabel: isRo ? "Anulează" : "Cancel",
+    onConfirm: () => {
+      deleteWatchlistAlert(a.id);
+      showToast(isRo ? "✓ Alerta Watchlist a fost ștearsă" : "✓ Watchlist alert removed", {
+        label: isRo ? "↺ Anulează" : "↺ Undo",
+        onUndo: () => {
+          watchlistAlerts.unshift(snapshot);
+          saveWatchlistAlerts();
+          if (document.getElementById("dashboardModal")?.classList.contains("open")) renderDashboardContent();
+          showToast(isRo ? "✓ Alerta Watchlist a fost restaurată" : "✓ Watchlist alert restored");
+        }
+      });
+    }
+  });
+}
+
+function requestDeleteGdprAccount() {
+  const isRo = currentLang === "ro";
+  openAppleDestructiveConfirmSheet({
+    title: isRo ? "Ștergi definitiv contul și datele (GDPR Art. 17)?" : "Erase Account & Personal Data (GDPR Art. 17)?",
+    subtitle: isRo
+      ? "Toate datele profilului tău, anunțurile publicate și propunerile asociate vor fi șterse conform Dreptului la Ștergere (Art. 17 GDPR)."
+      : "Your profile, published listings, and swap proposals will be permanently erased in compliance with GDPR Art. 17 (Right to Erasure).",
+    confirmLabel: isRo ? "Șterge Contul" : "Erase Account",
+    cancelLabel: isRo ? "Anulează" : "Cancel",
+    onConfirm: () => {
+      deleteUserGdprAccount();
+    }
+  });
+}
+
+function openQuickEditListingSheet(offerId) {
+  const item = offers.find(o => o.id === Number(offerId));
+  if (!item) return;
+  const loc = getOfferLocalized(item);
+  const modal = document.getElementById("appleSheetModal");
+  const card = document.getElementById("appleSheetCard");
+  const content = document.getElementById("appleSheetContent");
+  if (!modal || !content) {
+    editListingInWizard(offerId);
+    return;
+  }
+  if (card) card.classList.remove("hig-alert-mode");
+
+  const activeCurr = item.originalCurrency || currentCurrency || "EUR";
+  const displayAmt = item.originalAmount || getOfferValueInCurrency(item, activeCurr);
+  const cats = ["cars", "real-estate", "electronics", "home-garden", "auto-parts", "clothing"];
+
+  content.innerHTML = `
+    <form onsubmit="handleQuickEditListingSubmit(event, ${item.id})">
+      <div class="hig-sheet-toolbar">
+        <button type="button" class="hig-btn-cancel" onclick="closeAppleSheetModal()">Cancel</button>
+        <h3 class="hig-sheet-title">Edit Listing #${item.id}</h3>
+        <button type="submit" class="hig-btn-save">Save Changes</button>
+      </div>
+
+      <div style="display:grid;gap:12px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Title (What You Have)</label>
+          <input type="text" name="title" required value="${escapeHtml(item.title || loc.title || "")}" class="input-light" style="height:40px;font-size:13.5px;" />
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Category</label>
+            <select name="category" class="input-light" style="height:40px;font-size:13px;">
+              ${cats.map(cat => `<option value="${cat}" ${item.category === cat ? 'selected' : ''}>${getCategoryLabel(cat)}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Estimated Value</label>
+            <input type="text" inputmode="decimal" name="amount" required value="${displayAmt}" class="input-light" style="height:40px;font-size:13.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Currency</label>
+            <select name="currency" class="input-light" style="height:40px;font-size:13px;">
+              ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${c.code === activeCurr ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join("")}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Deal Type</label>
+            <select name="dealType" class="input-light" style="height:40px;font-size:13px;">
+              <option value="1to1" ${item.dealType === '1to1' ? 'selected' : ''}>${t("deal1to1")}</option>
+              <option value="cash" ${item.dealType === 'cash' ? 'selected' : ''}>${t("dealCashAdd")}</option>
+              <option value="either" ${item.dealType === 'either' ? 'selected' : ''}>${t("dealSwapOrSale")}</option>
+              <option value="sale" ${item.dealType === 'sale' ? 'selected' : ''}>${t("dealSaleOnly")}</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">What You Want in Return</label>
+            <input type="text" name="want" required value="${escapeHtml(item.want || loc.want || "")}" class="input-light" style="height:40px;font-size:13.5px;" />
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">City</label>
+            <input type="text" name="city" required value="${escapeHtml(item.city || "Bucharest")}" class="input-light" style="height:40px;font-size:13.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Country</label>
+            <select name="country" class="input-light" style="height:40px;font-size:13px;">
+              ${Object.keys(COUNTRY_COORDS).map(cnt => `<option value="${cnt}" ${item.country === cnt ? 'selected' : ''}>${getLocalizedCountryName(cnt)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Specifications & Highlights</label>
+          <input type="text" name="specs" value="${escapeHtml(item.specs || "")}" class="input-light" style="height:40px;font-size:13px;" />
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Description</label>
+          <textarea name="desc" rows="2" class="input-light" style="font-size:13px;">${escapeHtml(item.desc || loc.desc || "")}</textarea>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Cover Photo (Upload or URL)</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <img id="quickEditPhotoThumb" src="${escapeHtml(item.image || "")}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;border:1px solid #cbd5e1;flex-shrink:0;" alt="" />
+            <input type="text" id="quickEditPhotoInput" name="image" value="${escapeHtml(item.image || "")}" class="input-light" style="height:40px;font-size:12.5px;flex:1;" oninput="const th=document.getElementById('quickEditPhotoThumb');if(th&&this.value)th.src=this.value;" />
+            <label class="hig-btn-cancel" style="height:40px;display:inline-flex;align-items:center;padding:0 14px;font-size:12px;white-space:nowrap;cursor:pointer;margin:0;">
+              Upload…
+              <input type="file" accept="image/*" style="display:none;" onchange="handleQuickEditPhotoUpload(event)" />
+            </label>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Owner Name</label>
+            <input type="text" name="owner" value="${escapeHtml(item.owner || "")}" class="input-light" style="height:40px;font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Owner Email</label>
+            <input type="email" name="ownerEmail" value="${escapeHtml(item.ownerEmail || "")}" class="input-light" style="height:40px;font-size:13px;" />
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(12,44,40,0.12);flex-wrap:wrap;">
+        <button type="button" class="hig-btn-destructive-outline" onclick="closeAppleSheetModal(); requestDeleteListing(${item.id});">Delete Listing…</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="hig-btn-cancel" onclick="closeAppleSheetModal(); editListingInWizard(${item.id});">7-Step Wizard…</button>
+        </div>
+      </div>
+    </form>
+  `;
+
+  modal.classList.add("open");
+  document.body.classList.add("modal-open");
+}
+
+function handleQuickEditPhotoUpload(e) {
+  const file = e?.target?.files?.[0];
+  if (!file) return;
+  compressAndUploadPhotoFile(file, (finalUrl) => {
+    if (!finalUrl) return;
+    const inp = document.getElementById("quickEditPhotoInput");
+    const thumb = document.getElementById("quickEditPhotoThumb");
+    if (inp) inp.value = finalUrl;
+    if (thumb) thumb.src = finalUrl;
+  });
+}
+
+function exportFullBackofficeBackupJson() {
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    accounts: accountsDb,
+    userOffers: offers.filter(o => o.createdByUser || o.id > 100000 || o.editedByUser),
+    proposals: swapProposals,
+    watchlist: watchlistAlerts,
+    deletedOfferIds
+  };
+  try {
+    const jsonStr = JSON.stringify(backup, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `changeit4me-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL && URL.revokeObjectURL(url), 1000);
+  } catch (err) { }
+  showToast("✓ Full Database Backup (.json) downloaded!");
+}
+
+function importFullBackofficeBackupJson(e) {
+  const file = e?.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(String(ev?.target?.result || "{}"));
+      applyMergedCloudState(data);
+      pushCloudDatabaseSync({ forceSync: true });
+      renderAdminModalContent();
+      showToast("✓ Database Backup restored & synced to Cloud!");
+    } catch (err) {
+      showToast("! Invalid JSON backup file.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function handleQuickEditListingSubmit(e, offerId) {
+  e.preventDefault();
+  const item = offers.find(o => o.id === Number(offerId));
+  if (!item) return;
+  const fd = new FormData(e.target);
+  const title = String(fd.get("title") || item.title).trim();
+  const category = String(fd.get("category") || item.category);
+  const rawAmt = sanitizeNumericAmount(fd.get("amount"), item.valueEur || 15000);
+  const curr = String(fd.get("currency") || item.originalCurrency || currentCurrency).toUpperCase();
+  const valueEur = convertToEur(rawAmt, curr);
+  const dealType = String(fd.get("dealType") || item.dealType || "1to1");
+  const want = String(fd.get("want") || item.want).trim();
+  const city = String(fd.get("city") || item.city).trim();
+  const country = String(fd.get("country") || item.country).trim();
+  const specs = String(fd.get("specs") || item.specs).trim();
+  const desc = String(fd.get("desc") || item.desc).trim();
+  const imgUrl = String(fd.get("image") || item.image).trim();
+  const owner = String(fd.get("owner") || item.owner).trim();
+  const ownerEmail = String(fd.get("ownerEmail") || item.ownerEmail || "").trim();
+  const parsedLoc = parseSmartLocationString(`${city}, ${country}`);
+
+  Object.assign(item, {
+    title,
+    category,
+    originalAmount: rawAmt,
+    originalCurrency: curr,
+    valueEur,
+    dealType,
+    want,
+    city,
+    country,
+    lat: parsedLoc.lat || item.lat,
+    lng: parsedLoc.lng || item.lng,
+    specs,
+    desc,
+    image: imgUrl || item.image,
+    images: imgUrl ? [imgUrl, ...(Array.isArray(item.images) ? item.images.filter(u => u !== imgUrl) : [])] : item.images,
+    owner,
+    ownerEmail,
+    createdByUser: true,
+    i18n: undefined
+  });
+
+  saveOffersToStorage();
+  closeAppleSheetModal();
+  renderOffers();
+  renderMapPinsAndPanel();
+  if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId === item.id) {
+    openOfferModal(item.id, "details");
+  }
+  if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+    renderDashboardContent();
+  }
+  if (document.getElementById("adminModal")?.classList.contains("open")) {
+    renderAdminModalContent();
+  }
+  showToast(getWizValidationCopy().savedToast);
+}
+
+function openAdminEditUserSheet(emailKey) {
+  const k = String(emailKey || "").toLowerCase();
+  const acc = accountsDb[k];
+  if (!acc) return;
+  const modal = document.getElementById("appleSheetModal");
+  const card = document.getElementById("appleSheetCard");
+  const content = document.getElementById("appleSheetContent");
+  if (!modal || !content) return;
+  if (card) card.classList.remove("hig-alert-mode");
+
+  content.innerHTML = `
+    <form onsubmit="handleAdminEditUserSubmit(event, '${k.replace(/'/g, "\\'")}')">
+      <div class="hig-sheet-toolbar">
+        <button type="button" class="hig-btn-cancel" onclick="closeAppleSheetModal()">Cancel</button>
+        <h3 class="hig-sheet-title">Edit Account · ${escapeHtml(acc.name || k)}</h3>
+        <button type="submit" class="hig-btn-save">Save Changes</button>
+      </div>
+
+      <div style="display:grid;gap:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Full Name</label>
+            <input type="text" name="name" required value="${escapeHtml(acc.name || "")}" class="input-light" style="height:40px;font-size:13.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Email Address</label>
+            <input type="email" value="${escapeHtml(acc.email || k)}" disabled class="input-light" style="height:40px;font-size:13.5px;opacity:0.75;" />
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Phone Number</label>
+            <input type="tel" name="phone" value="${escapeHtml(acc.phone || "")}" class="input-light" style="height:40px;font-size:13.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">City</label>
+            <input type="text" name="city" value="${escapeHtml(acc.city || "Bucharest")}" class="input-light" style="height:40px;font-size:13.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Country</label>
+            <select name="country" class="input-light" style="height:40px;font-size:13px;">
+              ${Object.keys(COUNTRY_COORDS).map(cnt => `<option value="${cnt}" ${(acc.country || "Romania") === cnt ? 'selected' : ''}>${cnt}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Subscription Plan</label>
+            <select name="plan" class="input-light" style="height:40px;font-size:13.5px;">
+              <option value="starter" ${(!acc.plan || acc.plan === 'starter') ? 'selected' : ''}>Starter (10 Free Swaps)</option>
+              <option value="pack" ${acc.plan === 'pack' ? 'selected' : ''}>+15 Swaps Pack (€9)</option>
+              <option value="pro" ${acc.plan === 'pro' ? 'selected' : ''}>PRO Unlimited (€19)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Available Swap Credits</label>
+            <input type="number" name="freeSwaps" min="0" max="9999" value="${acc.freeSwaps ?? 10}" class="input-light" style="height:40px;font-size:13.5px;" />
+          </div>
+        </div>
+      </div>
+
+      ${acc.role !== "superadmin" ? `
+        <div style="display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(12,44,40,0.12);">
+          <button type="button" class="hig-btn-destructive-outline" onclick="closeAppleSheetModal(); requestAdminDeleteAccount('${k.replace(/'/g, "\\'")}');">Delete Account…</button>
+        </div>
+      ` : ""}
+    </form>
+  `;
+
+  modal.classList.add("open");
+  document.body.classList.add("modal-open");
+}
+
+function handleAdminEditUserSubmit(e, emailKey) {
+  e.preventDefault();
+  const k = String(emailKey || "").toLowerCase();
+  const acc = accountsDb[k];
+  if (!acc) return;
+  const fd = new FormData(e.target);
+  acc.name = String(fd.get("name") || acc.name).trim();
+  acc.phone = String(fd.get("phone") || acc.phone || "").trim();
+  acc.city = String(fd.get("city") || acc.city || "Bucharest").trim();
+  acc.country = String(fd.get("country") || acc.country || "Romania").trim();
+  acc.plan = String(fd.get("plan") || acc.plan || "starter");
+  const enteredCredits = Number(fd.get("freeSwaps"));
+  acc.freeSwaps = acc.plan === "pro" ? 999 : (Number.isFinite(enteredCredits) ? enteredCredits : 10);
+
+  if (currentUser && String(currentUser.email || "").toLowerCase() === k) {
+    Object.assign(currentUser, acc);
+    localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
+    renderUserHeaderState();
+  }
+  saveAccountsDb();
+  closeAppleSheetModal();
+  if (document.getElementById("adminModal")?.classList.contains("open")) {
+    renderAdminModalContent();
+  }
+  showToast(`✓ Saved changes for ${acc.name}`);
 }
 
 // ============================================================================
 // ENTERPRISE BACKOFFICE & CRM PORTAL (/admin)
-// Admin Login: jeka7ro@mail.com / 11Noiembrie2026!
+// SHA-256 Digest Verification (Zero Plaintext Admin Password in Client Code)
 // ============================================================================
 const BACKOFFICE_ADMIN_EMAIL = "jeka7ro@mail.com";
-const BACKOFFICE_ADMIN_PASS = "11Noiembrie2026!";
+const BACKOFFICE_ADMIN_PASS_HASH = "4106b4f2be492e957124b0687c3cb0781df5505e82f5946794d200201c3b63d4";
 
 let adminAuthenticated = (() => {
   try {
@@ -6387,7 +8141,15 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
       specs: "2023 · 28,000 km · 3.0 Hybrid xDrive · M-Sport Package · Full BMW Warranty",
       title: "2023 BMW X5 xDrive45e M-Sport · Bucharest",
       want: "2-3 Bedroom Apartment in Bucharest / Cluj or Porsche Cayenne",
-      desc: "Registered by Alexandru Ionescu in Bucharest. Single owner, full official BMW service history."
+      desc: "Registered by Alexandru Ionescu in Bucharest. Single owner, full official BMW service history.",
+      i18n: {
+        ro: { title: "2023 BMW X5 xDrive45e M-Sport · București", want: "Apartament 2-3 camere în București / Cluj sau Porsche Cayenne", desc: "Înregistrat de Alexandru Ionescu în București. Primul proprietar, istoric complet în reprezentanța BMW." },
+        de: { title: "2023 BMW X5 xDrive45e M-Sport · Bukarest", want: "2-3 Zimmer Wohnung in Bukarest / Cluj oder Porsche Cayenne", desc: "Inseriert von Alexandru Ionescu. Erstbesitz, lückenlose offizielle BMW-Servicehistorie." },
+        fr: { title: "2023 BMW X5 xDrive45e M-Sport · Bucarest", want: "Appartement 2-3 pièces à Bucarest / Cluj ou Porsche Cayenne", desc: "Enregistré par Alexandru Ionescu. Première main, historique complet concession BMW." },
+        it: { title: "2023 BMW X5 xDrive45e M-Sport · Bucarest", want: "Appartamento 2-3 locali a Bucarest / Cluj o Porsche Cayenne", desc: "Registrato da Alexandru Ionescu. Unico proprietario, storico tagliandi ufficiale BMW." },
+        es: { title: "2023 BMW X5 xDrive45e M-Sport · Bucarest", want: "Piso de 2-3 habitaciones en Bucarest / Cluj o Porsche Cayenne", desc: "Registrado por Alexandru Ionescu. Único propietario, historial oficial completo BMW." },
+        ru: { title: "2023 BMW X5 xDrive45e M-Sport · Бухарест", want: "2-3 комнатная квартира в Бухаресте / Клуже или Porsche Cayenne", desc: "Размещено Александру Ионеску. Один владелец, полная официальная сервисная история BMW." }
+      }
     },
     {
       id: 950102,
@@ -6410,7 +8172,15 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
       specs: "3 Rooms · 84 m² + 14 m² Terrace · Underground Parking · Central Cluj",
       title: "Modern 3-Room Apartment + Underground Parking · Cluj-Napoca",
       want: "House with Garden or Apartment in Bucharest / Vienna (± cash difference)",
-      desc: "Registered by Elena Popa. Premium finishes, clear title deed, ready for direct 1:1 swap."
+      desc: "Registered by Elena Popa. Premium finishes, clear title deed, ready for direct 1:1 swap.",
+      i18n: {
+        ro: { title: "Apartament Modern 3 Camere + Parcare Subterană · Cluj-Napoca", want: "Casă cu curte sau Apartament în București / Viena (± diferență)", desc: "Înregistrat de Elena Popa. Finisaje premium, acte la zi, pregătit pentru schimb direct 1:1." },
+        de: { title: "Moderne 3-Zimmer-Wohnung + Tiefgarage · Cluj-Napoca", want: "Haus mit Garten oder Wohnung in Bukarest / Wien (± Wertausgleich)", desc: "Inseriert von Elena Popa. Hochwertige Ausstattung, lastenfrei, bereit für 1:1-Tausch." },
+        fr: { title: "Appartement Moderne 3 Pièces + Parking Souterrain · Cluj-Napoca", want: "Maison avec jardin ou Appartement à Bucarest / Vienne (± soulte)", desc: "Enregistré par Elena Popa. Finitions haut de gamme, libre de charges, prêt pour échange 1:1." },
+        it: { title: "Moderno Appartamento Trilocale + Garage · Cluj-Napoca", want: "Casa con giardino o Appartamento a Bucarest / Vienna (± conguaglio)", desc: "Registrato da Elena Popa. Finiture di pregio, pronto per scambio diretto 1:1." },
+        es: { title: "Piso Moderno de 3 Habitaciones + Garaje Subterráneo · Cluj-Napoca", want: "Casa con jardín o Piso en Bucarest / Viena (± diferencia)", desc: "Registrado por Elena Popa. Acabados premium, libre de cargas, listo para intercambio 1:1." },
+        ru: { title: "Современная 3-комнатная квартира + подземный паркинг · Клуж-Напока", want: "Дом с садом или квартира в Бухаресте / Вене (± доплата)", desc: "Размещено Еленой Попа. Премиальная отделка, готова к прямому обмену 1:1." }
+      }
     },
     {
       id: 950103,
@@ -6433,7 +8203,15 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
       specs: "512GB · Natural Titanium · 100% Battery Health · Box & Invoice",
       title: "Apple iPhone 16 Pro Max 512GB · Timisoara",
       want: "MacBook Pro 16 M3 / iPad Pro M4",
-      desc: "Registered by Mihai Radulescu in Timisoara. Mint 10/10 condition with 24-month warranty."
+      desc: "Registered by Mihai Radulescu in Timisoara. Mint 10/10 condition with 24-month warranty.",
+      i18n: {
+        ro: { title: "Apple iPhone 16 Pro Max 512GB · Timișoara", want: "MacBook Pro 16 M3 / iPad Pro M4", desc: "Înregistrat de Mihai Rădulescu în Timișoara. Stare 10/10, cutie și garanție 24 luni." },
+        de: { title: "Apple iPhone 16 Pro Max 512GB · Timișoara", want: "MacBook Pro 16 M3 / iPad Pro M4", desc: "Inseriert von Mihai Rădulescu. Neuwertiger Zustand 10/10 mit 24 Monaten Garantie." },
+        fr: { title: "Apple iPhone 16 Pro Max 512GB · Timișoara", want: "MacBook Pro 16 M3 / iPad Pro M4", desc: "Enregistré par Mihai Rădulescu. État neuf 10/10 avec garantie 24 mois." },
+        it: { title: "Apple iPhone 16 Pro Max 512GB · Timișoara", want: "MacBook Pro 16 M3 / iPad Pro M4", desc: "Registrato da Mihai Rădulescu. Condizioni pari al nuovo 10/10 con garanzia 24 mesi." },
+        es: { title: "Apple iPhone 16 Pro Max 512GB · Timișoara", want: "MacBook Pro 16 M3 / iPad Pro M4", desc: "Registrado por Mihai Rădulescu. Estado impecable 10/10 con 24 meses de garantía." },
+        ru: { title: "Apple iPhone 16 Pro Max 512GB · Тимишоара", want: "MacBook Pro 16 M3 / iPad Pro M4", desc: "Размещено Михаем Рэдулеску. Идеальное состояние 10/10, гарантия 24 месяца." }
+      }
     },
     {
       id: 950104,
@@ -6456,7 +8234,15 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
       specs: "2022 · 39,000 km · GLE 350de 4MATIC Plug-in Hybrid · AMG Line",
       title: "2022 Mercedes-Benz GLE 350de 4MATIC AMG Line · Constanta",
       want: "2-Room Apartment in Mamaia Nord / Brasov or Compact SUV + difference",
-      desc: "Registered by Cristian Dumitrescu. Authorized dealer purchase, full Mercedes-Benz service history."
+      desc: "Registered by Cristian Dumitrescu. Authorized dealer purchase, full Mercedes-Benz service history.",
+      i18n: {
+        ro: { title: "2022 Mercedes-Benz GLE 350de 4MATIC AMG Line · Constanța", want: "Apartament 2 camere în Mamaia Nord / Brașov sau SUV compact + diferență", desc: "Înregistrat de Cristian Dumitrescu. Achiziționat din reprezentanță, istoric complet Mercedes-Benz." },
+        de: { title: "2022 Mercedes-Benz GLE 350de 4MATIC AMG Line · Constanța", want: "2-Zimmer-Wohnung in Mamaia Nord / Brașov oder Kompakt-SUV + Aufpreis", desc: "Inseriert von Cristian Dumitrescu. Vertragshändler-Fahrzeug mit lückenloser Mercedes-Benz Historie." },
+        fr: { title: "2022 Mercedes-Benz GLE 350de 4MATIC AMG Line · Constanța", want: "Appartement 2 pièces à Mamaia Nord / Brașov ou SUV compact + soulte", desc: "Enregistré par Cristian Dumitrescu. Achat concession officielle, historique complet Mercedes-Benz." },
+        it: { title: "2022 Mercedes-Benz GLE 350de 4MATIC AMG Line · Costanza", want: "Appartamento bilocale a Mamaia Nord / Brașov o SUV compatto + conguaglio", desc: "Registrato da Cristian Dumitrescu. Acquisto concessionaria ufficiale, storico completo Mercedes-Benz." },
+        es: { title: "2022 Mercedes-Benz GLE 350de 4MATIC AMG Line · Constanza", want: "Piso de 2 habitaciones en Mamaia Nord / Brașov o SUV compacto + diferencia", desc: "Registrado por Cristian Dumitrescu. Compra en concesionario oficial, historial completo Mercedes-Benz." },
+        ru: { title: "2022 Mercedes-Benz GLE 350de 4MATIC AMG Line · Констанца", want: "2-комнатная квартира в Мамая-Норд / Брашове или компактный SUV + доплата", desc: "Размещено Кристианом Думитреску. Покупка у официального дилера, полная история Mercedes-Benz." }
+      }
     },
     {
       id: 950105,
@@ -6479,7 +8265,15 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
       specs: "4 Rooms · 142 m² · Valea Morilor Park View · 2 Underground Parking Spots",
       title: "4-Room Luxury Penthouse (142 m²) · Central Chisinau",
       want: "3-4 Room Apartment in Bucharest / Iasi or House + cash difference",
-      desc: "Registered by Ana-Maria Stan in Chisinau. Custom-furnished, available for direct key-for-key swap."
+      desc: "Registered by Ana-Maria Stan in Chisinau. Custom-furnished, available for direct key-for-key swap.",
+      i18n: {
+        ro: { title: "Penthouse de Lux 4 Camere (142 m²) · Centru Chișinău", want: "Apartament 3-4 camere în București / Iași sau Casă + diferență", desc: "Înregistrat de Ana-Maria Stan în Chișinău. Mobilat la comandă, disponibil pentru schimb direct cheie-pe-cheie." },
+        de: { title: "4-Zimmer-Luxus-Penthouse (142 m²) · Zentrum Chișinău", want: "3-4 Zimmer Wohnung in Bukarest / Iași oder Haus + Wertausgleich", desc: "Inseriert von Ana-Maria Stan. Maßgefertigte Einrichtung, verfügbar für direkten 1:1-Tausch." },
+        fr: { title: "Penthouse de Luxe 4 Pièces (142 m²) · Centre Chișinău", want: "Appartement 3-4 pièces à Bucarest / Iași ou Maison + soulte", desc: "Enregistré par Ana-Maria Stan. Meublé sur mesure, disponible pour échange direct clé contre clé." },
+        it: { title: "Attico di Lusso 4 Locali (142 m²) · Centro Chișinău", want: "Appartamento 3-4 locali a Bucarest / Iași o Casa + conguaglio", desc: "Registrato da Ana-Maria Stan. Arredato su misura, disponibile per scambio diretto 1:1." },
+        es: { title: "Ático de Lujo de 4 Habitaciones (142 m²) · Centro Chișinău", want: "Piso de 3-4 habitaciones en Bucarest / Iași o Casa + diferencia", desc: "Registrado por Ana-Maria Stan. Amueblado a medida, disponible para intercambio directo 1:1." },
+        ru: { title: "Роскошный пентхаус 4 комнаты (142 м²) · Центр Кишинёва", want: "3-4 комнатная квартира в Бухаресте / Яссах или дом + доплата", desc: "Размещено Аной-Марией Стан в Кишинёве. Дизайнерская мебель, доступен для прямого обмена 1:1." }
+      }
     },
     {
       id: 950106,
@@ -6502,7 +8296,15 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
       specs: "4 Rooms · 125 m² Usable · 800 m² Land Plot · Solar Panels · Bran-Brasov",
       title: "A-Frame Mountain Chalet (800 m² Plot) · Brasov / Bran",
       want: "Apartment in Bucharest / Brasov or 2022+ SUV with cash difference",
-      desc: "Registered by Radu Marinescu. Turnkey mountain chalet with high rental yield, open to 1:1 swap."
+      desc: "Registered by Radu Marinescu. Turnkey mountain chalet with high rental yield, open to 1:1 swap.",
+      i18n: {
+        ro: { title: "Cabană Montană A-Frame (Teren 800 m²) · Brașov / Bran", want: "Apartament în București / Brașov sau SUV 2022+ cu diferență", desc: "Înregistrat de Radu Marinescu. Cabană la cheie cu randament turistic ridicat, deschis la schimb 1:1." },
+        de: { title: "A-Frame Berg-Chalet (800 m² Grundstück) · Brașov / Bran", want: "Wohnung in Bukarest / Brașov oder SUV ab 2022 mit Wertausgleich", desc: "Inseriert von Radu Marinescu. Schlüsselfertiges Berg-Chalet mit hoher Mietrendite, offen für 1:1-Tausch." },
+        fr: { title: "Chalet de Montagne A-Frame (Terrain 800 m²) · Brașov / Bran", want: "Appartement à Bucarest / Brașov ou SUV 2022+ avec soulte", desc: "Enregistré par Radu Marinescu. Chalet clé en main à haut rendement locatif, ouvert à l'échange 1:1." },
+        it: { title: "Chalet di Montagna A-Frame (Terreno 800 m²) · Brașov / Bran", want: "Appartamento a Bucarest / Brașov o SUV 2022+ con conguaglio", desc: "Registrato da Radu Marinescu. Chalet chiavi in mano ad alta resa, disponibile per scambio 1:1." },
+        es: { title: "Chalet de Montaña A-Frame (Parcela 800 m²) · Brașov / Bran", want: "Piso en Bucarest / Brașov o SUV 2022+ con diferencia", desc: "Registrado por Radu Marinescu. Chalet llave en mano de alta rentabilidad, abierto a intercambio 1:1." },
+        ru: { title: "Горное шале A-Frame (участок 800 м²) · Брашов / Бран", want: "Квартира в Бухаресте / Брашове или SUV 2022+ с доплатой", desc: "Размещено Раду Маринеску. Готовое горное шале с высокой доходностью, открыт к обмену 1:1." }
+      }
     }
   ]
 };
@@ -6518,7 +8320,6 @@ function ensurePlatformAccountsAndTestRegistrations() {
       id: "ADM-0001",
       name: "Eugeniu · Super-Admin",
       email: BACKOFFICE_ADMIN_EMAIL,
-      password: BACKOFFICE_ADMIN_PASS,
       phone: "+40 700 000 001",
       country: "Romania",
       city: "Bucharest",
@@ -6530,6 +8331,9 @@ function ensurePlatformAccountsAndTestRegistrations() {
       role: "superadmin",
       registeredAt: "2026-11-01 09:00"
     };
+    dbChanged = true;
+  } else if (accountsDb[adminKey].password) {
+    delete accountsDb[adminKey].password;
     dbChanged = true;
   }
 
@@ -6604,17 +8408,15 @@ function ensurePlatformAccountsAndTestRegistrations() {
     }
   });
 
-  // 4. Ensure the 6 Member Listings (#950101 - #950106) are present in offers (unless deleted by user)
+  // 4. Ensure the 6 Member Listings (#950101 - #950106) are present in offers (unless deleted or edited by user)
   [...INITIAL_TEST_REGISTRATIONS_AND_OFFERS.listings].reverse().forEach(tOff => {
     if (deletedOfferIds.includes(tOff.id)) return;
     const existingIdx = offers.findIndex(o => o.id === tOff.id);
-    if (existingIdx >= 0) {
-      if (offers[existingIdx].title !== tOff.title || offers[existingIdx].specs !== tOff.specs) {
-        offers[existingIdx] = { ...offers[existingIdx], ...tOff };
-        offersChanged = true;
-      }
-    } else {
+    if (existingIdx < 0) {
       offers.unshift({ ...tOff });
+      offersChanged = true;
+    } else if (!offers[existingIdx].i18n && offers[existingIdx].title === tOff.title) {
+      offers[existingIdx].i18n = tOff.i18n;
       offersChanged = true;
     }
   });
@@ -6769,6 +8571,25 @@ function applyMergedCloudState(remote) {
     });
   }
 
+  if (remote.authGateways && typeof remote.authGateways === "object") {
+    if (remote.authGateways.brevoApiKey) serverConfiguredGateways.brevo = true;
+    if (remote.authGateways.resendApiKey) serverConfiguredGateways.resend = true;
+    if (remote.authGateways.textbeeKey) serverConfiguredGateways.textbee = true;
+    if (remote.authGateways.smsAdvertToken) serverConfiguredGateways.smsAdvert = true;
+    if (remote.authGateways.twilioToken) serverConfiguredGateways.twilio = true;
+    try {
+      const localGw = getAuthGatewaysConfig();
+      const mergedGw = { ...localGw };
+      Object.entries(remote.authGateways).forEach(([gk, gv]) => {
+        const s = String(gv || "").trim();
+        if (s && !s.startsWith("•••") && !/^\*+$/.test(s)) {
+          mergedGw[gk] = s;
+        }
+      });
+      localStorage.setItem("ci4m_auth_gateways_v1", JSON.stringify(mergedGw));
+    } catch (err) { }
+  }
+
   if (Array.isArray(remote.userOffers)) {
     const delSet = new Set(deletedOfferIds.map(Number));
     remote.userOffers.forEach(rOff => {
@@ -6787,10 +8608,15 @@ function applyMergedCloudState(remote) {
   }
 
   if (Array.isArray(remote.proposals)) {
-    const existingPropIds = new Set(swapProposals.map(p => Number(p.id)));
     remote.proposals.forEach(p => {
-      if (p && p.id && !existingPropIds.has(Number(p.id))) {
+      if (!p || !p.id) return;
+      const pid = Number(p.id);
+      const idx = swapProposals.findIndex(x => Number(x.id) === pid);
+      if (idx === -1) {
         swapProposals.unshift(p);
+        changed = true;
+      } else if (JSON.stringify(swapProposals[idx]) !== JSON.stringify({ ...swapProposals[idx], ...p })) {
+        swapProposals[idx] = { ...swapProposals[idx], ...p };
         changed = true;
       }
     });
@@ -6886,6 +8712,9 @@ function initCloudSyncEngine() {
         if (ev.key === "ci4m_offers_v4" && ev.newValue) {
           offers = JSON.parse(ev.newValue);
         }
+        if (ev.key === "ci4m_proposals" && ev.newValue) {
+          swapProposals = JSON.parse(ev.newValue);
+        }
       } catch (e) { }
       renderOffers();
       if (document.getElementById("adminModal")?.classList.contains("open")) {
@@ -6928,7 +8757,7 @@ function handleAdminBackofficeLogin(e) {
   const pass = String(passIn ? passIn.value : "").trim();
   const rememberMe = remIn ? Boolean(remIn.checked) : true;
 
-  if ((email === BACKOFFICE_ADMIN_EMAIL || email === "jeka7ro@gmail.com") && pass === BACKOFFICE_ADMIN_PASS) {
+  if ((email === BACKOFFICE_ADMIN_EMAIL || email === "jeka7ro@gmail.com") && verifyAdminPasswordSync(pass)) {
     adminAuthenticated = true;
     adminLoginErrorMsg = "";
     try {
@@ -6936,7 +8765,6 @@ function handleAdminBackofficeLogin(e) {
         localStorage.setItem("ci4m_admin_session_v1", BACKOFFICE_ADMIN_EMAIL);
         localStorage.setItem("ci4m_admin_remember_v1", JSON.stringify({
           email: BACKOFFICE_ADMIN_EMAIL,
-          pass: BACKOFFICE_ADMIN_PASS,
           remember: true
         }));
       } else {
@@ -6944,6 +8772,13 @@ function handleAdminBackofficeLogin(e) {
         localStorage.removeItem("ci4m_admin_remember_v1");
       }
     } catch (err) { }
+    if (typeof fetch === "function") {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "admin_login", email, password: pass })
+      }).catch(() => { });
+    }
     updateAdminHeaderButtonsVisibility();
     renderAdminModalContent();
     showToast("✓ Signed in to ChangeIt4Me Backoffice");
@@ -7100,7 +8935,7 @@ function handleAdminCreateQuickAccount(e) {
   showToast(`✓ User created: ${name} (${email})`);
 }
 
-function adminDeleteAccount(emailKey) {
+function adminDeleteAccount(emailKey, silent = false) {
   const k = String(emailKey || "").toLowerCase();
   if (!k || k === BACKOFFICE_ADMIN_EMAIL) return;
   const name = accountsDb[k]?.name || k;
@@ -7108,7 +8943,7 @@ function adminDeleteAccount(emailKey) {
   saveAccountsDb();
   if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush({ deletedAccountEmails: [k] });
   renderAdminModalContent();
-  showToast(`✓ Account removed: ${name}`);
+  if (!silent) showToast(`✓ Account removed: ${name}`);
 }
 
 function adminLoginAsUser(emailKey) {
@@ -7162,6 +8997,7 @@ function getAccountLinkedOffers(acc) {
 function renderAdminModalContent() {
   const container = document.getElementById("adminBodyContent");
   if (!container) return;
+  const prevBoScrollTop = container.querySelector(".bo-content-scroll")?.scrollTop || 0;
 
   ensurePlatformAccountsAndTestRegistrations();
 
@@ -7215,7 +9051,7 @@ function renderAdminModalContent() {
               <label for="adminLoginEmailInput" style="display:block;font-size:12px;font-weight:700;color:#d1e7e3;margin-bottom:6px;">Email</label>
               <input type="email" id="adminLoginEmailInput" name="email" autocomplete="username" required placeholder="Email"
                 value="${savedAdminCreds.email.replace(/"/g, '&quot;')}"
-                style="width:100%;height:44px;padding:0 14px;border-radius:11px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
+                style="width:100%;height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
             </div>
 
             <div>
@@ -7223,7 +9059,7 @@ function renderAdminModalContent() {
               <div style="position:relative;">
                 <input type="password" id="adminLoginPassInput" name="password" autocomplete="current-password" required placeholder="Password"
                   value="${savedAdminCreds.pass.replace(/"/g, '&quot;')}"
-                  style="width:100%;height:44px;padding:0 44px 0 14px;border-radius:11px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
+                  style="width:100%;height:44px;padding:0 44px 0 18px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
                 <button type="button" onclick="togglePasswordVisibility('adminLoginPassInput', this)"
                   style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#a9ffca;cursor:pointer;padding:4px;" aria-label="Show password">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -7237,7 +9073,7 @@ function renderAdminModalContent() {
               <span>Remember me</span>
             </label>
 
-            <button type="submit" class="bo-btn bo-btn-mint" style="height:44px;font-size:14px;font-weight:800;border-radius:11px !important;margin-top:4px;">
+            <button type="submit" class="bo-btn bo-btn-mint" style="height:44px;font-size:14px;font-weight:800;border-radius:999px !important;margin-top:4px;">
               Sign in →
             </button>
           </form>
@@ -7312,56 +9148,56 @@ function renderAdminModalContent() {
     }
 
     mainModuleHtml = `
-      <div class="bo-card">
-        <form onsubmit="handleAdminCreateQuickAccount(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;align-items:end;">
+      <div class="bo-card" style="padding:16px 20px;">
+        <form onsubmit="handleAdminCreateQuickAccount(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;align-items:end;">
           <div>
-            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">Full Name</label>
-            <input type="text" id="boNewUserName" required placeholder="Full name" class="input-light" style="height:38px;font-size:13px;" />
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Full name</label>
+            <input type="text" id="boNewUserName" required placeholder="Full name" class="input-light" style="font-size:13px;" />
           </div>
           <div>
-            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">Email</label>
-            <input type="email" id="boNewUserEmail" required placeholder="Email address" class="input-light" style="height:38px;font-size:13px;" />
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Email</label>
+            <input type="email" id="boNewUserEmail" required placeholder="Email address" class="input-light" style="font-size:13px;" />
           </div>
           <div>
-            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">Phone</label>
-            <input type="text" id="boNewUserPhone" placeholder="+40 / +49 / +43..." class="input-light" style="height:38px;font-size:13px;" />
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Phone</label>
+            <input type="text" id="boNewUserPhone" placeholder="+40 / +49 / +43..." class="input-light" style="font-size:13px;" />
           </div>
           <div>
-            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">City</label>
-            <input type="text" id="boNewUserCity" placeholder="City" class="input-light" style="height:38px;font-size:13px;" />
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">City</label>
+            <input type="text" id="boNewUserCity" placeholder="City" class="input-light" style="font-size:13px;" />
           </div>
           <div>
-            <label style="display:block;font-size:11px;font-weight:700;color:#3f5954;margin-bottom:4px;">Plan</label>
-            <select id="boNewUserPlan" class="input-light" style="height:38px;font-size:13px;">
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Plan</label>
+            <select id="boNewUserPlan" class="input-light" style="font-size:13px;">
               <option value="starter">Starter (10 Free)</option>
               <option value="pack">+15 Swaps Pack (€9)</option>
               <option value="pro">PRO Unlimited (€19)</option>
             </select>
           </div>
-          <button type="submit" class="bo-btn bo-btn-primary" style="height:38px;">+ Add User</button>
+          <button type="submit" class="bo-btn bo-btn-primary" style="height:42px;font-size:13px;">+ Add User</button>
         </form>
       </div>
 
-      <div class="bo-card" style="padding:16px 18px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button type="button" class="bo-btn ${adminUsersFilterMode === 'all' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('all')">
+      <div class="bo-card bo-table-card">
+        <div class="bo-card-toolbar">
+          <div class="bo-segmented-control" role="tablist" aria-label="Filter users">
+            <button type="button" class="bo-seg-btn ${adminUsersFilterMode === 'all' ? 'active' : ''}" onclick="setAdminUsersFilter('all')">
               All (${accountsList.length})
             </button>
-            <button type="button" class="bo-btn ${adminUsersFilterMode === 'test' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('test')">
+            <button type="button" class="bo-seg-btn ${adminUsersFilterMode === 'test' ? 'active' : ''}" onclick="setAdminUsersFilter('test')">
               Recent Signups (${recentAccountsCount})
             </button>
-            <button type="button" class="bo-btn ${adminUsersFilterMode === 'pro' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('pro')">
+            <button type="button" class="bo-seg-btn ${adminUsersFilterMode === 'pro' ? 'active' : ''}" onclick="setAdminUsersFilter('pro')">
               PRO (${proAccountsCount})
             </button>
-            <button type="button" class="bo-btn ${adminUsersFilterMode === 'pack' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('pack')">
+            <button type="button" class="bo-seg-btn ${adminUsersFilterMode === 'pack' ? 'active' : ''}" onclick="setAdminUsersFilter('pack')">
               Pack +15 (${packAccountsCount})
             </button>
-            <button type="button" class="bo-btn ${adminUsersFilterMode === 'starter' ? 'bo-btn-primary' : ''}" onclick="setAdminUsersFilter('starter')">
+            <button type="button" class="bo-seg-btn ${adminUsersFilterMode === 'starter' ? 'active' : ''}" onclick="setAdminUsersFilter('starter')">
               Starter (${accountsList.length - proAccountsCount - packAccountsCount})
             </button>
           </div>
-          <span style="font-size:12px;color:#526b67;font-weight:600;">${filteredUsers.length} users</span>
+          <span style="font-size:12.5px;color:#64748b;font-weight:600;font-variant-numeric:tabular-nums;">${filteredUsers.length} users</span>
         </div>
 
         <div class="bo-table-wrap">
@@ -7379,80 +9215,76 @@ function renderAdminModalContent() {
             </thead>
             <tbody>
               ${filteredUsers.map(acc => {
-                const emailKey = String(acc.email || "").toLowerCase();
-                const linkedOffers = getAccountLinkedOffers(acc);
-                const isSuper = acc.role === "superadmin";
-                const isActiveUser = Boolean(currentUser && String(currentUser.email || "").toLowerCase() === emailKey);
-                const initials = String(acc.name || "U").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-                const planBadge = acc.plan === "pro"
-                  ? `<span style="background:#0c2c28;color:#a9ffca;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;">PRO ∞</span>`
-                  : acc.plan === "pack"
-                    ? `<span style="background:#e0f2fe;color:#0369a1;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;">Pack · ${acc.freeSwaps ?? 15} left</span>`
-                    : `<span style="background:#f1f5f9;color:#334155;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">Starter · ${acc.freeSwaps ?? 10}/10</span>`;
+      const emailKey = String(acc.email || "").toLowerCase();
+      const linkedOffers = getAccountLinkedOffers(acc);
+      const isSuper = acc.role === "superadmin";
+      const isActiveUser = Boolean(currentUser && String(currentUser.email || "").toLowerCase() === emailKey);
+      const initials = String(acc.name || "U").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+      const planBadge = acc.plan === "pro"
+        ? `<span class="bo-badge bo-badge-pro">PRO ∞</span>`
+        : acc.plan === "pack"
+          ? `<span class="bo-badge bo-badge-pack">Pack · ${acc.freeSwaps ?? 15} left</span>`
+          : `<span class="bo-badge bo-badge-starter">Starter · ${acc.freeSwaps ?? 10}/10</span>`;
 
-                return `
+      return `
                   <tr>
                     <td>
-                      <div style="display:flex;align-items:center;gap:10px;">
-                        <span style="width:32px;height:32px;border-radius:50%;background:${isSuper ? '#a9ffca' : '#e2ecea'};color:#0c2c28;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">${initials}</span>
-                        <div>
+                      <div style="display:flex;align-items:center;gap:11px;">
+                        <span class="bo-avatar ${isSuper ? 'is-super' : ''}">${initials}</span>
+                        <div style="min-width:0;">
                           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                            <strong style="font-size:13.5px;color:#0b221f;">${acc.name || "Member"}</strong>
-                            ${isSuper ? `<span style="background:#0c2c28;color:#a9ffca;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;">ADMIN</span>` : ""}
-                            ${isActiveUser ? `<span style="background:#a9ffca;color:#071d1a;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;">ACTIVE</span>` : ""}
+                            <strong style="font-size:13.5px;font-weight:650;color:#0f172a;">${escapeHtml(acc.name || "Member")}</strong>
+                            ${isSuper ? `<span class="bo-badge bo-badge-pro" style="font-size:10px;padding:1px 7px;">Admin</span>` : ""}
+                            ${isActiveUser ? `<span class="bo-badge bo-badge-active" style="font-size:10px;padding:1px 7px;">Active</span>` : ""}
                           </div>
-                          <span style="font-size:11px;color:#64748b;">${acc.id || "USR-1000"} · Verified ✓</span>
+                          <span style="font-size:11.5px;color:#64748b;">${escapeHtml(acc.id || "USR-1000")} · Verified</span>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <strong style="display:block;font-size:12.5px;color:#0b221f;">${acc.email || "—"}</strong>
-                      <span style="font-size:11.5px;color:#64748b;">${acc.phone || "—"}</span>
+                      <strong style="display:block;font-size:12.5px;font-weight:600;color:#0f172a;">${escapeHtml(acc.email || "—")}</strong>
+                      <span style="font-size:11.5px;color:#64748b;font-variant-numeric:tabular-nums;">${escapeHtml(acc.phone || "—")}</span>
                     </td>
                     <td>
-                      <strong style="display:block;font-size:12.5px;">${acc.city || "Bucharest"}</strong>
-                      <span style="font-size:11.5px;color:#64748b;">${acc.country || "Romania"}</span>
+                      <strong style="display:block;font-size:12.5px;font-weight:600;color:#0f172a;">${escapeHtml(acc.city || "Bucharest")}</strong>
+                      <span style="font-size:11.5px;color:#64748b;">${escapeHtml(acc.country || "Romania")}</span>
                     </td>
                     <td>${planBadge}</td>
                     <td>
-                      ${linkedOffers.length === 0 ? `<span style="font-size:11.5px;color:#94a3b8;">0</span>` : `
-                        <div style="display:flex;flex-direction:column;gap:4px;">
-                          ${linkedOffers.map(lo => `
-                            <button type="button" class="bo-btn" style="justify-content:flex-start;padding:4px 8px;font-size:11.5px;background:#f8fafc;max-width:270px;overflow:hidden;text-overflow:ellipsis;"
+                      ${linkedOffers.length === 0 ? `<span style="font-size:12px;color:#94a3b8;">No listings</span>` : `
+                        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;">
+                          ${linkedOffers.map(lo => {
+        const fullTitle = getOfferLocalized(lo).title;
+        return `
+                            <button type="button" class="bo-listing-pill" title="${escapeHtml(fullTitle)}"
                               onclick="openOfferModal(${lo.id}, 'details')">
-                              <strong>#${lo.id}</strong> · ${getOfferLocalized(lo).title.slice(0, 30)}
+                              <span class="bo-listing-pill-id">#${lo.id}</span>
+                              <span class="bo-listing-pill-title">${escapeHtml(fullTitle)}</span>
                             </button>
-                          `).join("")}
+                          `;
+      }).join("")}
                         </div>
                       `}
                     </td>
-                    <td><span style="font-size:12px;color:#475569;">${acc.registeredAt || "2026-11-11"}</span></td>
+                    <td><span style="font-size:12px;color:#64748b;font-variant-numeric:tabular-nums;">${escapeHtml((acc.registeredAt || "2026-11-11").split(" ")[0])}</span></td>
                     <td style="text-align:right;">
-                      <div style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
-                        <button type="button" class="bo-btn" onclick="adminFilterOffersByUser('${(acc.email || acc.name || "").replace(/'/g, "\\'")}')">
-                          Ads (${linkedOffers.length})
+                      <div class="bo-row-actions">
+                        <button type="button" class="bo-icon-btn" onclick="openAdminEditUserSheet('${emailKey.replace(/'/g, "\\'")}')" title="Edit user" aria-label="Edit user">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         </button>
-                        <button type="button" class="bo-btn bo-btn-mint" onclick="adminLoginAsUser('${emailKey.replace(/'/g, "\\'")}')">
-                          Sign in as
+                        <button type="button" class="bo-icon-btn" onclick="adminLoginAsUser('${emailKey.replace(/'/g, "\\'")}')" title="Sign in as user" aria-label="Sign in as user">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                         </button>
-                        <button type="button" class="bo-btn" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'add10')">
-                          +10 Swaps
-                        </button>
-                        ${acc.plan !== "pro" ? `
-                          <button type="button" class="bo-btn bo-btn-primary" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'pro')">
-                            Set PRO
-                          </button>
-                        ` : ""}
                         ${!isSuper ? `
-                          <button type="button" class="bo-btn bo-btn-danger" onclick="adminDeleteAccount('${emailKey.replace(/'/g, "\\'")}')" title="Delete">
-                            ✕
+                          <button type="button" class="bo-icon-btn is-danger" onclick="requestAdminDeleteAccount('${emailKey.replace(/'/g, "\\'")}')" title="Delete account" aria-label="Delete account">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                           </button>
                         ` : ""}
                       </div>
                     </td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -7462,12 +9294,12 @@ function renderAdminModalContent() {
     const draftBannerHtml = hasWizDraft ? `
       <div class="bo-card" style="background:#fefce8;border-color:#fde047;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
         <div>
-          <span style="background:#fef08a;color:#854d0e;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;">UNPUBLISHED DRAFT (STEP ${wizStep}/7)</span>
-          <strong style="display:block;font-size:15px;color:#0b221f;margin-top:4px;">${wizData.titleHave} · ${wizData.city || wizData.country || "Europe"}</strong>
+          <span style="background:#fef08a;color:#854d0e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;">Unpublished Draft (Step ${wizStep}/7)</span>
+          <strong style="display:block;font-size:15px;color:#0f172a;margin-top:4px;">${escapeHtml(wizData.titleHave)} · ${escapeHtml(wizData.city || wizData.country || "Europe")}</strong>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="bo-btn bo-btn-mint" onclick="publishAdminWizardDraftNow()">✓ Publish Now</button>
-          <button type="button" class="bo-btn" onclick="openWizardModal(${wizStep || 2});">Open in Wizard →</button>
+          <button type="button" class="bo-btn bo-btn-primary" onclick="publishAdminWizardDraftNow()">Publish Now</button>
+          <button type="button" class="bo-btn bo-btn-secondary" onclick="openWizardModal(${wizStep || 2});">Open in Wizard</button>
         </div>
       </div>
     ` : "";
@@ -7486,27 +9318,27 @@ function renderAdminModalContent() {
 
     mainModuleHtml = `
       ${draftBannerHtml}
-      <div class="bo-card" style="padding:16px 18px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button type="button" class="bo-btn ${adminListingFilterMode === 'all' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('all')">
+      <div class="bo-card bo-table-card">
+        <div class="bo-card-toolbar">
+          <div class="bo-segmented-control" role="tablist" aria-label="Filter listings">
+            <button type="button" class="bo-seg-btn ${adminListingFilterMode === 'all' ? 'active' : ''}" onclick="setAdminListingsFilter('all')">
               All (${offers.length})
             </button>
-            <button type="button" class="bo-btn ${adminListingFilterMode === 'user' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('user')">
+            <button type="button" class="bo-seg-btn ${adminListingFilterMode === 'user' ? 'active' : ''}" onclick="setAdminListingsFilter('user')">
               New Member Ads (${userCreatedOffers.length})
             </button>
-            <button type="button" class="bo-btn ${adminListingFilterMode === 'cars' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('cars')">
+            <button type="button" class="bo-seg-btn ${adminListingFilterMode === 'cars' ? 'active' : ''}" onclick="setAdminListingsFilter('cars')">
               Cars
             </button>
-            <button type="button" class="bo-btn ${adminListingFilterMode === 'real-estate' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('real-estate')">
+            <button type="button" class="bo-seg-btn ${adminListingFilterMode === 'real-estate' ? 'active' : ''}" onclick="setAdminListingsFilter('real-estate')">
               Real Estate
             </button>
-            <button type="button" class="bo-btn ${adminListingFilterMode === 'electronics' ? 'bo-btn-primary' : ''}" onclick="setAdminListingsFilter('electronics')">
+            <button type="button" class="bo-seg-btn ${adminListingFilterMode === 'electronics' ? 'active' : ''}" onclick="setAdminListingsFilter('electronics')">
               Electronics
             </button>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${deletedOfferIds.length > 0 ? `<button type="button" class="bo-btn" onclick="restoreDeletedOffersFromAdmin()">↺ Restore (${deletedOfferIds.length})</button>` : ""}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            ${deletedOfferIds.length > 0 ? `<button type="button" class="bo-btn bo-btn-secondary" onclick="restoreDeletedOffersFromAdmin()">↺ Restore (${deletedOfferIds.length})</button>` : ""}
             <button type="button" class="bo-btn bo-btn-primary" onclick="resetWizardDraft(); openWizardModal(1);">+ New Listing</button>
           </div>
         </div>
@@ -7516,7 +9348,7 @@ function renderAdminModalContent() {
             <thead>
               <tr>
                 <th>Listing</th>
-                <th>Category</th>
+                <th>Category & Specs</th>
                 <th>Want in Return</th>
                 <th>Value (${currentCurrency})</th>
                 <th>Owner</th>
@@ -7526,50 +9358,66 @@ function renderAdminModalContent() {
             </thead>
             <tbody>
               ${listToShow.map(item => {
-                const loc = getOfferLocalized(item);
-                return `
+      const loc = getOfferLocalized(item);
+      const cleanSpecs = String(item.specs || "")
+        .split("·")
+        .map(s => s.trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(" · ");
+      const formattedPrice = formatOfferPrice(item, currentCurrency);
+      const eurSubline = currentCurrency !== "EUR"
+        ? `<span style="display:block;font-size:11px;color:#64748b;font-variant-numeric:tabular-nums;">€${Number(item.valueEur || 0).toLocaleString("en-US")}</span>`
+        : "";
+      return `
                   <tr>
-                    <td>
-                      <div style="display:flex;align-items:center;gap:10px;">
-                        <img src="${item.image}" style="width:56px;height:40px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #dce6e4;" alt="" />
-                        <div>
-                          <span style="font-size:11px;font-weight:800;color:#0c2c28;background:#e2ecea;padding:1px 6px;border-radius:5px;">#${item.id}</span>
-                          <strong style="display:block;font-size:13px;color:#0b221f;margin-top:2px;">${loc.title}</strong>
+                    <td style="min-width:250px;max-width:310px;">
+                      <div style="display:flex;align-items:center;gap:12px;">
+                        <img src="${item.image}" style="width:52px;height:38px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid rgba(15,23,42,0.08);" alt="" />
+                        <div style="min-width:0;">
+                          <strong style="display:block;font-size:13.5px;font-weight:650;color:#0f172a;line-height:1.3;">${escapeHtml(loc.title)}</strong>
+                          <span style="display:inline-block;font-size:11px;font-weight:600;color:#64748b;margin-top:2px;font-variant-numeric:tabular-nums;">#${item.id}</span>
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <strong style="display:block;font-size:12px;color:#0c2c28;">${getCategoryLabel(item.category)}</strong>
-                      <span style="font-size:11.5px;color:#64748b;">${(item.specs || "").slice(0, 44)}</span>
+                    <td style="min-width:170px;max-width:230px;">
+                      <strong style="display:block;font-size:12.5px;font-weight:600;color:#0f172a;">${escapeHtml(getCategoryLabel(item.category))}</strong>
+                      <span style="display:block;font-size:11.5px;color:#64748b;line-height:1.35;margin-top:2px;">${escapeHtml(cleanSpecs)}</span>
+                    </td>
+                    <td style="min-width:210px;max-width:280px;">
+                      <span class="bo-badge bo-badge-deal">${escapeHtml(getDealTypeLabel(item.dealType))}</span>
+                      <span style="display:block;font-size:12px;color:#334155;line-height:1.35;margin-top:4px;">${escapeHtml(loc.want)}</span>
+                    </td>
+                    <td style="white-space:nowrap;">
+                      <strong style="font-size:13.5px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">${formattedPrice}</strong>
+                      ${eurSubline}
                     </td>
                     <td>
-                      <span style="display:inline-block;font-size:11px;font-weight:700;color:#0c2c28;background:#e6f4f1;padding:2px 7px;border-radius:6px;margin-bottom:2px;">${getDealTypeLabel(item.dealType)}</span>
-                      <span style="display:block;font-size:12px;color:#334155;">${loc.want}</span>
+                      <strong style="display:block;font-size:12.5px;font-weight:600;color:#0f172a;">${escapeHtml(item.owner || "Verified Member")}</strong>
+                      <button type="button" class="bo-owner-link" onclick="adminListingSearchQuery='${(item.ownerEmail || item.owner || "").replace(/'/g, "\\'")}'; switchAdminTab('users');">
+                        ${escapeHtml(item.ownerEmail || "View account")}
+                      </button>
                     </td>
                     <td>
-                      <strong style="font-size:13.5px;color:#0c2c28;">~${formatOfferPrice(item, currentCurrency)}</strong>
-                      <span style="display:block;font-size:11px;color:#64748b;">€${Number(item.valueEur || 0).toLocaleString("en-US")}</span>
-                    </td>
-                    <td>
-                      <strong style="display:block;font-size:12.5px;color:#0b221f;">${item.owner || "Verified Member"}</strong>
-                      <span style="font-size:11.5px;color:#0369a1;cursor:pointer;text-decoration:underline;" onclick="adminListingSearchQuery='${(item.ownerEmail || item.owner || "").replace(/'/g, "\\'")}'; switchAdminTab('users');">
-                        ${item.ownerEmail || "View user"}
-                      </span>
-                    </td>
-                    <td>
-                      <strong style="display:block;font-size:12.5px;">${item.city}</strong>
-                      <span style="font-size:11.5px;color:#64748b;">${item.country}</span>
+                      <strong style="display:block;font-size:12.5px;font-weight:600;color:#0f172a;">${escapeHtml(item.city)}</strong>
+                      <span style="font-size:11.5px;color:#64748b;">${escapeHtml(item.country)}</span>
                     </td>
                     <td style="text-align:right;">
-                      <div style="display:inline-flex;gap:5px;justify-content:flex-end;">
-                        <button type="button" class="bo-btn" onclick="openOfferModal(${item.id}, 'details')">View</button>
-                        <button type="button" class="bo-btn bo-btn-mint" onclick="editListingInWizard(${item.id})">Edit</button>
-                        <button type="button" class="bo-btn bo-btn-danger" onclick="deleteUserListing(${item.id}); renderAdminModalContent();" title="Delete">✕</button>
+                      <div class="bo-row-actions">
+                        <button type="button" class="bo-icon-btn" onclick="openOfferModal(${item.id}, 'details')" title="View listing" aria-label="View listing">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        <button type="button" class="bo-icon-btn" onclick="openQuickEditListingSheet(${item.id})" title="Edit listing" aria-label="Edit listing">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </button>
+                        <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteListing(${item.id})" title="Delete listing" aria-label="Delete listing">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
                       </div>
                     </td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -7584,10 +9432,10 @@ function renderAdminModalContent() {
 
     mainModuleHtml = `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px;">
-        <div class="bo-card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <strong style="font-size:15px;color:#071d1a;">Recent Users</strong>
-            <button type="button" class="bo-btn" onclick="switchAdminTab('users')">View All (${accountsList.length}) →</button>
+        <div class="bo-card bo-table-card">
+          <div class="bo-card-toolbar">
+            <strong style="font-size:15px;font-weight:700;color:#0f172a;">Recent Users</strong>
+            <button type="button" class="bo-btn bo-btn-secondary" onclick="switchAdminTab('users')">View All (${accountsList.length}) →</button>
           </div>
           <div class="bo-table-wrap">
             <table class="bo-table">
@@ -7596,16 +9444,25 @@ function renderAdminModalContent() {
                   <th>Name</th>
                   <th>Email & City</th>
                   <th>Plan</th>
-                  <th></th>
+                  <th style="text-align:right;"></th>
                 </tr>
               </thead>
               <tbody>
                 ${accountsList.slice(0, 6).map(acc => `
                   <tr>
-                    <td><strong>${acc.name}</strong></td>
-                    <td>${acc.email}<br/><span style="font-size:11px;color:#64748b;">${acc.city || "Bucharest"}, ${acc.country}</span></td>
-                    <td><span style="font-size:11px;font-weight:700;">${(acc.plan || "starter").toUpperCase()}</span></td>
-                    <td style="text-align:right;"><button type="button" class="bo-btn bo-btn-mint" onclick="adminFilterOffersByUser('${acc.email}')">Listings</button></td>
+                    <td><strong style="font-weight:650;color:#0f172a;">${escapeHtml(acc.name)}</strong></td>
+                    <td><span style="color:#0f172a;font-weight:500;">${escapeHtml(acc.email)}</span><br/><span style="font-size:11.5px;color:#64748b;">${escapeHtml(acc.city || "Bucharest")}, ${escapeHtml(acc.country)}</span></td>
+                    <td><span class="bo-badge ${acc.plan === 'pro' ? 'bo-badge-pro' : acc.plan === 'pack' ? 'bo-badge-pack' : 'bo-badge-starter'}">${(acc.plan || "starter").toUpperCase()}</span></td>
+                    <td style="text-align:right;">
+                      <div class="bo-row-actions">
+                        <button type="button" class="bo-icon-btn" onclick="openAdminEditUserSheet('${(acc.email || "").toLowerCase().replace(/'/g, "\\'")}')" title="Edit user" aria-label="Edit user">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </button>
+                        <button type="button" class="bo-icon-btn" onclick="adminFilterOffersByUser('${(acc.email || "").replace(/'/g, "\\'")}')" title="View user listings" aria-label="View user listings">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 `).join("")}
               </tbody>
@@ -7613,10 +9470,10 @@ function renderAdminModalContent() {
           </div>
         </div>
 
-        <div class="bo-card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <strong style="font-size:15px;color:#071d1a;">Recent Listings</strong>
-            <button type="button" class="bo-btn" onclick="setAdminListingsFilter('user'); switchAdminTab('listings');">View All (${offers.length}) →</button>
+        <div class="bo-card bo-table-card">
+          <div class="bo-card-toolbar">
+            <strong style="font-size:15px;font-weight:700;color:#0f172a;">Recent Listings</strong>
+            <button type="button" class="bo-btn bo-btn-secondary" onclick="setAdminListingsFilter('user'); switchAdminTab('listings');">View All (${offers.length}) →</button>
           </div>
           <div class="bo-table-wrap">
             <table class="bo-table">
@@ -7625,16 +9482,25 @@ function renderAdminModalContent() {
                   <th>Listing</th>
                   <th>Owner</th>
                   <th>Value</th>
-                  <th></th>
+                  <th style="text-align:right;"></th>
                 </tr>
               </thead>
               <tbody>
                 ${userCreatedOffers.slice(0, 6).map(item => `
                   <tr>
-                    <td><strong>#${item.id}</strong> · ${getOfferLocalized(item).title.slice(0, 28)}</td>
-                    <td>${item.owner}<br/><span style="font-size:11px;color:#64748b;">${item.ownerEmail || ""}</span></td>
-                    <td><strong>~${formatOfferPrice(item, currentCurrency)}</strong></td>
-                    <td style="text-align:right;"><button type="button" class="bo-btn" onclick="openOfferModal(${item.id}, 'details')">View</button></td>
+                    <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(getOfferLocalized(item).title)}"><strong style="color:#64748b;font-weight:600;">#${item.id}</strong> · <strong style="color:#0f172a;font-weight:650;">${escapeHtml(getOfferLocalized(item).title)}</strong></td>
+                    <td><span style="color:#0f172a;font-weight:600;">${escapeHtml(item.owner)}</span><br/><span style="font-size:11.5px;color:#64748b;">${escapeHtml(item.ownerEmail || "")}</span></td>
+                    <td><strong style="font-variant-numeric:tabular-nums;color:#0f172a;">${formatOfferPrice(item, currentCurrency)}</strong></td>
+                    <td style="text-align:right;">
+                      <div class="bo-row-actions">
+                        <button type="button" class="bo-icon-btn" onclick="openOfferModal(${item.id}, 'details')" title="View listing" aria-label="View listing">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        <button type="button" class="bo-icon-btn" onclick="openQuickEditListingSheet(${item.id})" title="Edit listing" aria-label="Edit listing">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 `).join("")}
               </tbody>
@@ -7643,8 +9509,10 @@ function renderAdminModalContent() {
         </div>
       </div>
 
-      <div class="bo-card">
-        <strong style="display:block;font-size:15px;color:#071d1a;margin-bottom:12px;">Catalog Breakdown by Category (${offers.length} Listings · ~${totalGmvFormatted})</strong>
+      <div class="bo-card bo-table-card">
+        <div class="bo-card-toolbar">
+          <strong style="font-size:15px;font-weight:700;color:#0f172a;">Catalog Breakdown by Category (${offers.length} Listings · ${totalGmvFormatted})</strong>
+        </div>
         <div class="bo-table-wrap">
           <table class="bo-table">
             <thead>
@@ -7658,26 +9526,28 @@ function renderAdminModalContent() {
             </thead>
             <tbody>
               ${catStats.map(cs => {
-                const pct = offers.length > 0 ? Math.round((cs.count / offers.length) * 100) : 0;
-                return `
+      const pct = offers.length > 0 ? Math.round((cs.count / offers.length) * 100) : 0;
+      return `
                   <tr>
-                    <td><strong>${cs.label}</strong></td>
-                    <td>${cs.count}</td>
+                    <td><strong style="color:#0f172a;font-weight:650;">${escapeHtml(cs.label)}</strong></td>
+                    <td style="font-variant-numeric:tabular-nums;">${cs.count}</td>
                     <td>
-                      <div style="display:flex;align-items:center;gap:8px;">
-                        <div style="width:110px;height:8px;background:#e2ecea;border-radius:999px;overflow:hidden;">
-                          <div style="width:${pct}%;height:100%;background:#0c2c28;"></div>
+                      <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:110px;height:7px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+                          <div style="width:${pct}%;height:100%;background:#0f172a;border-radius:999px;"></div>
                         </div>
-                        <span style="font-size:12px;font-weight:700;">${pct}%</span>
+                        <span style="font-size:12px;font-weight:600;color:#475569;font-variant-numeric:tabular-nums;">${pct}%</span>
                       </div>
                     </td>
-                    <td><strong>~${formatAmountInCurrentCurrency(convertFromEur(cs.sumEur, currentCurrency), currentCurrency)}</strong></td>
+                    <td><strong style="font-variant-numeric:tabular-nums;color:#0f172a;">${formatAmountInCurrentCurrency(convertFromEur(cs.sumEur, currentCurrency), currentCurrency)}</strong></td>
                     <td style="text-align:right;">
-                      <button type="button" class="bo-btn" onclick="setAdminListingsFilter('${cs.cat}'); switchAdminTab('listings');">View →</button>
+                      <button type="button" class="bo-icon-btn" onclick="setAdminListingsFilter('${cs.cat}'); switchAdminTab('listings');" title="View category" aria-label="View category">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+                      </button>
                     </td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -7685,8 +9555,10 @@ function renderAdminModalContent() {
     `;
   } else if (currentAdminTab === "proposals") {
     mainModuleHtml = `
-      <div class="bo-card">
-        <strong style="display:block;font-size:15px;color:#071d1a;margin-bottom:12px;">Active 1:1 Swap Proposals (${swapProposals.length})</strong>
+      <div class="bo-card bo-table-card">
+        <div class="bo-card-toolbar">
+          <strong style="font-size:15px;font-weight:700;color:#0f172a;">Active 1:1 Swap Proposals (${swapProposals.length})</strong>
+        </div>
         <div class="bo-table-wrap">
           <table class="bo-table">
             <thead>
@@ -7703,16 +9575,25 @@ function renderAdminModalContent() {
             <tbody>
               ${swapProposals.map(p => `
                 <tr>
-                  <td><strong>#CI4M-${p.id}</strong></td>
-                  <td><span style="background:#e6f4f1;color:#0c2c28;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800;">${p.direction}</span></td>
-                  <td><strong>${p.offeredItem}</strong> ⇄ ${p.targetTitle}</td>
-                  <td>${p.partner}</td>
-                  <td><strong style="color:#0c2c28;">${p.cashBalance}</strong></td>
-                  <td><span style="color:#059669;font-weight:700;">✓ ${p.status}</span></td>
+                  <td><strong style="font-variant-numeric:tabular-nums;color:#0f172a;">#CI4M-${p.id}</strong></td>
+                  <td><span class="bo-badge bo-badge-deal">${escapeHtml(p.direction)}</span></td>
+                  <td><strong style="color:#0f172a;font-weight:650;">${escapeHtml(p.offeredItem)}</strong> ⇄ ${escapeHtml(p.targetTitle)}</td>
+                  <td>${escapeHtml(p.partner)}</td>
+                  <td><strong style="color:#0f172a;font-variant-numeric:tabular-nums;">${escapeHtml(p.cashBalance)}</strong></td>
+                  <td><span style="color:#059669;font-weight:650;">● ${escapeHtml(getProposalStatusLabel(p))}</span></td>
                   <td style="text-align:right;">
-                    <div style="display:inline-flex;gap:6px;">
-                      ${p.offerId ? `<button type="button" class="bo-btn" onclick="openOfferModal(${p.offerId}, 'details')">Listing</button>` : ""}
-                      <button type="button" class="bo-btn bo-btn-mint" onclick="openSwapAgreementModal(${p.id})">1:1 Agreement PDF</button>
+                    <div class="bo-row-actions">
+                      ${p.offerId ? `
+                        <button type="button" class="bo-icon-btn" onclick="openOfferModal(${p.offerId}, 'details')" title="View listing" aria-label="View listing">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                      ` : ""}
+                      <button type="button" class="bo-icon-btn" onclick="openSwapAgreementModal(${p.id})" title="1:1 Swap Agreement PDF" aria-label="1:1 Swap Agreement PDF">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                      </button>
+                      <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteProposal(${p.id})" title="Delete proposal" aria-label="Delete proposal">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -7723,9 +9604,42 @@ function renderAdminModalContent() {
       </div>
     `;
   } else if (currentAdminTab === "billing") {
+    const gwCfg = getAuthGatewaysConfig();
+    const stripeActive = Boolean(gwCfg.stripeSecretKey || serverConfiguredGateways.stripe || gwCfg.stripePack15Url || gwCfg.stripeProMonthlyUrl);
     mainModuleHtml = `
       <div class="bo-card">
-        <strong style="display:block;font-size:15px;color:#071d1a;margin-bottom:12px;">Subscriptions & Swap Credits</strong>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+          <div>
+            <span style="background:${stripeActive ? '#dcfce7' : '#f1f5f9'};color:${stripeActive ? '#065f46' : '#475569'};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;">● ${stripeActive ? 'Stripe Checkout Live Active' : 'Stripe Checkout & Payment Links (Apple Pay / Google Pay / Card)'}</span>
+            <h3 style="margin:6px 0 2px;font-size:16px;font-weight:700;color:#0f172a;">Stripe Monetization (€9 Pack +15 Swaps · €19/mo PRO · €149/yr PRO)</h3>
+            <p style="margin:0;font-size:12.5px;color:#64748b;">Paste your <strong>Stripe Secret Key</strong> (automatic Checkout Session with <code>?stripe_success=...</code> return webhook) or direct <strong>Stripe Payment Links</strong>.</p>
+          </div>
+        </div>
+        <form onsubmit="saveAuthGatewaysConfig(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Stripe Secret Key (sk_live_... / sk_test_...)</label>
+            <input type="password" id="boStripeSecretKeyInput" placeholder="${serverConfiguredGateways.stripe ? '•••••••• (Configured on Server)' : 'sk_live_...'}" value="${(gwCfg.stripeSecretKey || (serverConfiguredGateways.stripe ? '••••••••' : '')).replace(/"/g, '&quot;')}" class="input-light" style="font-size:12.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">+15 Swaps Pack (€9) Link</label>
+            <input type="url" id="boStripePack15UrlInput" placeholder="https://buy.stripe.com/..." value="${(gwCfg.stripePack15Url || '').replace(/"/g, '&quot;')}" class="input-light" style="font-size:12.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">PRO Monthly (€19/mo) Link</label>
+            <input type="url" id="boStripeProMonthlyUrlInput" placeholder="https://buy.stripe.com/..." value="${(gwCfg.stripeProMonthlyUrl || '').replace(/"/g, '&quot;')}" class="input-light" style="font-size:12.5px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">PRO Yearly (€149/yr) Link</label>
+            <input type="url" id="boStripeProYearlyUrlInput" placeholder="https://buy.stripe.com/..." value="${(gwCfg.stripeProYearlyUrl || '').replace(/"/g, '&quot;')}" class="input-light" style="font-size:12.5px;" />
+          </div>
+          <button type="submit" class="bo-btn bo-btn-primary" style="height:42px;">Save Stripe Config</button>
+        </form>
+      </div>
+
+      <div class="bo-card bo-table-card">
+        <div class="bo-card-toolbar">
+          <strong style="font-size:15px;font-weight:700;color:#0f172a;">Subscriptions & Swap Credits</strong>
+        </div>
         <div class="bo-table-wrap">
           <table class="bo-table">
             <thead>
@@ -7739,22 +9653,22 @@ function renderAdminModalContent() {
             </thead>
             <tbody>
               ${accountsList.slice(0, 15).map(acc => {
-                const emailKey = String(acc.email || "").toLowerCase();
-                return `
+      const emailKey = String(acc.email || "").toLowerCase();
+      return `
                   <tr>
-                    <td><strong>${acc.name}</strong> · <span style="color:#64748b;">${acc.email}</span></td>
-                    <td><strong>${(acc.plan || "starter").toUpperCase()}</strong></td>
-                    <td>${acc.plan === "pro" ? "Unlimited (∞)" : `${acc.freeSwaps ?? 10} swaps`}</td>
-                    <td>${acc.country || "Romania"}</td>
+                    <td><strong style="color:#0f172a;font-weight:650;">${escapeHtml(acc.name)}</strong> · <span style="color:#64748b;">${escapeHtml(acc.email)}</span></td>
+                    <td><span class="bo-badge ${acc.plan === 'pro' ? 'bo-badge-pro' : acc.plan === 'pack' ? 'bo-badge-pack' : 'bo-badge-starter'}">${(acc.plan || "starter").toUpperCase()}</span></td>
+                    <td style="font-variant-numeric:tabular-nums;">${acc.plan === "pro" ? "Unlimited (∞)" : `${acc.freeSwaps ?? 10} swaps`}</td>
+                    <td>${escapeHtml(acc.country || "Romania")}</td>
                     <td style="text-align:right;">
-                      <div style="display:inline-flex;gap:6px;">
-                        <button type="button" class="bo-btn" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'add10')">+10 Swaps</button>
+                      <div class="bo-row-actions">
+                        <button type="button" class="bo-btn bo-btn-secondary" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'add10')">+10 Swaps</button>
                         <button type="button" class="bo-btn bo-btn-primary" onclick="adminGrantUserSwaps('${emailKey.replace(/'/g, "\\'")}', 'pro')">Activate PRO ∞</button>
                       </div>
                     </td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -7762,6 +9676,7 @@ function renderAdminModalContent() {
     `;
   } else if (currentAdminTab === "compliance") {
     const sbCfg = getSupabaseClientConfig();
+    const gwCfg = getAuthGatewaysConfig();
     mainModuleHtml = `
       <div class="bo-card" style="background:linear-gradient(135deg,#071d1a 0%,#0f3530 100%);color:#ffffff;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
@@ -7770,29 +9685,63 @@ function renderAdminModalContent() {
             <h3 style="margin:6px 0 2px;font-size:16px;color:#ffffff;">Central Cloud Database & Cross-Device Sync (/api/sync)</h3>
             <p style="margin:0;font-size:12px;color:#b8d8d2;">All accounts, listings, and 1:1 proposals registered on any phone or computer sync automatically to the central database.</p>
           </div>
-          <button type="button" class="bo-btn bo-btn-mint" onclick="pullCloudDatabaseSync(false)">↻ Sync Cloud Now</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="bo-btn bo-btn-mint" onclick="pullCloudDatabaseSync(false)">↻ Sync Cloud Now</button>
+            <button type="button" class="bo-btn" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.25);" onclick="exportFullBackofficeBackupJson()">↓ Backup JSON</button>
+            <label class="bo-btn" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.25);cursor:pointer;margin:0;">
+              ↑ Restore JSON
+              <input type="file" accept=".json,application/json" style="display:none;" onchange="importFullBackofficeBackupJson(event)" />
+            </label>
+          </div>
         </div>
         <form onsubmit="saveSupabaseClientConfig(event)" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px solid rgba(169,255,202,0.16);">
           <div>
             <label style="display:block;font-size:11px;font-weight:700;color:#b8d8d2;margin-bottom:4px;">Optional Supabase URL (or leave blank for built-in /api/sync)</label>
             <input type="url" id="boSupabaseUrlInput" placeholder="https://your-project.supabase.co" value="${sbCfg.url.replace(/"/g, '&quot;')}"
-              style="width:100%;height:36px;padding:0 12px;border-radius:8px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.7);color:#fff;font-size:12.5px;" />
+              style="width:100%;height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.7);color:#fff;font-size:12.5px;" />
           </div>
           <div>
             <label style="display:block;font-size:11px;font-weight:700;color:#b8d8d2;margin-bottom:4px;">Optional Supabase Key (Anon / Service Key)</label>
             <input type="password" id="boSupabaseKeyInput" placeholder="eyJhbGciOi..." value="${sbCfg.key.replace(/"/g, '&quot;')}"
-              style="width:100%;height:36px;padding:0 12px;border-radius:8px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.7);color:#fff;font-size:12.5px;" />
+              style="width:100%;height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.7);color:#fff;font-size:12.5px;" />
           </div>
-          <button type="submit" class="bo-btn bo-btn-mint" style="height:36px;">Save Cloud Config</button>
+          <button type="submit" class="bo-btn bo-btn-mint" style="height:38px;">Save Cloud Config</button>
         </form>
       </div>
 
       <div class="bo-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-          <h3 style="margin:0;font-size:16px;color:#071d1a;">EU GDPR (Reg. 2016/679), ePrivacy & DSA Compliance</h3>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+          <div>
+            <span style="background:${(gwCfg.brevoApiKey || serverConfiguredGateways.brevo) ? '#dcfce7' : '#e6f4f1'};color:${(gwCfg.brevoApiKey || serverConfiguredGateways.brevo) ? '#065f46' : '#0c2c28'};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;">● ${(gwCfg.brevoApiKey || serverConfiguredGateways.brevo) ? `Brevo Email Verification Active (${gwCfg.brevoSenderEmail || 'jeka7ro@gmail.com'})` : 'Brevo Email Verification & Notifications'}</span>
+            <h3 style="margin:6px 0 2px;font-size:16px;font-weight:700;color:#0f172a;">Email Verification (Brevo SMTP API) & Google OAuth 2.0</h3>
+            <p style="margin:0;font-size:12.5px;color:#64748b;">Your <strong>Brevo API Key</strong> is active in the central database and sends real 6-digit email verification codes and 1:1 swap notifications.</p>
+          </div>
+          <button type="button" class="bo-btn bo-btn-primary" onclick="testAuthGatewaysLive()">Test Email Delivery</button>
+        </div>
+
+        <form onsubmit="saveAuthGatewaysConfig(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Brevo API Key (xkeysib-...)</label>
+            <input type="password" id="boBrevoApiKeyInput" placeholder="${serverConfiguredGateways.brevo ? '•••••••• (Configured on Server — Live)' : 'xkeysib-xxxxxxxxxxxxxxxx'}" value="${(gwCfg.brevoApiKey || (serverConfiguredGateways.brevo ? '••••••••' : '')).replace(/"/g, '&quot;')}" class="input-light" style="font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Verified Sender Email</label>
+            <input type="email" id="boBrevoSenderInput" placeholder="jeka7ro@gmail.com" value="${(gwCfg.brevoSenderEmail || "jeka7ro@gmail.com").replace(/"/g, '&quot;')}" class="input-light" style="font-size:13px;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Google OAuth Client ID (Optional)</label>
+            <input type="text" id="boGoogleClientIdInput" placeholder="xxxx.apps.googleusercontent.com" value="${gwCfg.googleClientId.replace(/"/g, '&quot;')}" class="input-light" style="font-size:13px;" />
+          </div>
+          <button type="submit" class="bo-btn bo-btn-primary" style="height:42px;">Save Email Config</button>
+        </form>
+      </div>
+
+      <div class="bo-card bo-table-card">
+        <div class="bo-card-toolbar">
+          <h3 style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">EU GDPR (Reg. 2016/679), ePrivacy & DSA Compliance</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="bo-btn bo-btn-mint" onclick="exportUserGdprData()">Export GDPR JSON (Art. 20)</button>
-            <button type="button" class="bo-btn" onclick="openGdprPreferencesModal();">Consent Preferences</button>
+            <button type="button" class="bo-btn bo-btn-secondary" onclick="exportUserGdprData()">Export GDPR JSON (Art. 20)</button>
+            <button type="button" class="bo-btn bo-btn-ghost" onclick="openGdprPreferencesModal();">Consent Preferences</button>
           </div>
         </div>
         <div class="bo-table-wrap">
@@ -7805,11 +9754,14 @@ function renderAdminModalContent() {
               </tr>
             </thead>
             <tbody>
-              <tr><td><strong>Cloud Sync API (/api/sync)</strong></td><td>Centralized Multi-Device Accounts, Listings & Proposals Sync</td><td><span style="color:#059669;font-weight:800;">● Active (${cloudSyncLastState.lastSyncAt})</span></td></tr>
-              <tr><td><strong>SPA Build & Routing</strong></td><td>JS Syntax, DOM Integrity & Vercel Rewrites</td><td><span style="color:#059669;font-weight:800;">● Active</span></td></tr>
-              <tr><td><strong>Form & Numeric Validation</strong></td><td>Resilient decimal & currency parsing across 7 currencies</td><td><span style="color:#059669;font-weight:800;">● Active</span></td></tr>
-              <tr><td><strong>1:1 Parity & Billing</strong></td><td>EUR/USD/RON/MDL/RUB/GBP/CHF + 10 Free Swaps / PRO Plans</td><td><span style="color:#059669;font-weight:800;">● Active</span></td></tr>
-              <tr><td><strong>GDPR Art. 15, 17, 20 & DSA</strong></td><td>Data Access, Right to Erasure, JSON Portability & Listing Reports</td><td><span style="color:#059669;font-weight:800;">● Active</span></td></tr>
+              <tr><td><strong style="color:#0f172a;">Cloud Sync API (/api/sync)</strong></td><td>Centralized Multi-Device Accounts, Listings & Proposals Sync</td><td><span style="color:#059669;font-weight:700;">● Active (${cloudSyncLastState.lastSyncAt})</span></td></tr>
+              <tr><td><strong style="color:#0f172a;">Karpathy Engineering Guidelines</strong></td><td>Think Before Coding · Simplicity First · Surgical Changes · Goal-Driven Verification (.agents/skills/karpathy-guidelines)</td><td><span style="color:#059669;font-weight:700;">● Active</span></td></tr>
+              <tr><td><strong style="color:#0f172a;">Apple HIG & Liquid Glass Skill</strong></td><td>2-Layer Liquid Glass Discipline · 44pt/28pt Touch Targets · Reduced Motion & Contrast (.agents/skills/apple-design)</td><td><span style="color:#059669;font-weight:700;">● Active</span></td></tr>
+              <tr><td><strong style="color:#0f172a;">Ruflo / Ruflow SPARC Meta-Harness</strong></td><td>5-Phase Quality Gates: Specification · Pseudocode · Architecture · Refinement · Completion (.agents/skills/ruflo-sparc)</td><td><span style="color:#059669;font-weight:700;">● Active (100/100)</span></td></tr>
+              <tr><td><strong style="color:#0f172a;">SPA Build & Routing</strong></td><td>JS Syntax, DOM Integrity & Vercel Rewrites</td><td><span style="color:#059669;font-weight:700;">● Active</span></td></tr>
+              <tr><td><strong style="color:#0f172a;">Form & Numeric Validation</strong></td><td>Resilient decimal & currency parsing across 7 currencies</td><td><span style="color:#059669;font-weight:700;">● Active</span></td></tr>
+              <tr><td><strong style="color:#0f172a;">1:1 Parity & Billing</strong></td><td>EUR/USD/RON/MDL/RUB/GBP/CHF + 10 Free Swaps / PRO Plans</td><td><span style="color:#059669;font-weight:700;">● Active</span></td></tr>
+              <tr><td><strong style="color:#0f172a;">GDPR Art. 15, 17, 20 & DSA</strong></td><td>Data Access, Right to Erasure, JSON Portability & Listing Reports</td><td><span style="color:#059669;font-weight:700;">● Active</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -7821,22 +9773,22 @@ function renderAdminModalContent() {
     <div class="bo-workspace">
       <!-- LEFT SIDEBAR -->
       <aside class="bo-sidebar">
-        <div style="padding:20px 16px;">
-          <div class="logo" style="display:flex;align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px solid rgba(169,255,202,0.12);margin-bottom:16px;">
-            <svg width="36" height="36" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="flex-shrink:0;box-shadow:0 0 0 1.5px rgba(169,255,202,0.35);border-radius:50%;">
-              <circle cx="16" cy="16" r="16" fill="#0c2c28"></circle>
+        <div style="padding:20px 14px;">
+          <div class="logo" style="display:flex;align-items:center;gap:10px;padding:0 6px 16px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:14px;">
+            <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="flex-shrink:0;box-shadow:0 0 0 1px rgba(255,255,255,0.16);border-radius:50%;">
+              <circle cx="16" cy="16" r="16" fill="#0f2925"></circle>
               <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
               <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
               <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
               <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
             <div style="min-width:0;">
-              <strong style="display:block;font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ChangeIt4Me</strong>
-              <span style="display:block;font-size:11px;color:#8ab8b0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Backoffice</span>
+              <strong style="display:block;font-size:14.5px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ChangeIt4Me</strong>
+              <span style="display:block;font-size:11px;font-weight:500;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Backoffice</span>
             </div>
           </div>
 
-          <div style="display:grid;gap:4px;">
+          <div style="display:grid;gap:3px;">
             <button type="button" class="bo-nav-btn ${currentAdminTab === 'overview' ? 'active' : ''}" onclick="switchAdminTab('overview')">
               <span>Overview</span>
             </button>
@@ -7861,68 +9813,72 @@ function renderAdminModalContent() {
           </div>
         </div>
 
-        <div style="padding:16px;border-top:1px solid rgba(169,255,202,0.12);display:grid;gap:8px;">
-          <button type="button" class="bo-btn bo-btn-mint" style="width:100%;" onclick="resetWizardDraft(); openWizardModal(1);">
+        <div class="bo-sidebar-footer">
+          <button type="button" class="bo-btn bo-sidebar-action-primary" onclick="resetWizardDraft(); openWizardModal(1);">
             + New Listing
           </button>
-          <button type="button" class="bo-btn" style="width:100%;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.14);color:#e2f1ee;" onclick="closeAdminModal()">
-            ← Back to Site
-          </button>
-          <button type="button" class="bo-btn bo-btn-danger" style="width:100%;" onclick="logoutAdminBackoffice()">
-            Sign out
-          </button>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:6px;">
+            <button type="button" class="bo-btn bo-sidebar-action-quiet" onclick="closeAdminModal()">
+              ← Back to Site
+            </button>
+            <button type="button" class="bo-btn bo-sidebar-action-signout" onclick="logoutAdminBackoffice()">
+              Sign out
+            </button>
+          </div>
         </div>
       </aside>
 
       <!-- MAIN WORKSPACE -->
       <main class="bo-main">
         <header class="bo-topbar">
-          <h1 style="font-size:18px;font-weight:800;color:#071d1a;margin:0;">${activeTitle}</h1>
+          <h1 style="font-size:18px;font-weight:700;letter-spacing:-0.02em;color:#0f172a;margin:0;">${activeTitle}</h1>
 
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <button type="button" class="bo-btn" style="background:#eefaf3;border-color:#a7f3d0;color:#065f46;" onclick="pullCloudDatabaseSync(false)" title="Sync live accounts & listings from Cloud (/api/sync)">
-              ● Cloud Sync (${cloudSyncLastState.lastSyncAt}) ↻
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="bo-btn bo-sync-pill" onclick="pullCloudDatabaseSync(false)" title="Sync live accounts & listings from Cloud (/api/sync)">
+              <span class="bo-sync-dot"></span>
+              <span>Cloud Sync (${cloudSyncLastState.lastSyncAt})</span>
             </button>
 
-            <input type="search" id="adminListingSearchInput" class="input-light"
-              style="width:240px;height:38px;font-size:13px;background:#f4f8f7;"
+            <input type="search" id="adminListingSearchInput" class="input-light bo-topbar-search"
               placeholder="Search user, email, ID, city..."
               value="${adminListingSearchQuery.replace(/"/g, '&quot;')}"
               oninput="onAdminSearchInput(this.value)" />
 
-            <select class="input-light" style="width:94px;height:38px;font-size:12.5px;font-weight:700;" onchange="setCurrency(this.value, true); renderAdminModalContent();">
+            <select class="input-light bo-topbar-select" onchange="setCurrency(this.value, true); renderAdminModalContent();" aria-label="Currency">
               ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${c.code === currentCurrency ? 'selected' : ''}>${c.code}</option>`).join("")}
             </select>
 
-            <button type="button" class="bo-btn" onclick="closeAdminModal()">✕ Close</button>
+            <button type="button" class="bo-icon-btn" style="width:36px;height:36px;min-height:36px;" onclick="closeAdminModal()" title="Close Backoffice" aria-label="Close Backoffice">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
         </header>
 
         <div class="bo-content-scroll">
           <div class="bo-kpi-grid">
             <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminUsersFilter('all'); switchAdminTab('users');">
-              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">Registered Users</span>
-              <strong style="display:block;font-size:24px;color:#071d1a;margin:4px 0 0;">${accountsList.length}</strong>
+              <span class="bo-kpi-label">Registered users</span>
+              <strong class="bo-kpi-value">${accountsList.length}</strong>
             </div>
 
             <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminListingsFilter('all'); switchAdminTab('listings');">
-              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">Active Listings</span>
-              <strong style="display:block;font-size:24px;color:#071d1a;margin:4px 0 0;">${offers.length}</strong>
+              <span class="bo-kpi-label">Active listings</span>
+              <strong class="bo-kpi-value">${offers.length}</strong>
             </div>
 
             <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminListingsFilter('all'); switchAdminTab('listings');">
-              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">Catalog Volume</span>
-              <strong style="display:block;font-size:22px;color:#071d1a;margin:4px 0 0;">~${totalGmvFormatted}</strong>
+              <span class="bo-kpi-label">Catalog volume</span>
+              <strong class="bo-kpi-value">${totalGmvFormatted}</strong>
             </div>
 
             <div class="bo-kpi-card" style="cursor:pointer;" onclick="switchAdminTab('billing');">
-              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">PRO & Paid Plans</span>
-              <strong style="display:block;font-size:24px;color:#071d1a;margin:4px 0 0;">${proAccountsCount + packAccountsCount}</strong>
+              <span class="bo-kpi-label">PRO & paid plans</span>
+              <strong class="bo-kpi-value">${proAccountsCount + packAccountsCount}</strong>
             </div>
 
             <div class="bo-kpi-card" style="cursor:pointer;" onclick="switchAdminTab('proposals');">
-              <span style="font-size:11px;font-weight:800;color:#526b67;text-transform:uppercase;">Swap Proposals</span>
-              <strong style="display:block;font-size:24px;color:#071d1a;margin:4px 0 0;">${swapProposals.length}</strong>
+              <span class="bo-kpi-label">Swap proposals</span>
+              <strong class="bo-kpi-value">${swapProposals.length}</strong>
             </div>
           </div>
 
@@ -7931,11 +9887,16 @@ function renderAdminModalContent() {
       </main>
     </div>
   `;
+  const nextBoScrollEl = container.querySelector(".bo-content-scroll");
+  if (nextBoScrollEl && prevBoScrollTop > 0) {
+    nextBoScrollEl.scrollTop = prevBoScrollTop;
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   ensurePlatformAccountsAndTestRegistrations();
   initCloudSyncEngine();
+  checkStripeCheckoutReturnUrl();
   updateAdminHeaderButtonsVisibility();
   initLanguageDropdown();
   initCurrencyDropdown();
@@ -8007,4 +9968,34 @@ document.addEventListener("DOMContentLoaded", () => {
       mobileBtn.setAttribute("aria-expanded", String(open));
     });
   }
+
+  // Apple HIG Hierarchical Escape (Esc) Dismissal (sheets.md & alerts.md › Provide alternative ways to cancel)
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    if (document.getElementById("appleSheetModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeAppleSheetModal();
+    } else if (document.getElementById("guideModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeGuideModal();
+    } else if (document.getElementById("offerModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeOfferModal();
+    } else if (document.getElementById("wizardModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeWizardModal();
+    } else if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeDashboardModal();
+    } else if (document.getElementById("authModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeAuthModal();
+    } else if (document.getElementById("chatDock")?.classList.contains("is-open")) {
+      ev.preventDefault();
+      toggleChatDock();
+    } else if (document.getElementById("adminModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeAdminModal();
+    }
+  });
 });

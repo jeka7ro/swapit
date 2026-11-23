@@ -10,46 +10,99 @@
   <meta name="theme-color" content="#0c2c28" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Change It 4 Me — Don't buy it. Swap it. | Global 1:1 Exchange" />
-  <meta property="og:description" content="Direct 1:1 key-for-key exchange for cars, real estate, and electronics across Europe with 0% commission." />
-  <meta property="og:image" content="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80" />
+  <meta property="og:description"
+    content="Direct 1:1 key-for-key exchange for cars, real estate, and electronics across Europe with 0% commission." />
+  <meta property="og:image"
+    content="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80" />
   <meta name="twitter:card" content="summary_large_image" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23a9ffca'/%3E%3Cpath d='M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2' stroke='%230c2c28' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23a9ffca'/%3E%3Cpath d='M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2' stroke='%230c2c28' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="/styles.css?v=44" />
-  <link rel="stylesheet" href="/tahoe-skin.css?v=44" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link rel="stylesheet" href="/styles.css?v=67" />
+  <link rel="stylesheet" href="/tahoe-skin.css?v=67" />
   <style id="core-ui-fixes">
-    button { appearance: none; -webkit-appearance: none; border-radius: 999px; }
-    .header { z-index: 1200 !important; }
-    .mobile-panel { z-index: 1190 !important; }
+    button {
+      appearance: none;
+      -webkit-appearance: none;
+      border-radius: 999px;
+    }
+
+    .header {
+      z-index: 1200 !important;
+    }
+
+    .mobile-panel {
+      z-index: 1190 !important;
+    }
+
     .modal-backdrop {
       top: 60px !important;
       height: calc(100dvh - 60px) !important;
       z-index: 1100 !important;
     }
-    .hero { overflow: visible !important; }
+
+    .hero {
+      overflow: visible !important;
+    }
+
     .hero::before {
       border-radius: inherit !important;
       transform: none !important;
       animation: none !important;
     }
-    .hero::after { border-radius: inherit !important; }
-    .hero-inner { position: relative !important; z-index: 60 !important; }
-    .hero-smart-search-wrap { position: relative !important; z-index: 800 !important; }
-    .search-bar-anchor { position: relative !important; z-index: 900 !important; }
-    .hero-quick-tags { position: relative !important; z-index: 1 !important; }
-    .hero-actions { position: relative !important; z-index: 2 !important; }
-    .hero-matcher-wrap { position: relative !important; z-index: 5 !important; }
-    .mobile-instant-search { position: relative !important; z-index: 800 !important; }
+
+    .hero::after {
+      border-radius: inherit !important;
+    }
+
+    .hero-inner {
+      position: relative !important;
+      z-index: 60 !important;
+    }
+
+    .hero-smart-search-wrap {
+      position: relative !important;
+      z-index: 800 !important;
+    }
+
+    .search-bar-anchor {
+      position: relative !important;
+      z-index: 900 !important;
+    }
+
+    .hero-quick-tags {
+      position: relative !important;
+      z-index: 1 !important;
+    }
+
+    .hero-actions {
+      position: relative !important;
+      z-index: 2 !important;
+    }
+
+    .hero-matcher-wrap {
+      position: relative !important;
+      z-index: 5 !important;
+    }
+
+    .mobile-instant-search {
+      position: relative !important;
+      z-index: 800 !important;
+    }
+
     .hero-smart-dropdown,
     .wiz-autocomplete-list {
       z-index: 9999 !important;
     }
+
     @media (max-width: 768px) {
+
       body:not(.mobile-started) #mobileQuickHub,
       body:not(.mobile-started) #categories,
       body:not(.mobile-started) #offers,
@@ -57,41 +110,57 @@
       body:not(.mobile-started) .footer {
         display: none !important;
       }
+
       body:not(.mobile-started) .hero {
         min-height: calc(100dvh - 64px) !important;
         margin: 0 !important;
         border-radius: 0 !important;
       }
+
       body.mobile-started .hero {
         display: none !important;
       }
+
       body.mobile-started #mobileQuickHub,
       body.mobile-started #categories,
       body.mobile-started #offers {
         animation: mobileScreenFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
       }
+
       .wiz-step-btn:not(.active) b {
         display: none !important;
       }
+
       .wiz-step-btn.active {
         flex: 2 1 auto !important;
       }
     }
+
     @keyframes mobileScreenFadeIn {
-      from { opacity: 0; transform: translateY(14px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
+
     @media (min-width: 769px) {
       .hero-inner {
         grid-template-columns: 1.55fr 0.45fr !important;
         gap: 24px !important;
       }
+
       .hero-actions {
         display: flex !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
         gap: 10px !important;
       }
+
       .hero-actions .btn,
       .hero-actions .linkish {
         height: 48px !important;
@@ -103,6 +172,7 @@
         align-items: center !important;
       }
     }
+
     .hero-quick-tags button,
     .hero-qtag {
       background: rgba(12, 44, 40, 0.78) !important;
@@ -115,11 +185,13 @@
       cursor: pointer !important;
       backdrop-filter: blur(8px) !important;
     }
+
     .mobile-quick-tags button {
       background: #ffffff !important;
       color: var(--forest) !important;
       border: 1px solid rgba(12, 44, 40, 0.2) !important;
     }
+
     .swap-card-footer {
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
@@ -128,6 +200,7 @@
       margin-top: auto !important;
       padding-top: 8px !important;
     }
+
     .swap-card-footer .btn {
       width: 100% !important;
       height: 44px !important;
@@ -145,15 +218,35 @@
       justify-content: center !important;
       box-sizing: border-box !important;
     }
-    .top-notice, #geoIpStatusPill, .lang-geo-footer, [data-tab="geoip"] { display: none !important; }
-    .lang-trigger { display: inline-flex !important; align-items: center !important; line-height: 1 !important; }
-    #currentLangFlag, #currentLangShort, #currentCurrencySymbol, #currentCurrencyCode {
+
+    .top-notice,
+    #geoIpStatusPill,
+    .lang-geo-footer,
+    [data-tab="geoip"] {
+      display: none !important;
+    }
+
+    .lang-trigger {
+      display: inline-flex !important;
+      align-items: center !important;
+      line-height: 1 !important;
+    }
+
+    #currentLangFlag,
+    #currentLangShort,
+    #currentCurrencySymbol,
+    #currentCurrencyCode {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
       line-height: 1 !important;
     }
-    .lang-flag, .lang-chevron { display: block !important; }
+
+    .lang-flag,
+    .lang-chevron {
+      display: block !important;
+    }
+
     .price-range-mini {
       display: inline-flex !important;
       align-items: center !important;
@@ -164,6 +257,7 @@
       padding: 0 14px !important;
       gap: 8px !important;
     }
+
     .price-range-mini input {
       width: 92px !important;
       height: 100% !important;
@@ -178,11 +272,13 @@
       appearance: textfield !important;
       -moz-appearance: textfield !important;
     }
+
     .price-range-mini input::-webkit-outer-spin-button,
     .price-range-mini input::-webkit-inner-spin-button {
       -webkit-appearance: none !important;
       margin: 0 !important;
     }
+
     .swap-fav-btn {
       width: 36px !important;
       height: 36px !important;
@@ -197,11 +293,13 @@
       cursor: pointer !important;
       padding: 0 !important;
     }
+
     .swap-fav-btn.is-fav {
       background: var(--mint) !important;
       color: var(--forest) !important;
       border-color: var(--mint) !important;
     }
+
     .swap-card-match {
       position: absolute !important;
       bottom: 12px !important;
@@ -218,6 +316,7 @@
       align-items: center !important;
       gap: 4px !important;
     }
+
     .wiz-steps-bar {
       display: flex !important;
       flex-wrap: nowrap !important;
@@ -227,6 +326,7 @@
       padding: 12px 16px !important;
       overflow: hidden !important;
     }
+
     .wiz-step-btn {
       flex: 1 1 auto !important;
       min-width: 0 !important;
@@ -241,7 +341,8 @@
 
   <!-- STICKY HEADER -->
   <header class="header" id="header">
-    <a class="logo" href="#top" onclick="if(window.innerWidth<=768){exitMobileStartScreen();}" aria-label="Change It 4 Me">
+    <a class="logo" href="#top" onclick="if(window.innerWidth<=768){exitMobileStartScreen();}"
+      aria-label="Change It 4 Me">
       <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <circle cx="16" cy="16" r="16" fill="#0c2c28"></circle>
         <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
@@ -295,14 +396,15 @@
         </div>
       </div>
 
-      <button type="button" class="btn btn-login" id="headerDashboardBtn" style="display:none;" onclick="openDashboardModal('proposals')">
+      <button type="button" class="btn btn-login" id="headerDashboardBtn" style="display:none;"
+        onclick="openDashboardModal('proposals')">
         <span data-i18n="navDashboard">Dashboard</span>
         <span id="headerProposalsBadge"
           style="background:var(--forest);color:var(--mint);border-radius:999px;padding:1px 7px;font-size:11.5px;">2</span>
       </button>
 
-      <button type="button" class="btn btn-login" id="postWizardHeaderBtn" style="display:none;" onclick="openWizardModal()"
-        data-i18n="navPostSwap">+ Post a Swap</button>
+      <button type="button" class="btn btn-login" id="postWizardHeaderBtn" style="display:none;"
+        onclick="openWizardModal()" data-i18n="navPostSwap">+ Post a Swap</button>
 
       <div id="guestAuthButtons" style="display:flex;align-items:center;gap:8px;">
         <button type="button" class="btn btn-login" onclick="openAuthModal('login')">
@@ -319,8 +421,16 @@
         </button>
       </div>
 
-      <button type="button" class="btn btn-login" id="headerAdminBtn" onclick="openAdminModal()" style="display:none;padding:7px 12px;font-size:12.5px;font-weight:800;background:#0c2c28;color:#a9ffca;border-color:#0c2c28;" title="Backoffice Enterprise (/admin)">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <button type="button" class="btn btn-login" id="headerAdminBtn" onclick="openAdminModal()"
+        style="display:none;padding:7px 12px;font-size:12.5px;font-weight:800;background:#0c2c28;color:#a9ffca;border-color:#0c2c28;"
+        title="Backoffice Enterprise (/admin)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+        </svg>
         <span id="headerAdminBtnLabel">Backoffice</span>
       </button>
 
@@ -339,9 +449,10 @@
     <a href="#world" onclick="closeMobileMenu()" data-i18n="navWhere">Where we work</a>
     <a href="#process" onclick="closeMobileMenu()" data-i18n="navHow">How it works</a>
     <a href="#enroll" onclick="closeMobileMenu()" data-i18n="navEnroll">Quick Enroll</a>
-    <button type="button" class="mobile-nav-btn" id="mobileDashboardBtn" style="display:none;" onclick="closeMobileMenu(); openDashboardModal('proposals');"
-      data-i18n="navDashboard">Dashboard</button>
-    <button type="button" class="mobile-nav-btn" id="mobileAdminBtn" style="display:none;" onclick="closeMobileMenu(); openAdminModal();">Backoffice (/admin)</button>
+    <button type="button" class="mobile-nav-btn" id="mobileDashboardBtn" style="display:none;"
+      onclick="closeMobileMenu(); openDashboardModal('proposals');" data-i18n="navDashboard">Dashboard</button>
+    <button type="button" class="mobile-nav-btn" id="mobileAdminBtn" style="display:none;"
+      onclick="closeMobileMenu(); openAdminModal();">Backoffice (/admin)</button>
     <button type="button" class="mobile-nav-btn" onclick="closeMobileMenu(); openWizardModal();"
       data-i18n="navPostSwap">+ Post a Swap</button>
     <button type="button" class="mobile-nav-btn" id="mobileAuthBtn" onclick="closeMobileMenu(); openAuthModal('login');"
@@ -371,13 +482,18 @@
         <div class="hero-smart-search-wrap" id="heroSmartSearchWrap">
           <div class="search-bar-anchor">
             <div class="hero-smart-search-bar">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--forest);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--forest);">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input type="search" id="heroSmartSearchInput" autocomplete="off"
-                placeholder="Search by model, city, or keyword…"
-                data-i18n-placeholder="searchPlaceholder"
+                placeholder="Search by model, city, or keyword…" data-i18n-placeholder="searchPlaceholder"
                 oninput="handleHeroLiveSearch(this.value)"
                 onkeydown="if(event.key==='Enter'){event.preventDefault(); executeQuickKeywordSearch(this.value);}" />
-              <button type="button" class="btn btn-mint" style="height:38px;padding:0 16px;font-size:13px;" onclick="executeQuickKeywordSearch(document.getElementById('heroSmartSearchInput').value)" data-i18n="smartSearchBtn">
+              <button type="button" class="btn btn-mint" style="height:38px;padding:0 16px;font-size:13px;"
+                onclick="executeQuickKeywordSearch(document.getElementById('heroSmartSearchInput').value)"
+                data-i18n="smartSearchBtn">
                 Search →
               </button>
             </div>
@@ -387,9 +503,12 @@
             <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('iPhone')">iPhone</button>
             <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('iPad')">iPad</button>
             <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('MacBook')">MacBook</button>
-            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Villa')" data-i18n="qtagHouse">House / Villa</button>
-            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Apartment')" data-i18n="qtagApartment">Apartment</button>
-            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('BMW')" data-i18n="qtagCar">BMW / Auto</button>
+            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Villa')"
+              data-i18n="qtagHouse">House / Villa</button>
+            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Apartment')"
+              data-i18n="qtagApartment">Apartment</button>
+            <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('BMW')" data-i18n="qtagCar">BMW /
+              Auto</button>
           </div>
         </div>
 
@@ -485,7 +604,8 @@
   <section class="mobile-quick-hub" id="mobileQuickHub">
     <div class="wrap">
       <div class="mobile-screen-top">
-        <button type="button" class="mobile-back-cover-btn" onclick="exitMobileStartScreen()" data-i18n="mobileBackBtn">← Back</button>
+        <button type="button" class="mobile-back-cover-btn" onclick="exitMobileStartScreen()"
+          data-i18n="mobileBackBtn">← Back</button>
         <p class="mobile-hub-kicker" style="margin:0 !important;" data-i18n="mHubTitle">What would you like to do?</p>
       </div>
 
@@ -493,13 +613,17 @@
       <div class="mobile-instant-search" id="mobileSmartSearchWrap">
         <div class="search-bar-anchor">
           <div class="mobile-search-input-row">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--forest);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--forest);">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
             <input type="search" id="mobileSmartSearchInput" autocomplete="off"
-              placeholder="Search iPhone, iPad, MacBook, House, Auto…"
-              data-i18n-placeholder="searchPlaceholder"
+              placeholder="Search iPhone, iPad, MacBook, House, Auto…" data-i18n-placeholder="searchPlaceholder"
               oninput="handleMobileLiveSearch(this.value)"
               onkeydown="if(event.key==='Enter'){event.preventDefault(); executeQuickKeywordSearch(this.value);}" />
-            <button type="button" class="btn btn-mint" style="height:36px;padding:0 12px;font-size:12.5px;" onclick="executeQuickKeywordSearch(document.getElementById('mobileSmartSearchInput').value)">→</button>
+            <button type="button" class="btn btn-mint" style="height:36px;padding:0 12px;font-size:12.5px;"
+              onclick="executeQuickKeywordSearch(document.getElementById('mobileSmartSearchInput').value)">→</button>
           </div>
           <div class="hero-smart-dropdown" id="mobileSmartDropdown" style="display:none;"></div>
         </div>
@@ -507,14 +631,18 @@
           <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('iPhone')">iPhone</button>
           <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('iPad')">iPad</button>
           <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('MacBook')">MacBook</button>
-          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Villa')" data-i18n="qtagHouse">House / Villa</button>
-          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Apartment')" data-i18n="qtagApartment">Apartment</button>
-          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('BMW')" data-i18n="qtagCar">BMW / Auto</button>
+          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Villa')"
+            data-i18n="qtagHouse">House / Villa</button>
+          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('Apartment')"
+            data-i18n="qtagApartment">Apartment</button>
+          <button type="button" class="hero-qtag" onclick="executeQuickKeywordSearch('BMW')" data-i18n="qtagCar">BMW /
+            Auto</button>
         </div>
       </div>
 
       <div class="mobile-hub-grid">
-        <button type="button" class="mobile-hub-card primary" onclick="document.getElementById('offers').scrollIntoView({behavior:'smooth'})">
+        <button type="button" class="mobile-hub-card primary"
+          onclick="document.getElementById('offers').scrollIntoView({behavior:'smooth'})">
           <span class="mhub-icon">⇄</span>
           <span class="mhub-copy">
             <strong data-i18n="mHubExploreTitle">Explore Offers</strong>
@@ -771,8 +899,7 @@
         </article>
         <article class="shot"
           style="background-image:url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=900&q=80');cursor:pointer;"
-          onclick="filterByCategory('cars')"
-          role="img" aria-label="Car swap"></article>
+          onclick="filterByCategory('cars')" role="img" aria-label="Car swap"></article>
         <article class="feature" style="cursor:pointer;" onclick="filterByCategory('real-estate')">
           <div class="ico">◷</div>
           <div>
@@ -783,8 +910,7 @@
         </article>
         <article class="shot"
           style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80');cursor:pointer;"
-          onclick="filterByCategory('real-estate')"
-          role="img" aria-label="Apartment swap"></article>
+          onclick="filterByCategory('real-estate')" role="img" aria-label="Apartment swap"></article>
         <article class="feature" style="cursor:pointer;" onclick="openGuideModal('meet-and-check')">
           <div class="ico">✓</div>
           <div>
@@ -813,10 +939,14 @@
 
       <!-- TRANSACTION MODE BAR (SWAP + BUY/SELL) -->
       <div class="catalog-pills" id="dealModePills" style="margin-bottom:12px;">
-        <button type="button" class="cat-pill active" data-mode="all" onclick="filterByDealMode('all')" data-i18n="modeAll">All Listings</button>
-        <button type="button" class="cat-pill" data-mode="swap" onclick="filterByDealMode('swap')" data-i18n="modeSwap">Swap (1:1)</button>
-        <button type="button" class="cat-pill" data-mode="buy" onclick="filterByDealMode('buy')" data-i18n="modeBuySell">Buy & Sell</button>
-        <button type="button" class="cat-pill" data-mode="either" onclick="filterByDealMode('either')" data-i18n="modeBoth">Swap or Sale</button>
+        <button type="button" class="cat-pill active" data-mode="all" onclick="filterByDealMode('all')"
+          data-i18n="modeAll">All Listings</button>
+        <button type="button" class="cat-pill" data-mode="swap" onclick="filterByDealMode('swap')"
+          data-i18n="modeSwap">Swap (1:1)</button>
+        <button type="button" class="cat-pill" data-mode="buy" onclick="filterByDealMode('buy')"
+          data-i18n="modeBuySell">Buy & Sell</button>
+        <button type="button" class="cat-pill" data-mode="either" onclick="filterByDealMode('either')"
+          data-i18n="modeBoth">Swap or Sale</button>
       </div>
 
       <!-- INTERACTIVE FILTER TOOLBAR -->
@@ -849,11 +979,11 @@
             placeholder="Search by model, city, or keyword…" data-i18n-placeholder="searchPlaceholder"
             oninput="renderOffers()" />
           <div class="price-range-mini">
-            <input type="number" id="catalogMinEur" placeholder="Min €" data-i18n-placeholder="minEurPlaceholder"
-              oninput="renderOffers()" min="0" />
+            <input type="text" inputmode="decimal" id="catalogMinEur" placeholder="Min €"
+              data-i18n-placeholder="minEurPlaceholder" oninput="renderOffers()" />
             <span>–</span>
-            <input type="number" id="catalogMaxEur" placeholder="Max €" data-i18n-placeholder="maxEurPlaceholder"
-              oninput="renderOffers()" min="0" />
+            <input type="text" inputmode="decimal" id="catalogMaxEur" placeholder="Max €"
+              data-i18n-placeholder="maxEurPlaceholder" oninput="renderOffers()" />
           </div>
           <select id="catalogDealSelect" class="catalog-select" onchange="renderOffers()" aria-label="Deal type">
             <option value="all" data-i18n="dealAll">All deal types</option>
@@ -911,7 +1041,8 @@
           <h3 data-i18n="step1Title">Post your offer</h3>
           <p data-i18n="step1Desc">List your car, property or item — and describe what you want in return.</p>
         </article>
-        <article class="step" style="cursor:pointer;" onclick="document.getElementById('offers').scrollIntoView({behavior:'smooth'})">
+        <article class="step" style="cursor:pointer;"
+          onclick="document.getElementById('offers').scrollIntoView({behavior:'smooth'})">
           <div class="num">02</div>
           <h3 data-i18n="step2Title">Find a match</h3>
           <p data-i18n="step2Desc">Browse matching offers and connect with owners looking for your item.</p>
@@ -943,14 +1074,17 @@
         <div>
           <h2 data-i18n-html="plansHeadingHtml">First 10 swaps free,<br /><em>then pay per pack or subscribe</em></h2>
         </div>
-        <p data-i18n="plansSub">Start with 10 free swaps included on registration. After using your free swaps, unlock a +15 Swap Pack or an Unlimited PRO Subscription.</p>
+        <p data-i18n="plansSub">Start with 10 free swaps included on registration. After using your free swaps, unlock a
+          +15 Swap Pack or an Unlimited PRO Subscription.</p>
       </div>
 
       <div class="plans">
         <article class="plan">
           <h3 id="plan1Heading">Starter · 10 Free Swaps</h3>
-          <div class="price"><span data-i18n="planFreeLabel">Free</span> <small data-i18n="planPerList">/ first 10 swaps</small></div>
-          <p class="sub" data-i18n="plan1Desc">Included automatically when you create your account — test the platform with zero risk.</p>
+          <div class="price"><span data-i18n="planFreeLabel">Free</span> <small data-i18n="planPerList">/ first 10
+              swaps</small></div>
+          <p class="sub" data-i18n="plan1Desc">Included automatically when you create your account — test the platform
+            with zero risk.</p>
           <ul>
             <li data-i18n="plan1Item1">First 10 swap proposals & listings 100% free</li>
             <li data-i18n="plan1Item2">1:1 Parity & cash difference calculator in 7 currencies</li>
@@ -965,27 +1099,34 @@
           <span class="tag" data-i18n="plan2Tag">Pay-As-You-Go</span>
           <h3 data-i18n="plan2Title">Swap Pack (+15 Swaps)</h3>
           <div class="price"><span id="planPricePack">€9</span> <small id="planPerPack">/ +15 swaps</small></div>
-          <p class="sub" data-i18n="plan2Desc">Used up your 10 free swaps? Top up +15 extra swap & listing credits anytime without a monthly commitment.</p>
+          <p class="sub" data-i18n="plan2Desc">Used up your 10 free swaps? Top up +15 extra swap & listing credits
+            anytime without a monthly commitment.</p>
           <ul>
             <li data-i18n="plan2Item1">+15 additional swap proposals & active listings</li>
             <li data-i18n="plan2Item2">Credits never expire — use them at your own pace</li>
             <li data-i18n="plan2Item3">Boosted visibility in AI Smart Match results</li>
             <li data-i18n="plan2Item4">Instant direct owner contact & multi-photo gallery</li>
           </ul>
-          <button type="button" class="btn btn-dark btn-block" id="plan2ActionBtn" onclick="openSubscriptionModal('pack15')">
+          <button type="button" class="btn btn-dark btn-block" id="plan2ActionBtn"
+            onclick="openSubscriptionModal('pack15')">
             +15 Swaps Pack →
           </button>
         </article>
 
         <article class="plan dark">
           <div>
-            <span class="tag" id="plan3Tag" style="background:var(--mint);color:var(--forest);display:inline-block;margin-bottom:8px;">PRO Unlimited ∞</span>
+            <span class="tag" id="plan3Tag"
+              style="background:var(--mint);color:var(--forest);display:inline-block;margin-bottom:8px;">PRO Unlimited
+              ∞</span>
             <h3 data-i18n="plan3Title">PRO Unlimited Subscription</h3>
-            <div class="price" style="color:var(--mint);margin:8px 0 4px;"><span id="planPricePro">€19</span> <small id="planPerMonth" style="color:rgba(255,255,255,0.75);">/ month</small></div>
+            <div class="price" style="color:var(--mint);margin:8px 0 4px;"><span id="planPricePro">€19</span> <small
+                id="planPerMonth" style="color:rgba(255,255,255,0.75);">/ month</small></div>
             <p style="color:rgba(255,255,255,0.84);margin-top:8px;" data-i18n="plan3Desc">
-              For active traders, real estate owners & auto dealers. Unlimited swaps and listings across all categories, priority map badge, and VIP Watchlist alerts.
+              For active traders, real estate owners & auto dealers. Unlimited swaps and listings across all categories,
+              priority map badge, and VIP Watchlist alerts.
             </p>
-            <ul id="plan3List" style="margin:12px 0 16px;padding-left:18px;color:rgba(255,255,255,0.9);font-size:13.5px;display:grid;gap:6px;">
+            <ul id="plan3List"
+              style="margin:12px 0 16px;padding-left:18px;color:rgba(255,255,255,0.9);font-size:13.5px;display:grid;gap:6px;">
               <li>Unlimited (∞) swap proposals, buy offers & listings</li>
               <li>PRO Verified badge & top placement in catalog</li>
               <li>0% commission on all direct 1:1 deals</li>
@@ -1062,7 +1203,13 @@
 
               <div class="pill-input-group">
                 <input type="email" class="pill-input" name="email" autocomplete="email" required
-                  data-i18n-placeholder="formEmailShort" placeholder="Email" />
+                  data-i18n-placeholder="formEmailShort" placeholder="Email" oninput="validateLiveAuthField(this)" />
+              </div>
+
+              <div class="pill-input-group">
+                <input type="tel" class="pill-input" name="phone" autocomplete="tel" required
+                  data-i18n-placeholder="formPhone" placeholder="Phone number (e.g. +40 722 123 456)"
+                  oninput="validateLiveAuthField(this)" />
               </div>
 
               <div class="pill-input-group">
@@ -1093,7 +1240,8 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                   <div>
                     <label class="pill-select-label" data-i18n="formPrefLang">Preferred language</label>
-                    <select class="pill-input pill-select" name="prefLang" id="inlineRegLangSelect" onchange="onRegLangSelectChange(this.value, 'inlineRegCurrencySelect')">
+                    <select class="pill-input pill-select" name="prefLang" id="inlineRegLangSelect"
+                      onchange="onRegLangSelectChange(this.value, 'inlineRegCurrencySelect')">
                       <option value="en" selected>English</option>
                       <option value="de">Deutsch</option>
                       <option value="fr">Français</option>
@@ -1105,7 +1253,8 @@
                   </div>
                   <div>
                     <label class="pill-select-label" data-i18n="formPrefCurrency">Preferred currency</label>
-                    <select class="pill-input pill-select" name="prefCurrency" id="inlineRegCurrencySelect" onchange="setCurrency(this.value, true)">
+                    <select class="pill-input pill-select" name="prefCurrency" id="inlineRegCurrencySelect"
+                      onchange="setCurrency(this.value, true)">
                       <option value="EUR" selected>EUR (€)</option>
                       <option value="USD">USD ($)</option>
                       <option value="RON">LEI (RON)</option>
@@ -1147,7 +1296,8 @@
               <label class="glass-remember-row" style="margin-top:6px;align-items:flex-start;gap:8px;">
                 <input type="checkbox" name="gdprConsent" required style="margin-top:3px;flex-shrink:0;" />
                 <span class="glass-legal-line" style="margin:0;text-align:left;" data-i18n-html="authLegalHtml">
-                  I agree to the <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;">Terms of Use</a> and
+                  I agree to the <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;">Terms
+                    of Use</a> and
                   <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;">Privacy Policy</a>
                 </span>
               </label>
@@ -1225,9 +1375,15 @@
           <div class="enroll-form-card" id="enrollQuickPostPanel" style="display:none;">
             <form id="inlineQuickPostForm" onsubmit="handleInlineQuickPost(event)" autocomplete="off">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
-                <button type="button" id="quickSampleChipCars" class="wiz-chip" style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);" onclick="fillQuickPostSample('cars')">+ Auto (Porsche / BMW)</button>
-                <button type="button" id="quickSampleChipRealEstate" class="wiz-chip" style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);" onclick="fillQuickPostSample('real-estate')">+ Imobiliare (Apartament / Vilă)</button>
-                <button type="button" id="quickSampleChipElectronics" class="wiz-chip" style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);" onclick="fillQuickPostSample('electronics')">+ Tech (iPhone 16 / MacBook)</button>
+                <button type="button" id="quickSampleChipCars" class="wiz-chip"
+                  style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);"
+                  onclick="fillQuickPostSample('cars')">+ Auto (Porsche / BMW)</button>
+                <button type="button" id="quickSampleChipRealEstate" class="wiz-chip"
+                  style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);"
+                  onclick="fillQuickPostSample('real-estate')">+ Imobiliare (Apartament / Vilă)</button>
+                <button type="button" id="quickSampleChipElectronics" class="wiz-chip"
+                  style="background:rgba(169,255,202,0.16);color:#a9ffca;border-color:rgba(169,255,202,0.35);"
+                  onclick="fillQuickPostSample('electronics')">+ Tech (iPhone 16 / MacBook)</button>
               </div>
               <div class="form-grid-2">
                 <div class="field-group">
@@ -1243,9 +1399,11 @@
                 </div>
                 <div class="field-group">
                   <label id="quickValueLabel" data-i18n="quickValueEur">Estimated value</label>
-                  <div style="display:grid;grid-template-columns:1fr 115px;gap:8px;">
-                    <input type="number" class="input-glass" id="quickPostValueInput" name="valueEur" required min="1" placeholder="15000" oninput="onQuickPostPriceChange()" />
-                    <select class="input-glass" name="valueCurrency" id="quickPostCurrencySelect" onchange="onQuickPostPriceChange()">
+                  <div style="display:grid;grid-template-columns:1fr 136px;gap:8px;">
+                    <input type="text" inputmode="decimal" class="input-glass" id="quickPostValueInput" name="valueEur"
+                      required placeholder="15000" oninput="onQuickPostPriceChange()" />
+                    <select class="input-glass" name="valueCurrency" id="quickPostCurrencySelect"
+                      onchange="onQuickPostPriceChange()">
                       <option value="EUR">EUR (€)</option>
                       <option value="USD">USD ($)</option>
                       <option value="RON">LEI (RON)</option>
@@ -1261,18 +1419,23 @@
 
               <div class="field-group">
                 <label data-i18n="quickTitleHave">What you HAVE</label>
-                <input type="text" class="input-glass" id="quickHaveInput" name="titleHave" required data-i18n-placeholder="quickHavePlaceholder" placeholder="e.g. 2022 BMW X5 / 3-Room Apartment / iPhone 16 Pro Max" />
+                <input type="text" class="input-glass" id="quickHaveInput" name="titleHave" required
+                  data-i18n-placeholder="quickHavePlaceholder"
+                  placeholder="e.g. 2022 BMW X5 / 3-Room Apartment / iPhone 16 Pro Max" />
               </div>
 
               <div class="field-group" id="quickWantGroup">
                 <label id="quickWantLabel" data-i18n="quickTitleWant">What you WANT in exchange</label>
-                <input type="text" class="input-glass" id="quickWantInput" name="titleWant" required data-i18n-placeholder="quickWantPlaceholder" placeholder="e.g. Porsche Macan / Villa / MacBook Pro M3" />
+                <input type="text" class="input-glass" id="quickWantInput" name="titleWant" required
+                  data-i18n-placeholder="quickWantPlaceholder"
+                  placeholder="e.g. Porsche Macan / Villa / MacBook Pro M3" />
               </div>
 
               <div class="form-grid-2">
                 <div class="field-group">
                   <label data-i18n="quickDealType">Exchange structure</label>
-                  <select class="input-glass" name="dealType" id="quickDealTypeSelect" onchange="onQuickDealTypeChange()">
+                  <select class="input-glass" name="dealType" id="quickDealTypeSelect"
+                    onchange="onQuickDealTypeChange()">
                     <option value="1to1" data-i18n="deal1to1">1:1 Key-for-Key</option>
                     <option value="cash" data-i18n="dealCashAdd">+ Cash top-up possible</option>
                     <option value="either" data-i18n="dealSwapOrSale">Swap or Sale</option>
@@ -1281,24 +1444,33 @@
                 </div>
                 <div class="field-group">
                   <label data-i18n="formCountry">Country & City</label>
-                  <input type="text" class="input-glass" id="quickLocationInput" name="location" required data-i18n-placeholder="quickLocPlaceholder" placeholder="e.g. Bucharest, Romania / Munich, Germany" />
+                  <input type="text" class="input-glass" id="quickLocationInput" name="location" required
+                    data-i18n-placeholder="quickLocPlaceholder"
+                    placeholder="e.g. Bucharest, Romania / Munich, Germany" />
                 </div>
               </div>
 
               <div class="form-grid-2">
                 <div class="field-group">
                   <label data-i18n="quickDescription">Condition & swap notes</label>
-                  <input type="text" class="input-glass" id="quickDescInput" name="desc" required data-i18n-placeholder="quickDescPlaceholder" placeholder="e.g. First owner, full service history, mint condition" />
+                  <input type="text" class="input-glass" id="quickDescInput" name="desc" required
+                    data-i18n-placeholder="quickDescPlaceholder"
+                    placeholder="e.g. First owner, full service history, mint condition" />
                 </div>
                 <div class="field-group">
                   <label data-i18n="wizStep1">Photos</label>
-                  <input type="url" class="input-glass" id="quickPhotoUrlInput" name="imageUrl" placeholder="https://... (optional photo URL)" />
+                  <input type="url" class="input-glass" id="quickPhotoUrlInput" name="imageUrl"
+                    placeholder="https://... (optional photo URL)" />
                 </div>
               </div>
 
-              <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(255,255,255,0.84);margin:6px 0 12px;cursor:pointer;line-height:1.45;">
-                <input type="checkbox" name="gdprConsent" required style="width:16px;height:16px;margin-top:2px;accent-color:#a9ffca;flex-shrink:0;" />
-                <span data-i18n-html="authLegalHtml">I agree to the <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;">Terms of Use</a> and <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;">Privacy Policy</a></span>
+              <label
+                style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(255,255,255,0.84);margin:6px 0 12px;cursor:pointer;line-height:1.45;">
+                <input type="checkbox" name="gdprConsent" required
+                  style="width:16px;height:16px;margin-top:2px;accent-color:#a9ffca;flex-shrink:0;" />
+                <span data-i18n-html="authLegalHtml">I agree to the <a href="#before-trade"
+                    onclick="openGuideModal('terms-of-use'); return false;">Terms of Use</a> and <a href="#before-trade"
+                    onclick="openGuideModal('privacy-policy'); return false;">Privacy Policy</a></span>
               </label>
 
               <button type="submit" class="btn btn-mint btn-block" data-i18n="quickSubmitBtn">
@@ -1371,9 +1543,15 @@
           placeholder="Country" />
         <input type="email" required name="email" data-i18n-placeholder="ctaEmailPlaceholder"
           placeholder="Email for notifications" />
-        <label style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:#d5e2e4;margin:2px 0 4px;cursor:pointer;text-align:left;line-height:1.45;">
-          <input type="checkbox" name="gdprConsent" required style="width:16px;height:16px;padding:0;margin-top:2px;accent-color:#a9ffca;flex-shrink:0;" />
-          <span data-i18n-html="authLegalHtml">I agree to the <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;" style="color:#a9ffca;text-decoration:underline;">Terms of Use</a> and <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;" style="color:#a9ffca;text-decoration:underline;">Privacy Policy</a></span>
+        <label
+          style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:#d5e2e4;margin:2px 0 4px;cursor:pointer;text-align:left;line-height:1.45;">
+          <input type="checkbox" name="gdprConsent" required
+            style="width:16px;height:16px;padding:0;margin-top:2px;accent-color:#a9ffca;flex-shrink:0;" />
+          <span data-i18n-html="authLegalHtml">I agree to the <a href="#before-trade"
+              onclick="openGuideModal('terms-of-use'); return false;"
+              style="color:#a9ffca;text-decoration:underline;">Terms of Use</a> and <a href="#before-trade"
+              onclick="openGuideModal('privacy-policy'); return false;"
+              style="color:#a9ffca;text-decoration:underline;">Privacy Policy</a></span>
         </label>
         <button class="btn btn-mint btn-block" type="submit">
           <span data-i18n="ctaSubmitBtn">Notify me</span>
@@ -1426,10 +1604,14 @@
     <div class="legal">
       <span>© 2026 Change It 4 Me · Global 1:1 Exchange Platform</span>
       <nav>
-        <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;" data-i18n="footerTermsLink">Terms & Safety</a>
-        <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;" data-i18n="footerPrivacyLink">Privacy</a>
-        <a href="#before-trade" onclick="openGuideModal('cookies-policy'); return false;" data-i18n="footerCookiesLink">Cookies</a>
-        <a href="#before-trade" onclick="openGdprPreferencesModal(); return false;" id="footerGdprLink">GDPR & Consent</a>
+        <a href="#before-trade" onclick="openGuideModal('terms-of-use'); return false;"
+          data-i18n="footerTermsLink">Terms & Safety</a>
+        <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;"
+          data-i18n="footerPrivacyLink">Privacy</a>
+        <a href="#before-trade" onclick="openGuideModal('cookies-policy'); return false;"
+          data-i18n="footerCookiesLink">Cookies</a>
+        <a href="#before-trade" onclick="openGdprPreferencesModal(); return false;" id="footerGdprLink">GDPR &
+          Consent</a>
         <a href="/admin" onclick="openAdminModal(); return false;" id="footerAdminLink">Backoffice</a>
       </nav>
     </div>
@@ -1453,7 +1635,13 @@
 
         <div class="pill-input-group">
           <input type="email" class="pill-input" name="email" autocomplete="email" required
-            data-i18n-placeholder="formEmailShort" placeholder="Email" />
+            data-i18n-placeholder="formEmailShort" placeholder="Email" oninput="validateLiveAuthField(this)" />
+        </div>
+
+        <div class="pill-input-group">
+          <input type="tel" class="pill-input" name="phone" autocomplete="tel" required
+            data-i18n-placeholder="formPhone" placeholder="Phone number (e.g. +40 722 123 456)"
+            oninput="validateLiveAuthField(this)" />
         </div>
 
         <div class="pill-input-group">
@@ -1484,7 +1672,8 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div>
               <label class="pill-select-label" data-i18n="formPrefLang">Preferred language</label>
-              <select class="pill-input pill-select" name="prefLang" id="modalRegLangSelect" onchange="onRegLangSelectChange(this.value, 'modalRegCurrencySelect')">
+              <select class="pill-input pill-select" name="prefLang" id="modalRegLangSelect"
+                onchange="onRegLangSelectChange(this.value, 'modalRegCurrencySelect')">
                 <option value="en" selected>English</option>
                 <option value="de">Deutsch</option>
                 <option value="fr">Français</option>
@@ -1496,7 +1685,8 @@
             </div>
             <div>
               <label class="pill-select-label" data-i18n="formPrefCurrency">Preferred currency</label>
-              <select class="pill-input pill-select" name="prefCurrency" id="modalRegCurrencySelect" onchange="setCurrency(this.value, true)">
+              <select class="pill-input pill-select" name="prefCurrency" id="modalRegCurrencySelect"
+                onchange="setCurrency(this.value, true)">
                 <option value="EUR" selected>EUR (€)</option>
                 <option value="USD">USD ($)</option>
                 <option value="RON">LEI (RON)</option>
@@ -1538,8 +1728,10 @@
         <label class="glass-remember-row" style="margin-top:6px;align-items:flex-start;gap:8px;">
           <input type="checkbox" name="gdprConsent" required style="margin-top:3px;flex-shrink:0;" />
           <span class="glass-legal-line" style="margin:0;text-align:left;" data-i18n-html="authLegalHtml">
-            I agree to the <a href="#before-trade" onclick="closeAuthModal(); openGuideModal('terms-of-use'); return false;">Terms of
-              Use</a> and <a href="#before-trade" onclick="closeAuthModal(); openGuideModal('privacy-policy'); return false;">Privacy Policy</a>
+            I agree to the <a href="#before-trade"
+              onclick="closeAuthModal(); openGuideModal('terms-of-use'); return false;">Terms of
+              Use</a> and <a href="#before-trade"
+              onclick="closeAuthModal(); openGuideModal('privacy-policy'); return false;">Privacy Policy</a>
           </span>
         </label>
 
@@ -1610,7 +1802,8 @@
       <!-- 6-DIGIT EMAIL VERIFICATION CODE FORM (Matches Screenshot: Enter the code from email to finish registration) -->
       <form id="modalVerifyForm" style="display:none;" onsubmit="handleVerifyEmailCode(event)" autocomplete="off"
         class="glass-pill-form">
-        <p class="glass-verify-prompt" data-i18n="authVerifyPrompt">Enter the code from email to finish registration.</p>
+        <p class="glass-verify-prompt" data-i18n="authVerifyPrompt">Enter the code from email to finish registration.
+        </p>
 
         <div class="pill-input-group">
           <input type="text" id="verifyCodeInput" class="pill-input" inputmode="numeric" maxlength="6"
@@ -1653,6 +1846,34 @@
         </div>
 
         <button type="submit" class="pill-btn-mint" id="resetSubmitBtn">Reset Password →</button>
+
+        <p class="glass-bottom-switch">
+          <button type="button" onclick="switchAuthTab('login')" data-i18n="navLogin">Log in</button>
+        </p>
+      </form>
+
+      <!-- GOOGLE / GMAIL VERIFIED QUICK SIGN-IN FORM -->
+      <form id="modalGoogleForm" style="display:none;" onsubmit="handleGoogleFormSubmit(event)" autocomplete="on"
+        class="glass-pill-form">
+        <p class="glass-verify-prompt" id="googlePromptText">Enter your Google (@gmail.com) account & phone number for
+          verified 1-click sign-in.</p>
+
+        <div class="pill-input-group">
+          <input type="text" id="googleAuthNameInput" name="name" class="pill-input" autocomplete="name" required
+            placeholder="Full name (Google Profile)" />
+        </div>
+
+        <div class="pill-input-group">
+          <input type="email" id="googleAuthEmailInput" name="email" class="pill-input" autocomplete="email" required
+            placeholder="your.name@gmail.com" />
+        </div>
+
+        <div class="pill-input-group">
+          <input type="tel" id="googleAuthPhoneInput" name="phone" class="pill-input" autocomplete="tel" required
+            placeholder="Phone number (e.g. +40 722 123 456)" />
+        </div>
+
+        <button type="submit" class="pill-btn-mint" id="googleSubmitBtn">Verify & Continue with Gmail →</button>
 
         <p class="glass-bottom-switch">
           <button type="button" onclick="switchAuthTab('login')" data-i18n="navLogin">Log in</button>
@@ -1701,9 +1922,14 @@
       </div>
 
       <div class="wiz-footer">
-        <button type="button" class="btn btn-login" id="wizPrevBtn" onclick="prevWizStep()" data-i18n="mobileBackBtn">← Back</button>
+        <button type="button" class="btn btn-login" id="wizPrevBtn" onclick="prevWizStep()" data-i18n="mobileBackBtn">←
+          Back</button>
         <span id="wizStepCounter" style="font-size:13.5px;color:var(--muted);font-weight:700;">1 / 7</span>
-        <button type="button" class="btn btn-mint" id="wizNextBtn" onclick="nextWizStep()">Next →</button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button" class="btn btn-dark" id="wizQuickSaveBtn" style="display:none;"
+            onclick="publishWizardOffer()">✓ Save Changes</button>
+          <button type="button" class="btn btn-mint" id="wizNextBtn" onclick="nextWizStep()">Next →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1732,21 +1958,30 @@
         style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding-right:44px;flex-wrap:wrap;">
         <h2 style="font-size:26px;margin:0;" data-i18n="dashTitle">Personal Swap Dashboard</h2>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span
-            onclick="openSubscriptionModal('pro')"
-            style="background:var(--mint);color:var(--forest);padding:6px 14px;border-radius:999px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;"
+          <span onclick="openSubscriptionModal('pro')"
+            style="background:#f1f5f4;color:#0f172a;border:1px solid rgba(15,23,42,0.08);padding:6px 14px;border-radius:999px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;"
             title="Upgrade / Top-up Swaps">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
             <span id="dashFreeSwapsCount">10</span> <span id="dashFreeSwapsSuffix">/ 10 Free Swaps</span>
           </span>
-          <button type="button" id="dashUpgradeBtn" class="btn btn-mint" style="padding:6px 13px;font-size:12px;font-weight:800;" onclick="openSubscriptionModal('pro')">
+          <button type="button" id="dashUpgradeBtn" class="btn btn-mint"
+            style="padding:6px 13px;font-size:12px;font-weight:800;" onclick="openSubscriptionModal('pro')">
             + PRO / Credite
           </button>
-          <button type="button" id="dashAdminBtn" class="btn btn-login" style="padding:6px 12px;font-size:12px;font-weight:800;" onclick="openAdminModal()">
+          <button type="button" id="dashAdminBtn" class="btn btn-login"
+            style="padding:6px 12px;font-size:12px;font-weight:800;" onclick="openAdminModal()">
             Admin
           </button>
-          <button type="button" id="dashLogoutBtn" class="btn btn-login" style="display:none;padding:6px 14px;font-size:12.5px;gap:6px;" onclick="handleUserLogout()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <button type="button" id="dashLogoutBtn" class="btn btn-login"
+            style="display:none;padding:6px 14px;font-size:12.5px;gap:6px;" onclick="handleUserLogout()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
             <span data-i18n="dashLogout">Log out</span>
           </button>
         </div>
@@ -1792,7 +2027,8 @@
         </div>
       </div>
       <form class="chat-input-bar" onsubmit="handleChatSubmit(event)">
-        <input type="text" id="chatInput" required data-i18n-placeholder="chatPlaceholder" placeholder="Type what you have or want (e.g. iPhone, Villa, BMW)..." />
+        <input type="text" id="chatInput" required data-i18n-placeholder="chatPlaceholder"
+          placeholder="Type what you have or want (e.g. iPhone, Villa, BMW)..." />
         <button type="submit" class="btn btn-mint" style="padding:8px 14px;">→</button>
       </form>
     </div>
@@ -1806,22 +2042,44 @@
   </div>
 
   <!-- GDPR & E-PRIVACY CONSENT BANNER -->
-  <div id="gdprConsentBanner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:760px;margin:0 auto;background:#0a2520;color:#fff;border:1px solid rgba(169,255,202,0.32);border-radius:18px;padding:16px 20px;z-index:1180;box-shadow:0 18px 42px rgba(0,0,0,0.42);">
+  <div id="gdprConsentBanner"
+    style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:760px;margin:0 auto;background:#0a2520;color:#fff;border:1px solid rgba(169,255,202,0.32);border-radius:18px;padding:16px 20px;z-index:1180;box-shadow:0 18px 42px rgba(0,0,0,0.42);">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <div style="flex:1;min-width:250px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <span style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">GDPR & ePrivacy</span>
+          <span
+            style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">GDPR
+            & ePrivacy</span>
           <strong id="gdprBannerTitle" style="font-size:14px;color:#fff;">Privacy & Local Storage Consent</strong>
         </div>
         <p id="gdprBannerDesc" style="margin:0;font-size:12.5px;color:#c9dfdb;line-height:1.45;">
-          We use strictly necessary local storage for your session and optional functional preferences (language, currency, Geo-IP region). Zero third-party ad trackers.
+          We use strictly necessary local storage for your session and optional functional preferences (language,
+          currency, Geo-IP region). Zero third-party ad trackers.
         </p>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;align-self:center;">
-        <button type="button" id="gdprBtnSettings" class="btn btn-login" style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:8px 13px;font-size:12px;" onclick="openGdprPreferencesModal()">GDPR Settings</button>
-        <button type="button" id="gdprBtnEssential" class="btn btn-login" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.24);padding:8px 13px;font-size:12px;" onclick="acceptGdprConsent('essential')">Essential Only</button>
-        <button type="button" id="gdprBtnAcceptAll" class="btn btn-mint" style="padding:8px 16px;font-size:12.5px;font-weight:800;" onclick="acceptGdprConsent('all')">Accept All</button>
+        <button type="button" id="gdprBtnSettings" class="btn btn-login"
+          style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:8px 13px;font-size:12px;"
+          onclick="openGdprPreferencesModal()">GDPR Settings</button>
+        <button type="button" id="gdprBtnEssential" class="btn btn-login"
+          style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.24);padding:8px 13px;font-size:12px;"
+          onclick="acceptGdprConsent('essential')">Essential Only</button>
+        <button type="button" id="gdprBtnAcceptAll" class="btn btn-mint"
+          style="padding:8px 16px;font-size:12.5px;font-weight:800;" onclick="acceptGdprConsent('all')">Accept
+          All</button>
       </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 7: APPLE HIG UNIVERSAL SHEET & DESTRUCTIVE CONFIRMATION POPUP
+       (sheets.md, alerts.md, action-sheets.md, buttons.md, liquid-glass.md)
+       ======================================================================= -->
+  <div class="modal-backdrop hig-sheet-backdrop" id="appleSheetModal"
+    onclick="if(event.target===this)closeAppleSheetModal()">
+    <div class="hig-sheet-card" id="appleSheetCard" role="dialog" aria-modal="true">
+      <div class="hig-sheet-grabber" onclick="closeAppleSheetModal()" title="Dismiss sheet" aria-hidden="true"></div>
+      <div id="appleSheetContent"></div>
     </div>
   </div>
 
@@ -1829,9 +2087,9 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/i18n.js?v=44"></script>
-  <script src="/data.js?v=44"></script>
-  <script src="/app.js?v=44"></script>
+  <script src="/i18n.js?v=67"></script>
+  <script src="/data.js?v=67"></script>
+  <script src="/app.js?v=67"></script>
 </body>
 
 </html>

@@ -4,6 +4,68 @@ Toate modificările sunt adăugate cronologic invers (cele mai noi deasupra) și
 
 ---
 
+## [2026-11-22] — Integrare & Aplicare Skill-uri `andrej-karpathy-skills` (`karpathy-guidelines`), `apple-design-skill` (`apple-design` HIG + Liquid Glass) & `ruflow` (`ruflo-sparc` Meta-Harness)
+- **Autor:** Agent Paperclip
+- **Ramură / Commit:** `main` (peste `2cfdc77`, pregătit pentru commit)
+- **Fișiere atinse:**
+  - `.agents/skills/karpathy-guidelines/SKILL.md`
+  - `.agents/skills/apple-design/SKILL.md` (+ `references/hig/*.md`, `GEMINI.md`, `AGENTS.md`)
+  - `.agents/skills/ruflo-sparc/SKILL.md` (+ `scripts/`)
+  - `.agents/AGENTS.md`
+  - `tahoe-skin.css`
+  - `app.js`
+  - `api/sync.js`
+   - `dev_server.py`
+  - `supabase_schema.sql`
+  - `index.html`
+  - `.agents/skills/audit-gatekeeper/scripts/run_prepush_audit.py`
+  - `.agents/CHANGELOG.md`
+- **Descrierea modificării:**
+  1. **Instalare și Activare Skill `karpathy-guidelines` (`https://github.com/multica-ai/andrej-karpathy-skills`) & `ruflo-sparc` (`https://github.com/henryalouf/ruflow`)**:
+     - Instalarea `.agents/skills/karpathy-guidelines/SKILL.md` și `.agents/skills/ruflo-sparc/SKILL.md` în workspace și codificarea celor 4 principii Karpathy (**Think Before Coding**, **Simplicity First**, **Surgical Changes**, **Goal-Driven Execution**) și a celor 5 faze Ruflo SPARC (**Specification**, **Pseudocode**, **Architecture**, **Refinement**, **Completion**) în `.agents/AGENTS.md`.
+  2. **Instalare și Aplicare Skill `apple-design` (`https://github.com/dickwu/apple-design-skill`)**:
+     - Instalarea `.agents/skills/apple-design/SKILL.md` împreună cu cele 123 de pagini oficiale Apple HIG (`references/hig/*.md` și ghidul curat `references/hig/liquid-glass.md`).
+     - Implementarea disciplinei **Apple Liquid Glass pe 2 straturi** în `tahoe-skin.css`:
+       - **Functional Layer** (`.header`, `.glass-auth-modal`, `.bo-login-card`, `.modal`, `.chat-dock`, `.toast`, `thead th`): material `Liquid Glass Regular` (`backdrop-filter: blur(24px) saturate(140%)` + contur specular `inset 0 1px 0 rgba(255,255,255,0.22)`).
+       - **Content Layer** (`.offer-card`, `.bo-card`, `.bo-kpi-card`, `.bo-table-wrap`): suprafețe opace curate, fără suprapunere de sticlă peste sticlă (`liquid-glass.md › Review checklist #1 & #2`).
+     - Implementarea **Apple HIG Lens 1 (Accesibilitate Critică)** în `tahoe-skin.css`: inel de focus pentru tastatură (`:focus-visible`), ținte tactile `44x44px` pe mobil/touch (`--hig-hit-mobile: 44px`) și `28x28px` pe desktop, `font-size: 16px` pe inputuri mobile (prevenire auto-zoom iOS Safari), plus suport nativ pentru `@media (prefers-reduced-motion: reduce)`, `@media (prefers-reduced-transparency: reduce)` și `@media (prefers-contrast: more)`.
+     - **Aplicare Completă Apple HIG pe Toate Cardurile, Ferestrele, Formularele, Pop-up-urile, Acțiunile Edit și Delete (`#offerModal`, `#appleSheetModal`, `.swap-card`) & Audit Multi-Agent Cap-Coadă (Design, Securitate, Funcționalitate, Comunicare & i18n)**:
+       - **Apple Store Catalog Cards (`.swap-card`), Fereastra de Detalii (`#offerModal` / `openOfferModal`), Backoffice (`/admin`) & Toate Modalele (`?v=67`)**: eliminarea celor 6 etichete aglomerate de pe fotografiile cardurilor și înlocuirea cu o singură pilulă `Clear Liquid Glass` stânga-sus + butonul circular de favorite dreapta-sus, preț cu cifre tabelare inline (`swap-card-price-inline`), butoane, etichete (`.swap-tag`) și inputuri 100% rotunjite tip capsulă Apple (`border-radius: 999px !important`), bară de acțiuni uniformă (`height: 34px`), switcher segmentat `Propose Swap | Buy / Cash Offer` pe 100% din lățime, lărgirea câmpurilor `#calcMyValueInput` (`1.25fr 0.95fr`, selector `88px`) și `#buyOfferCurrencySelect` (`134px`), eliminarea tuturor chenarelor verzi groase (`1.5px solid var(--forest)`) din `#offerModal`, `#dashboardModal`, `#wizardModal`, `#guideModal` și `#appleSheetModal` în favoarea suprafețelor grupate Apple (`#f5f7f7`), plus **redesign-ul complet Apple HIG al Backoffice-ului (`/admin`) cu butoane-iconiță rotunde SF Symbols (`.bo-icon-btn`, `34x34px`)**: eliminarea tăierii cuvintelor pe jumătate (`.slice(0, 44)` / `.slice(0, 30)`) în favoarea tokenurilor complete de specificații și a pilulelor `.bo-listing-pill` cu `text-overflow: ellipsis`, transformarea filtrelor din `Users` și `Catalog Listings` în controale segmentate Apple autentice (`.bo-segmented-control`), înlocuirea butoanelor cu text din coloana `Actions` (și din `#offerModal` / `#dashboardModal`) cu iconițe SVG rotunde Apple SF Symbols (`eye`, `pencil`, `arrow.right.to.line`, `doc.text`, `trash`), eliminarea chenarului dublu `.bo-table-wrap` în `.bo-table-card` și integrarea live **Brevo Email Verification (`api/sync.js`, `dev_server.py`)**.
+       - **Securitate, Hash-uire SHA-256 Parole, Stripe Checkout, Compresie & Upload Cloud Imagini și Schema Supabase (`api/sync.js`, `dev_server.py`, `app.js`, `supabase_schema.sql`)**: eliminarea parolei admin în clar din `app.js` în favoarea verificării criptografice SHA-256 (`BACKOFFICE_ADMIN_PASS_HASH` + `action: "admin_login"`), hash-uirea automată SHA-256 cu salt (`sha256$...`) a tuturor parolelor utilizatorilor pe client și server (`hashUserPassword` / `hashUserPasswordServer` + `action: "user_login"`), integrarea **Stripe Checkout** (`action: "create_checkout_session"` + Payment Links + auto-creditare la întoarcerea pe `?stripe_success=pack15|pro_monthly|pro_yearly`), compresia automată HTML5 Canvas a fotografiilor încărcate la max `1280px` (`image/jpeg 0.82`) + upload pe server (`action: "upload_image"` servit din `/uploads/...` sau Cloudinary) și schema SQL completă `supabase_schema.sql` pentru tabela `public.ci4m_state`.
+       - **Funcționalități, Comunicare 1-la-1 & i18n în 7 Limbi / 7 Monede**: parsare rezilientă cu `sanitizeNumericAmount` pentru sume cu virgulă zecimală în calculatorul 1:1, oferta cash, filtrul de preț și wizard (`type="text" inputmode="decimal"`), butoane directe de contact cu 1 click (`✉ Email`, `✆ Telefon / SMS`, `WhatsApp`) în propunerile de schimb și în Acordul 1:1 printabil, traduceri complete `i18n` în 7 limbi pentru primele 6 anunțuri ale membrilor (`#950101`–`#950106`), remedierea selectorului de limbă din Dashboard (`l.label || l.name`) și afișarea dinamică a creditelor (`remSwaps / maxSwaps`) după activarea pachetului `+15 Swaps`.
+       - **Apple HIG Single-View Quick-Edit Sheets (`sheets.md` & `entering-data.md`)**: `openQuickEditListingSheet(offerId)` (pentru editarea rapidă într-o singură fereastră a oricărui anunț din Backoffice, Dashboard sau `#offerModal`, cu bară Apple Sheet `Cancel` | `Edit Listing #...` | `Save Changes` + buton `7-Step Wizard…` și încărcare directă de fotografii din dispozitiv), `openAdminEditUserSheet(emailKey)` (pentru editarea conturilor din Backoffice) și butonul `✓ Save Changes` direct în footer-ul `#wizardModal` pe orice pas în modul Edit.
+       - **Apple HIG Destructive Confirmation Sheets + Toast Undo (`alerts.md`, `buttons.md`, `undo-and-redo.md`)**: `openAppleDestructiveConfirmSheet()` activat pe toate acțiunile de ștergere (`requestDeleteListing`, `requestAdminDeleteAccount`, `requestDeleteProposal`, `requestDeleteWatchlistAlert`, `requestDeleteGdprAccount`), cu buton `Cancel` în stânga, buton roșu distructiv `Delete` în dreapta și buton **`↺ Undo` (`Anulează`)** direct în notificarea Toast pentru restaurare cu 1 click.
+       - **Validare Dinamică Live în Formulare & Navigare Ierarhică `Escape` (`Esc`)**: `validateLiveAuthField()` pentru feedback vizual instantaneu pe câmpurile Email/Telefon și închiderea ierarhică cu tasta `Esc` doar a ferestrei/sheet-ului activ de deasupra (`#appleSheetModal` → `#offerModal` / `#wizardModal` → `#adminModal`).
+  3. **Verificare Automată în Audit Gatekeeper (Faza 4 & Faza 6)**:
+     - Extinderea `phase_6_ui_ux_and_tahoe_skin()` în `.agents/skills/audit-gatekeeper/scripts/run_prepush_audit.py` pentru a valida automat prezența și integritatea ambelor skill-uri (`karpathy-guidelines` și `apple-design`) și a regulilor Apple HIG / Liquid Glass din `tahoe-skin.css`.
+- **Rezultat Audit Gatekeeper:** `6/6 FAZE VERDE` (`python3 .agents/skills/audit-gatekeeper/scripts/run_prepush_audit.py`).
+
+---
+
+## [2026-11-11] — Validare Anti-Fake Email & Telefon, Confirmare Strictă Cod OTP 6 Cifre (Email Resend + SMS Twilio) & Autentificare Automată cu Google / Gmail (`OAuth 2.0`)
+- **Autor:** Agent Paperclip
+- **Ramură / Commit:** `main` (peste `2cfdc77`, pregătit pentru commit)
+- **Fișiere atinse:**
+  - `index.html`
+  - `app.js`
+  - `api/sync.js`
+  - `dev_server.py`
+  - `.agents/skills/audit-gatekeeper/scripts/run_prepush_audit.py`
+  - `.agents/CHANGELOG.md`
+- **Descrierea modificării:**
+  1. **Câmp Obligatoriu de Telefon + Filtru Anti-Fake (`isValidRealEmail` & `isValidRealPhone`)**:
+     - Adăugarea câmpului obligatoriu `input[name="phone"]` în ambele formulare de înregistrare (`#modalRegisterForm` și `#enrollAccountPanel`) din `index.html`.
+     - Implementarea `isValidRealEmail()` în `app.js` (blochează 20+ domenii de email temporare/burner precum `mailinator.com`, `tempmail.com`, `10minutemail.com`, `yopmail.com`, `fake.com`, etc. și adresele repetitive) și `isValidRealPhone()` (validează numere mobile reale de 9–15 cifre și respinge secvențele false precum `0700000000`, `111111111`, `123456789`).
+  2. **Confirmare Strictă prin Cod OTP din 6 Cifre (Email + SMS) & Blocare Login Conturi Neverificate**:
+     - Repararea `handleVerifyEmailCode()` în `app.js` astfel încât să verifice strict `entered === String(generatedVerifyCode)` (respingând orice cod greșit) și integrarea trimiterii codului OTP prin `POST /api/sync` (`action: "send_otp"` / `action: "verify_otp"`) cu suport nativ pentru **Resend Email API** și **Twilio SMS API**.
+     - Repararea `handleModalLogin()` astfel încât un email neînregistrat să nu mai poată intra fără verificare, ci să fie redirecționat către înregistrare + confirmare cod OTP.
+  3. **Logare Automată cu Google / Gmail (`handleGoogleAuth` + Google Identity Services OAuth 2.0)**:
+     - Înlocuirea vechiului demo din `handleGoogleAuth()` cu integrarea oficială **Google Identity Services (`accounts.google.com/gsi/client`)** + formularul verificat `#modalGoogleForm` pentru conturi `@gmail.com` și memorarea contului Gmail verificat pentru logare cu 1 click.
+     - Adăugarea panoului **Google OAuth 2.0, Email OTP (Resend) & SMS OTP (Twilio)** în Backoffice (`/admin` → `GDPR & Compliance`).
+- **Rezultat Audit Gatekeeper:** `6/6 FAZE VERDE` (`python3 .agents/skills/audit-gatekeeper/scripts/run_prepush_audit.py`).
+
+---
+
 ## [2026-11-11] — Cloud Database & Cross-Device Sync API (`/api/sync`), Suport Supabase/Vercel KV, Vizualizare Anunțuri Peste Backoffice & Fix Buton `✕` (`/admin`)
 - **Autor:** Agent Paperclip
 - **Ramură / Commit:** `main` (peste `c7ce69d`, pregătit pentru commit)
