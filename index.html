@@ -24,8 +24,8 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <link rel="stylesheet" href="/styles.css?v=67" />
-  <link rel="stylesheet" href="/tahoe-skin.css?v=67" />
+  <link rel="stylesheet" href="/styles.css?v=70" />
+  <link rel="stylesheet" href="/tahoe-skin.css?v=70" />
   <style id="core-ui-fixes">
     button {
       appearance: none;
@@ -1852,31 +1852,28 @@
         </p>
       </form>
 
-      <!-- GOOGLE / GMAIL VERIFIED QUICK SIGN-IN FORM -->
+      <!-- GOOGLE / APPLE 1-CLICK ACCOUNT CHOOSER & EMAIL SIGN-IN -->
       <form id="modalGoogleForm" style="display:none;" onsubmit="handleGoogleFormSubmit(event)" autocomplete="on"
         class="glass-pill-form">
-        <p class="glass-verify-prompt" id="googlePromptText">Enter your Google (@gmail.com) account & phone number for
-          verified 1-click sign-in.</p>
+        <p class="glass-verify-prompt" id="googlePromptText" style="margin-bottom:10px;">Choose an account to continue to ChangeIt4Me</p>
 
-        <div class="pill-input-group">
-          <input type="text" id="googleAuthNameInput" name="name" class="pill-input" autocomplete="name" required
-            placeholder="Full name (Google Profile)" />
+        <div id="socialAccountChooserList" style="display:grid;gap:8px;width:100%;margin-bottom:12px;"></div>
+
+        <div style="display:flex;align-items:center;gap:10px;width:100%;margin:2px 0 8px;">
+          <span style="flex:1;height:1px;background:rgba(255,255,255,0.14);"></span>
+          <span id="socialUseAnotherLabel" style="font-size:11.5px;color:rgba(236,255,245,0.65);font-weight:600;">or use another account</span>
+          <span style="flex:1;height:1px;background:rgba(255,255,255,0.14);"></span>
         </div>
 
         <div class="pill-input-group">
           <input type="email" id="googleAuthEmailInput" name="email" class="pill-input" autocomplete="email" required
-            placeholder="your.name@gmail.com" />
+            placeholder="your.name@gmail.com" oninput="validateLiveAuthField(this)" />
         </div>
 
-        <div class="pill-input-group">
-          <input type="tel" id="googleAuthPhoneInput" name="phone" class="pill-input" autocomplete="tel" required
-            placeholder="Phone number (e.g. +40 722 123 456)" />
-        </div>
-
-        <button type="submit" class="pill-btn-mint" id="googleSubmitBtn">Verify & Continue with Gmail →</button>
+        <button type="submit" class="pill-btn-mint" id="googleSubmitBtn">Continue →</button>
 
         <p class="glass-bottom-switch">
-          <button type="button" onclick="switchAuthTab('login')" data-i18n="navLogin">Log in</button>
+          <button type="button" onclick="switchAuthTab('login')" data-i18n="navLogin">Sign In</button>
         </p>
       </form>
     </div>
@@ -2087,9 +2084,9 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/i18n.js?v=67"></script>
-  <script src="/data.js?v=67"></script>
-  <script src="/app.js?v=67"></script>
+  <script src="/i18n.js?v=70"></script>
+  <script src="/data.js?v=70"></script>
+  <script src="/app.js?v=70"></script>
 </body>
 
 </html>

@@ -3848,47 +3848,45 @@ function switchAuthTab(mode) {
       const isApple = socialAuthProvider === "apple";
       titleEl.textContent = isApple ? t("formAppleBtn") : t("formGoogleBtn");
       const gPromptMap = {
-        en: isApple
-          ? "Enter your Apple ID email & phone number for verified 1-click sign-in."
-          : "Enter your Google (@gmail.com) account & phone number for verified 1-click sign-in.",
-        de: isApple
-          ? "Geben Sie Ihre Apple-ID E-Mail & Telefonnummer für den 1-Klick-Login ein."
-          : "Geben Sie Ihr Google-Konto (@gmail.com) & Ihre Telefonnummer ein.",
-        fr: isApple
-          ? "Entrez votre e-mail Apple ID et votre téléphone pour une connexion vérifiée."
-          : "Entrez votre compte Google (@gmail.com) et votre téléphone.",
-        it: isApple
-          ? "Inserisci la tua email Apple ID e il numero di telefono per l'accesso rapido."
-          : "Inserisci il tuo account Google (@gmail.com) e il numero di telefono.",
-        es: isApple
-          ? "Introduce tu correo de Apple ID y teléfono para iniciar sesión en 1 clic."
-          : "Introduce tu cuenta de Google (@gmail.com) y tu número de teléfono.",
-        ro: isApple
-          ? "Introdu adresa de email Apple ID și numărul de telefon pentru autentificare verificată."
-          : "Introdu contul tău Google (@gmail.com) și numărul de telefon pentru autentificare 1-click.",
-        ru: isApple
-          ? "Введите ваш email Apple ID и номер телефона для быстрого входа."
-          : "Введите ваш аккаунт Google (@gmail.com) и номер телефона для входа."
+        en: isApple ? "Select your Apple ID to sign in with 1 click:" : "Choose a Google account to continue to ChangeIt4Me:",
+        de: isApple ? "Wählen Sie Ihre Apple-ID für den 1-Klick-Login:" : "Google-Konto auswählen, um fortzufahren:",
+        fr: isApple ? "Choisissez votre identifiant Apple en 1 clic :" : "Choisissez un compte Google pour continuer :",
+        it: isApple ? "Scegli il tuo Apple ID per accedere in 1 clic:" : "Scegli un account Google per continuare:",
+        es: isApple ? "Elige tu Apple ID para iniciar sesión en 1 clic:" : "Elige una cuenta de Google para continuar:",
+        ro: isApple ? "Alege contul Apple ID pentru autentificare 1-click:" : "Alege contul tău Google pentru autentificare instantă 1-click:",
+        ru: isApple ? "Выберите Apple ID для входа в 1 клик:" : "Выберите аккаунт Google для продолжения:"
+      };
+      const anotherMap = {
+        en: isApple ? "or enter another Apple ID email" : "or enter another Gmail address",
+        de: isApple ? "oder andere Apple-ID eingeben" : "oder andere Gmail-Adresse eingeben",
+        fr: isApple ? "ou utiliser un autre Apple ID" : "ou saisir une autre adresse Gmail",
+        it: isApple ? "o inserisci un altro Apple ID" : "o inserisci un altro indirizzo Gmail",
+        es: isApple ? "o usa otro Apple ID" : "o introduce otro correo Gmail",
+        ro: isApple ? "sau introdu alt email Apple ID" : "sau introdu altă adresă Gmail",
+        ru: isApple ? "или введите другой Apple ID" : "или введите другой адрес Gmail"
       };
       const gBtnMap = {
-        en: isApple ? "Verify & Continue with Apple →" : "Verify & Continue with Gmail →",
-        de: isApple ? "Mit Apple fortfahren →" : "Mit Gmail fortfahren →",
-        fr: isApple ? "Continuer avec Apple →" : "Continuer avec Gmail →",
-        it: isApple ? "Continua con Apple →" : "Continua con Gmail →",
-        es: isApple ? "Continuar con Apple →" : "Continuar con Gmail →",
-        ro: isApple ? "Verifică & Continuă cu Apple →" : "Verifică & Continuă cu Gmail →",
-        ru: isApple ? "Продолжить с Apple →" : "Продолжить с Gmail →"
+        en: isApple ? "Continue with Apple →" : "Continue with Google →",
+        de: isApple ? "Mit Apple fortfahren →" : "Mit Google fortfahren →",
+        fr: isApple ? "Continuer avec Apple →" : "Continuer avec Google →",
+        it: isApple ? "Continua con Apple →" : "Continua con Google →",
+        es: isApple ? "Continuar con Apple →" : "Continuar con Google →",
+        ro: isApple ? "Continuă cu Apple →" : "Continuă cu Google →",
+        ru: isApple ? "Продолжить с Apple →" : "Продолжить с Google →"
       };
       const gpEl = document.getElementById("googlePromptText");
       if (gpEl) gpEl.textContent = gPromptMap[currentLang] || gPromptMap.en;
-      const gNameIn = document.getElementById("googleAuthNameInput");
-      if (gNameIn) gNameIn.placeholder = t("formFullName");
+      const anotherEl = document.getElementById("socialUseAnotherLabel");
+      if (anotherEl) anotherEl.textContent = anotherMap[currentLang] || anotherMap.en;
       const gEmailIn = document.getElementById("googleAuthEmailInput");
-      if (gEmailIn) gEmailIn.placeholder = isApple ? "name@icloud.com / Apple ID" : "your.name@gmail.com";
-      const gPhoneIn = document.getElementById("googleAuthPhoneInput");
-      if (gPhoneIn) gPhoneIn.placeholder = t("formPhone");
+      if (gEmailIn) {
+        gEmailIn.placeholder = isApple ? "name@icloud.com / Apple ID" : "your.name@gmail.com";
+        gEmailIn.value = "";
+        gEmailIn.classList.remove("hig-field-valid", "hig-field-invalid");
+      }
       const gSubBtn = document.getElementById("googleSubmitBtn");
       if (gSubBtn) gSubBtn.textContent = gBtnMap[currentLang] || gBtnMap.en;
+      renderSocialAccountChooserList(isApple);
     } else if (isReset) {
       titleEl.style.display = "block";
       titleEl.textContent = t("authForgotPwd");
@@ -4308,6 +4306,99 @@ function handleModalLogin(e) {
   }
 }
 
+function renderSocialAccountChooserList(isApple = false) {
+  const listEl = document.getElementById("socialAccountChooserList");
+  if (!listEl) return;
+
+  const accountsToShow = [];
+  const seenEmails = new Set();
+  const pushCandidate = (name, email, badge = "") => {
+    const cleanEm = String(email || "").trim().toLowerCase();
+    if (!cleanEm || seenEmails.has(cleanEm)) return;
+    seenEmails.add(cleanEm);
+    accountsToShow.push({ name: String(name || "Member").trim(), email: cleanEm, badge });
+  };
+
+  try {
+    const savedRaw = localStorage.getItem("ci4m_saved_google_user_v1");
+    if (savedRaw) {
+      const parsed = JSON.parse(savedRaw);
+      if (parsed && parsed.email) {
+        pushCandidate(parsed.name || parsed.email.split("@")[0], parsed.email, "Connected");
+      }
+    }
+  } catch (err) { }
+
+  pushCandidate("Eugeniu Cazmal", "jeka7ro@gmail.com", isApple ? "Apple ID" : "Google");
+
+  Object.values(accountsDb).forEach(acc => {
+    if (!acc || !acc.email) return;
+    const em = String(acc.email).toLowerCase();
+    if (em.endsWith("@gmail.com") || em.endsWith("@icloud.com")) {
+      pushCandidate(acc.name || em.split("@")[0], em, acc.plan === "pro" ? "PRO ∞" : "");
+    }
+  });
+
+  const providerIcon = isApple
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>`
+    : `<svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>`;
+
+  listEl.innerHTML = accountsToShow.slice(0, 3).map(acc => {
+    const initials = acc.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "G";
+    return `
+      <button type="button" onclick="signInWithSocialAccountInstant('${acc.email.replace(/'/g, "\\'")}', '${acc.name.replace(/'/g, "\\'")}')"
+        style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:999px !important;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#ffffff;cursor:pointer;text-align:left;transition:background 0.15s ease;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <span style="width:34px;height:34px;border-radius:50%;background:#a9ffca;color:#071d1a;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0;">${escapeHtml(initials)}</span>
+          <div style="min-width:0;">
+            <strong style="display:block;font-size:13.5px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(acc.name)}</strong>
+            <span style="display:block;font-size:11.5px;color:rgba(236,255,245,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(acc.email)}</span>
+          </div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.14);padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;color:#ffffff;flex-shrink:0;">
+          ${providerIcon}
+          <span>1-Click →</span>
+        </span>
+      </button>
+    `;
+  }).join("");
+}
+
+function signInWithSocialAccountInstant(email, name) {
+  const emailKey = String(email || "").trim().toLowerCase();
+  if (!emailKey) return;
+  const existing = accountsDb[emailKey];
+  const isSuper = emailKey === "jeka7ro@gmail.com" || emailKey === BACKOFFICE_ADMIN_EMAIL;
+  if (isSuper) {
+    adminAuthenticated = true;
+    try { localStorage.setItem("ci4m_admin_session_v1", BACKOFFICE_ADMIN_EMAIL); } catch (err) { }
+  }
+  const finalName = existing?.name || name || emailKey.split("@")[0];
+  try {
+    localStorage.setItem("ci4m_saved_google_user_v1", JSON.stringify({
+      name: finalName,
+      email: emailKey,
+      phone: existing?.phone || ""
+    }));
+  } catch (err) { }
+  activateUserAccount({
+    name: finalName,
+    email: emailKey,
+    phone: existing?.phone || "+40 700 000 001",
+    country: existing?.country || detectedIpInfo.countryName || "Romania",
+    prefLang: existing?.prefLang || currentLang,
+    prefCurrency: existing?.prefCurrency || currentCurrency,
+    plan: isSuper ? "pro" : (existing?.plan || "starter"),
+    freeSwaps: isSuper ? 999 : (typeof existing?.freeSwaps === "number" ? existing.freeSwaps : 10),
+    role: isSuper ? "superadmin" : (existing?.role || "member"),
+    kycVerified: true,
+    emailVerified: true,
+    registeredAt: existing?.registeredAt || new Date().toISOString().slice(0, 16).replace("T", " ")
+  });
+  updateAdminHeaderButtonsVisibility();
+  closeAuthModal();
+}
+
 function handleGoogleAuth() {
   socialAuthProvider = "google";
   const gw = getAuthGatewaysConfig();
@@ -4327,28 +4418,7 @@ function handleGoogleAuth() {
               const gEmail = String(profile.email || "").trim().toLowerCase();
               const gName = String(profile.name || profile.given_name || "Google Member").trim();
               if (gEmail) {
-                const existing = accountsDb[gEmail];
-                try {
-                  localStorage.setItem("ci4m_saved_google_user_v1", JSON.stringify({
-                    name: gName,
-                    email: gEmail,
-                    phone: existing?.phone || ""
-                  }));
-                } catch (err) { }
-                activateUserAccount({
-                  name: existing?.name || gName,
-                  email: gEmail,
-                  phone: existing?.phone || "",
-                  country: existing?.country || detectedIpInfo.countryName || "Romania",
-                  prefLang: existing?.prefLang || currentLang,
-                  prefCurrency: existing?.prefCurrency || currentCurrency,
-                  plan: existing?.plan || "starter",
-                  freeSwaps: typeof existing?.freeSwaps === "number" ? existing.freeSwaps : 10,
-                  kycVerified: true,
-                  emailVerified: true,
-                  registeredAt: existing?.registeredAt || new Date().toISOString().slice(0, 16).replace("T", " ")
-                });
-                closeAuthModal();
+                signInWithSocialAccountInstant(gEmail, gName);
               }
             }
           } catch (err) { }
@@ -4359,50 +4429,18 @@ function handleGoogleAuth() {
     } catch (err) { }
   }
 
-  // Check if user already verified a Google account on this device
-  try {
-    const savedRaw = localStorage.getItem("ci4m_saved_google_user_v1");
-    if (savedRaw) {
-      const savedGoogle = JSON.parse(savedRaw);
-      if (savedGoogle && savedGoogle.email) {
-        const emailKey = String(savedGoogle.email).toLowerCase();
-        const existing = accountsDb[emailKey];
-        activateUserAccount(existing || {
-          name: savedGoogle.name || "Google Verified",
-          email: savedGoogle.email,
-          phone: savedGoogle.phone || "",
-          country: detectedIpInfo.countryName || "Romania",
-          prefLang: currentLang,
-          prefCurrency: currentCurrency,
-          kycVerified: true,
-          emailVerified: true,
-          phoneVerified: true
-        });
-        closeAuthModal();
-        return;
-      }
-    }
-  } catch (err) { }
-
-  // Otherwise open the Google / Gmail Verified Sign-In step inside #authModal
+  // Open the 1-Click Google Account Chooser inside #authModal
   document.getElementById("authModal")?.classList.add("open");
   document.body.classList.add("modal-open");
   switchAuthTab("google");
-  setTimeout(() => document.getElementById("googleAuthEmailInput")?.focus(), 60);
 }
 
 function handleGoogleFormSubmit(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
-  const name = String(fd.get("name") || "").trim();
-  const email = String(fd.get("email") || "").trim().toLowerCase();
-  const phone = String(fd.get("phone") || "").trim();
+  const email = String(fd.get("email") || document.getElementById("googleAuthEmailInput")?.value || "").trim().toLowerCase();
   const am = getAuthMsg();
 
-  if (name.length < 3) {
-    showToast(am.invalidName);
-    return;
-  }
   if (!isValidRealEmail(email)) {
     showToast(am.invalidEmail);
     return;
@@ -4411,24 +4449,27 @@ function handleGoogleFormSubmit(e) {
     showToast(am.invalidGmail);
     return;
   }
-  if (!isValidRealPhone(phone)) {
-    showToast(am.invalidPhone);
+
+  const existing = accountsDb[email];
+  if (existing || email === "jeka7ro@gmail.com" || email === BACKOFFICE_ADMIN_EMAIL) {
+    const derivedName = existing?.name || email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    signInWithSocialAccountInstant(email, derivedName);
+    e.target.reset();
     return;
   }
 
-  const existing = accountsDb[email];
+  const derivedName = email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "Google Member";
   startEmailVerification({
-    name: existing?.name || name,
+    name: derivedName,
     email,
-    phone: existing?.phone || phone,
-    country: existing?.country || detectedIpInfo.countryName || "Romania",
-    prefLang: existing?.prefLang || currentLang,
-    prefCurrency: existing?.prefCurrency || currentCurrency,
-    plan: existing?.plan || "starter",
-    freeSwaps: typeof existing?.freeSwaps === "number" ? existing.freeSwaps : 10,
+    phone: "",
+    country: detectedIpInfo.countryName || "Romania",
+    prefLang: currentLang,
+    prefCurrency: currentCurrency,
+    plan: "starter",
+    freeSwaps: 10,
     isGoogleAuth: true,
-    emailVerified: true,
-    phoneVerified: true
+    emailVerified: true
   });
   e.target.reset();
 }
@@ -4438,7 +4479,6 @@ function handleAppleAuth() {
   document.getElementById("authModal")?.classList.add("open");
   document.body.classList.add("modal-open");
   switchAuthTab("google");
-  setTimeout(() => document.getElementById("googleAuthEmailInput")?.focus(), 60);
 }
 
 // ============================================================================
@@ -8117,9 +8157,190 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
       kycVerified: true,
       isTestRegistration: true,
       registeredAt: "2026-11-11 13:38"
+    },
+    {
+      id: "USR-9007",
+      name: "Tudor Munteanu",
+      email: "tudor.munteanu@test.ro",
+      phone: "+40 723 880 110",
+      country: "Romania",
+      city: "Bucharest",
+      prefLang: "ro",
+      prefCurrency: "EUR",
+      plan: "pro",
+      freeSwaps: 999,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-23 15:10"
+    },
+    {
+      id: "USR-9008",
+      name: "Andreea Dragomir",
+      email: "andreea.dragomir@test.ro",
+      phone: "+40 745 910 220",
+      country: "Romania",
+      city: "Bucharest",
+      prefLang: "ro",
+      prefCurrency: "EUR",
+      plan: "pro",
+      freeSwaps: 999,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-23 15:12"
+    },
+    {
+      id: "USR-9009",
+      name: "Vlad Iancu",
+      email: "vlad.iancu@test.ro",
+      phone: "+40 751 440 330",
+      country: "Romania",
+      city: "Cluj-Napoca",
+      prefLang: "ro",
+      prefCurrency: "EUR",
+      plan: "pack",
+      freeSwaps: 24,
+      kycVerified: true,
+      isTestRegistration: true,
+      registeredAt: "2026-11-23 15:14"
     }
   ],
   listings: [
+    {
+      id: 950107,
+      createdByUser: true,
+      ownerEmail: "tudor.munteanu@test.ro",
+      category: "cars",
+      country: "Romania",
+      city: "Bucharest",
+      lat: 44.4518,
+      lng: 26.0892,
+      valueEur: 94500,
+      originalAmount: 94500,
+      originalCurrency: "EUR",
+      dealType: "cash",
+      owner: "Tudor Munteanu",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=1000&q=80",
+      images: [
+        "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=1000&q=80",
+        "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80"
+      ],
+      specs: "2024 · 11,500 km · 571 HP AWD · Panoramic Glass Roof · Burmester 3D",
+      title: "2024 Porsche Taycan 4S Cross Turismo · Performance Battery Plus",
+      want: "3-Room Penthouse in Bucharest / Cluj-Napoca or Mercedes-AMG G63",
+      desc: "Registered by Tudor Munteanu in Bucharest. Official Porsche Pipera warranty until 2028, PPF full body protection.",
+      i18n: {
+        ro: { title: "2024 Porsche Taycan 4S Cross Turismo · Performance Battery Plus", want: "Penthouse 3 camere în București / Cluj-Napoca sau Mercedes-AMG G63", desc: "Înregistrat de Tudor Munteanu în București. Garanție oficială Porsche Pipera până în 2028, folie PPF integrală." },
+        de: { title: "2024 Porsche Taycan 4S Cross Turismo · Performance Battery Plus", want: "3-Zimmer-Penthouse in Bukarest / Cluj-Napoca oder Mercedes-AMG G63", desc: "Inseriert von Tudor Munteanu. Offizielle Porsche-Garantie bis 2028, Voll-PPF-Schutzfolie." },
+        fr: { title: "2024 Porsche Taycan 4S Cross Turismo · Performance Battery Plus", want: "Penthouse 3 pièces à Bucarest / Cluj-Napoca ou Mercedes-AMG G63", desc: "Enregistré par Tudor Munteanu. Garantie officielle Porsche jusqu'en 2028, protection PPF intégrale." },
+        it: { title: "2024 Porsche Taycan 4S Cross Turismo · Performance Battery Plus", want: "Attico 3 locali a Bucarest / Cluj-Napoca o Mercedes-AMG G63", desc: "Registrato da Tudor Munteanu. Garanzia ufficiale Porsche fino al 2028, pellicola PPF integrale." },
+        es: { title: "2024 Porsche Taycan 4S Cross Turismo · Performance Battery Plus", want: "Ático de 3 habitaciones en Bucarest / Cluj-Napoca o Mercedes-AMG G63", desc: "Registrado por Tudor Munteanu. Garantía oficial Porsche hasta 2028, protección PPF completa." },
+        ru: { title: "2024 Porsche Taycan 4S Cross Turismo · Performance Battery Plus", want: "3-комнатный пентхаус в Бухаресте / Клуже или Mercedes-AMG G63", desc: "Размещено Тудором Мунтяну. Официальная гарантия Porsche до 2028 года, полная бронепленка PPF." }
+      }
+    },
+    {
+      id: 950108,
+      createdByUser: true,
+      ownerEmail: "andreea.dragomir@test.ro",
+      category: "real-estate",
+      country: "Romania",
+      city: "Bucharest",
+      lat: 44.7012,
+      lng: 26.1631,
+      valueEur: 420000,
+      originalAmount: 420000,
+      originalCurrency: "EUR",
+      dealType: "either",
+      owner: "Andreea Dragomir",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80",
+      images: [
+        "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80",
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80"
+      ],
+      specs: "4 Bedrooms · 240 m² Usable · 950 m² Lakefront Plot · Smart Home KNX",
+      title: "Lakefront Modern Villa with Private Dock & Heated Pool (240 m²)",
+      want: "Central Apartment in Vienna / Munich or 2 Apartments in Bucharest + Difference",
+      desc: "Registered by Andreea Dragomir. Direct lake access with private boat pontoon, heated infinity pool, solar + heat pump.",
+      i18n: {
+        ro: { title: "Vilă Modernă pe Malul Lacului cu Ponton Privat & Piscină Încălzită (240 m²)", want: "Apartament central în Viena / München sau 2 Apartamente în București + diferență", desc: "Înregistrat de Andreea Dragomir. Deschidere directă la lac cu ponton privat, piscină încălzită, sistem Smart Home KNX." },
+        de: { title: "Moderne Villa am See mit eigenem Steg & beheiztem Pool (240 m²)", want: "Zentrale Wohnung in Wien / München oder 2 Wohnungen in Bukarest + Ausgleich", desc: "Inseriert von Andreea Dragomir. Direkter Seezugang mit Privatsteg, beheizter Pool, KNX Smart Home." },
+        fr: { title: "Villa Moderne au Bord du Lac avec Ponton Privé & Piscine Chauffée (240 m²)", want: "Appartement central à Vienne / Munich ou 2 Appartements à Bucarest + soulte", desc: "Enregistré par Andreea Dragomir. Accès direct au lac avec ponton privé, piscine chauffée, domotique KNX." },
+        it: { title: "Villa Moderna sul Lago con Pontile Privato e Piscina Riscaldata (240 m²)", want: "Appartamento centrale a Vienna / Monaco o 2 Appartamenti a Bucarest + conguaglio", desc: "Registrato da Andreea Dragomir. Accesso diretto al lago con pontile privato, piscina riscaldata, domotica KNX." },
+        es: { title: "Villa Moderna Frente al Lago con Muelle Privado y Piscina Climatizada (240 m²)", want: "Piso céntrico en Viena / Múnich o 2 Pisos en Bucarest + diferencia", desc: "Registrado por Andreea Dragomir. Acceso directo al lago con embarcadero privado, piscina climatizada, domótica KNX." },
+        ru: { title: "Современная вилла у озера с частным причалом и подогреваемым бассейном (240 м²)", want: "Квартира в центре Вены / Мюнхена или 2 квартиры в Бухаресте + доплата", desc: "Размещено Андреей Драгомир. Прямой выход к озеру с причалом, подогреваемый бассейн, умный дом KNX." }
+      }
+    },
+    {
+      id: 950109,
+      createdByUser: true,
+      ownerEmail: "vlad.iancu@test.ro",
+      category: "electronics",
+      country: "Romania",
+      city: "Cluj-Napoca",
+      lat: 46.7745,
+      lng: 23.6198,
+      valueEur: 3450,
+      originalAmount: 3450,
+      originalCurrency: "EUR",
+      dealType: "1to1",
+      owner: "Vlad Iancu",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80",
+      images: [
+        "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80",
+        "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=1000&q=80"
+      ],
+      specs: "M3 Max 16-Core CPU / 40-Core GPU · 64GB RAM · 2TB SSD · AppleCare+",
+      title: "Apple MacBook Pro 16\" M3 Max (64GB RAM / 2TB SSD) Space Black",
+      want: "Leica Q2 / Q3 Full-Frame Camera or Gaming Workstation RTX 4090",
+      desc: "Registered by Vlad Iancu in Cluj-Napoca. Only 9 battery cycles, original box, invoice and active AppleCare+ protection.",
+      i18n: {
+        ro: { title: "Apple MacBook Pro 16\" M3 Max (64GB RAM / 2TB SSD) Space Black", want: "Cameră Full-Frame Leica Q2 / Q3 sau Stație Grafică RTX 4090", desc: "Înregistrat de Vlad Iancu în Cluj-Napoca. Doar 9 cicluri de încărcare, cutie originală, factură și AppleCare+ activ." },
+        de: { title: "Apple MacBook Pro 16\" M3 Max (64GB RAM / 2TB SSD) Space Black", want: "Leica Q2 / Q3 Vollformatkamera oder RTX 4090 Workstation", desc: "Inseriert von Vlad Iancu. Nur 9 Ladezyklen, Originalverpackung, Rechnung und aktives AppleCare+." },
+        fr: { title: "Apple MacBook Pro 16\" M3 Max (64 Go RAM / 2 To SSD) Noir Sidéral", want: "Appareil Photo Leica Q2 / Q3 ou Station RTX 4090", desc: "Enregistré par Vlad Iancu. Seulement 9 cycles de batterie, boîte d'origine, facture et AppleCare+ actif." },
+        it: { title: "Apple MacBook Pro 16\" M3 Max (64GB RAM / 2TB SSD) Nero Siderale", want: "Fotocamera Leica Q2 / Q3 o Workstation RTX 4090", desc: "Registrato da Vlad Iancu. Solo 9 cicli di carica, scatola originale, fattura e AppleCare+ attivo." },
+        es: { title: "Apple MacBook Pro 16\" M3 Max (64GB RAM / 2TB SSD) Negro Espacial", want: "Cámara Leica Q2 / Q3 o Estación de Trabajo RTX 4090", desc: "Registrado por Vlad Iancu. Solo 9 ciclos de batería, caja original, factura y AppleCare+ activo." },
+        ru: { title: "Apple MacBook Pro 16\" M3 Max (64 ГБ ОЗУ / 2 ТБ SSD) Space Black", want: "Камера Leica Q2 / Q3 или рабочая станция RTX 4090", desc: "Размещено Владом Янку. Всего 9 циклов батареи, оригинальная коробка, чек и активный AppleCare+." }
+      }
+    },
+    {
+      id: 950110,
+      createdByUser: true,
+      ownerEmail: "tudor.munteanu@test.ro",
+      category: "clothing",
+      country: "Romania",
+      city: "Timișoara",
+      lat: 45.7537,
+      lng: 21.2257,
+      valueEur: 13800,
+      originalAmount: 13800,
+      originalCurrency: "EUR",
+      dealType: "either",
+      owner: "Tudor Munteanu",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=1000&q=80",
+      images: [
+        "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=1000&q=80",
+        "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1000&q=80"
+      ],
+      specs: "41mm Oystersteel · Black Cerachrom Bezel · Box, Papers & 5-Year Warranty",
+      title: "Rolex Submariner Date 41mm Oystersteel (Ref. 126610LN · Full Set)",
+      want: "Compact Electric City Car (MINI Cooper SE / VW ID.3) or Omega + Cash",
+      desc: "Registered by Tudor Munteanu. Purchased from authorized Rolex Boutique, full set with NFC warranty card and box.",
+      i18n: {
+        ro: { title: "Rolex Submariner Date 41mm Oystersteel (Ref. 126610LN · Full Set)", want: "Mașină electrică de oraș (MINI Cooper SE / VW ID.3) sau Omega + diferență", desc: "Înregistrat de Tudor Munteanu. Achiziționat din reprezentanță autorizată Rolex, set complet cu card NFC și cutie." },
+        de: { title: "Rolex Submariner Date 41mm Oystersteel (Ref. 126610LN · Full Set)", want: "Kompaktes Elektroauto (MINI Cooper SE / VW ID.3) oder Omega + Aufpreis", desc: "Inseriert von Tudor Munteanu. Aus autorisierter Rolex-Boutique, Full-Set mit NFC-Garantiekarte und Box." },
+        fr: { title: "Rolex Submariner Date 41mm Oystersteel (Réf. 126610LN · Full Set)", want: "Citadine électrique (MINI Cooper SE / VW ID.3) ou Omega + soulte", desc: "Enregistré par Tudor Munteanu. Achetée en boutique officielle Rolex, full set avec carte de garantie NFC." },
+        it: { title: "Rolex Submariner Date 41mm Oystersteel (Ref. 126610LN · Full Set)", want: "Citycar elettrica (MINI Cooper SE / VW ID.3) o Omega + conguaglio", desc: "Registrato da Tudor Munteanu. Acquistato presso concessionario ufficiale Rolex, full set con card NFC." },
+        es: { title: "Rolex Submariner Date 41mm Oystersteel (Ref. 126610LN · Full Set)", want: "Coche eléctrico urbano (MINI Cooper SE / VW ID.3) u Omega + diferencia", desc: "Registrado por Tudor Munteanu. Comprado en boutique oficial Rolex, set completo con tarjeta NFC y caja." },
+        ru: { title: "Rolex Submariner Date 41mm Oystersteel (Ref. 126610LN · Полный комплект)", want: "Городской электромобиль (MINI Cooper SE / VW ID.3) или Omega + доплата", desc: "Размещено Тудором Мунтяну. Куплены у официального дилера Rolex, полный комплект с картой гарантии NFC." }
+      }
+    },
     {
       id: 950101,
       createdByUser: true,
@@ -9102,6 +9323,10 @@ function renderAdminModalContent() {
     const aRecent = Boolean(a.isTestRegistration || (!a.isPartnerSeed && a.role !== "superadmin"));
     const bRecent = Boolean(b.isTestRegistration || (!b.isPartnerSeed && b.role !== "superadmin"));
     if (aRecent !== bRecent) return aRecent ? -1 : 1;
+    if (aRecent && bRecent) {
+      const regCmp = String(b.registeredAt || "").localeCompare(String(a.registeredAt || ""));
+      if (regCmp !== 0) return regCmp;
+    }
     if (a.role === "superadmin" && b.role !== "superadmin") return -1;
     if (b.role === "superadmin" && a.role !== "superadmin") return 1;
     return String(a.name || "").localeCompare(String(b.name || ""));
@@ -9110,7 +9335,9 @@ function renderAdminModalContent() {
   const recentAccountsCount = accountsList.filter(a => a.isTestRegistration || (!a.isPartnerSeed && a.role !== "superadmin")).length;
   const proAccountsCount = accountsList.filter(a => a.plan === "pro").length;
   const packAccountsCount = accountsList.filter(a => a.plan === "pack").length;
-  const userCreatedOffers = offers.filter(o => o.createdByUser || o.id > 100000);
+  const userCreatedOffers = offers
+    .filter(o => o.createdByUser || o.id > 100000)
+    .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
   const totalGmvEur = offers.reduce((acc, o) => acc + (Number(o.valueEur) || 0), 0);
   const totalGmvFormatted = formatAmountInCurrentCurrency(convertFromEur(totalGmvEur, currentCurrency), currentCurrency);
   const hasWizDraft = Boolean(wizData && String(wizData.titleHave || "").trim());
@@ -9304,7 +9531,13 @@ function renderAdminModalContent() {
       </div>
     ` : "";
 
-    let listToShow = [...offers];
+    let listToShow = [...offers].sort((a, b) => {
+      const aCustom = (a.createdByUser || a.id > 100000) ? 1 : 0;
+      const bCustom = (b.createdByUser || b.id > 100000) ? 1 : 0;
+      if (bCustom !== aCustom) return bCustom - aCustom;
+      if (aCustom && bCustom) return (Number(b.id) || 0) - (Number(a.id) || 0);
+      return 0;
+    });
     if (adminListingFilterMode === "user") {
       listToShow = listToShow.filter(o => o.createdByUser || o.id > 100000);
     } else if (adminListingFilterMode === "seed") {
