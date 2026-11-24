@@ -7,9 +7,9 @@
   --bg: #f4f5f4;
   --bg-alt: #eaeceb;
   --card: #ffffff;
-  --mint: #a9ffca;
-  --mint-deep: #7df0ad;
-  --mint-soft: #e6faee;
+  --mint: #0d8a5e;
+  --mint-deep: #0a754f;
+  --mint-soft: #eaf7f1;
   --forest: #0c2c28;
   --forest-2: #123832;
   --forest-3: #184740;
@@ -374,8 +374,8 @@ em {
 }
 
 .btn-mint {
-  background: var(--mint);
-  color: var(--forest);
+  background: #0d8a5e;
+  color: #ffffff;
 }
 
 .btn-mint:hover {

@@ -1,6 +1,5 @@
 // ChangeIt4Me — Main Application Logic
 // Default Language: EN ("en") + Automatic European Geo-IP Language Routing + Full Swap Platform
-
 function escapeHtml(raw) {
   if (raw === null || raw === undefined) return "";
   return String(raw)
@@ -10,11 +9,9 @@ function escapeHtml(raw) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-
 function escapeJsStr(raw) {
   return escapeHtml(String(raw ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\r?\n/g, " "));
 }
-
 let dsaReports = (() => {
   try {
     const saved = localStorage.getItem("ci4m_dsa_reports_v1");
@@ -23,7 +20,6 @@ let dsaReports = (() => {
     return [];
   }
 })();
-
 const COUNTRY_COORDS = {
   "Germany": { lat: 51.1657, lng: 10.4515 },
   "Romania": { lat: 45.9432, lng: 24.9668 },
@@ -35,7 +31,6 @@ const COUNTRY_COORDS = {
   "United Kingdom": { lat: 54.0, lng: -2.0 },
   "Moldova": { lat: 47.0105, lng: 28.8638 }
 };
-
 // Default language is strictly English ("en") unless overridden by Geo-IP or explicit user selection
 let currentLang = "en";
 let currentCurrency = localStorage.getItem("ci4m_currency") || "EUR";
@@ -47,13 +42,11 @@ let detectedIpInfo = {
   autoLang: "en",
   source: "default"
 };
-
 let currentCategoryFilter = "all";
 let selectedMapCountry = null;
 let leafletMap = null;
 let mapMarkers = [];
-let currentDashTab = "proposals";
-
+let currentDashTab = "mylistings";
 // Saved Favorites (Offer IDs)
 let favoriteIds = (() => {
   try {
@@ -63,37 +56,57 @@ let favoriteIds = (() => {
     return [101, 102];
   }
 })();
-
 // Sent / Received Swap Proposals
+function normalizeSeedProposals(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(p => {
+    if (p && Number(p.id) === 901) {
+      return {
+        ...p,
+        id: 901,
+        direction: "Incoming",
+        offerId: 101,
+        targetTitle: "2022 Porsche Macan S (38,000 km)",
+        offeredItem: "2023 Audi Q8 e-tron 55 Quattro (24,000 km)",
+        offeredImage: "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80",
+        targetImage: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80",
+        partner: "Markus Weber (Munich, Germany)",
+        senderEmail: "markus.weber@changeit4me.de",
+        partnerPhone: "+49 171 440 8210",
+        cashBalance: "1:1 Key-for-Key (€0)",
+        status: p.status || "Ready for Inspection"
+      };
+    }
+    if (p && Number(p.id) === 902) {
+      return {
+        ...p,
+        id: 902,
+        direction: "Incoming",
+        offerId: 104,
+        targetTitle: "Modern 3-Room Apartment in Cluj-Napoca",
+        offeredItem: "3-Room Penthouse in Bucharest North (Herăstrău)",
+        offeredImage: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80",
+        targetImage: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=600&q=80",
+        partner: "Elena Voicu (Bucharest, Romania)",
+        senderEmail: "elena.voicu@changeit4me.ro",
+        partnerPhone: "+40 723 510 890",
+        cashBalance: "+ €10,000 Cash Top-up",
+        status: p.status || "New Match Proposal"
+      };
+    }
+    return p;
+  });
+}
 let swapProposals = (() => {
   try {
     const saved = localStorage.getItem("ci4m_proposals");
-    if (saved) return JSON.parse(saved);
+    if (saved) return normalizeSeedProposals(JSON.parse(saved));
   } catch (e) { }
-  return [
-    {
-      id: 901,
-      direction: "Incoming",
-      offerId: 101,
-      targetTitle: "2022 Porsche Macan S (38k km)",
-      offeredItem: "2023 Audi Q8 e-tron 55 Quattro (24,000 km, Munich)",
-      partner: "Markus H. (Munich, DE)",
-      cashBalance: "Even 1:1 Key-for-Key (€0)",
-      status: "Ready for Inspection"
-    },
-    {
-      id: 902,
-      direction: "Incoming",
-      offerId: 102,
-      targetTitle: "Modern 3-Room Apartment in Cluj-Napoca",
-      offeredItem: "3-Room Apartment in Bucharest North (Herăstrău / Pipera)",
-      partner: "elena.v@email.ro",
-      cashBalance: "+ €10,000 Cash Top-up",
-      status: "New Match Proposal"
-    }
-  ];
+  return normalizeSeedProposals([
+    { id: 901, direction: "Incoming", offerId: 101, status: "Ready for Inspection" },
+    { id: 902, direction: "Incoming", offerId: 104, status: "New Match Proposal" }
+  ]);
 })();
-
 // Load offers from localStorage + merge user-created offers with latest INITIAL_OFFERS
 let deletedOfferIds = (() => {
   try {
@@ -103,7 +116,6 @@ let deletedOfferIds = (() => {
     return [];
   }
 })();
-
 let offers = (() => {
   const baseOffers = (window.INITIAL_OFFERS || []).filter(o => !deletedOfferIds.includes(o.id));
   try {
@@ -128,7 +140,6 @@ let offers = (() => {
   } catch (e) { }
   return [...baseOffers];
 })();
-
 function saveOffersToStorage() {
   try {
     localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
@@ -138,9 +149,7 @@ function saveOffersToStorage() {
     if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush();
   } catch (e) { }
 }
-
 let currentDealModeFilter = "all";
-
 // Persistent Accounts Database (Email -> Account Object)
 let accountsDb = (() => {
   try {
@@ -150,14 +159,12 @@ let accountsDb = (() => {
     return {};
   }
 })();
-
 function saveAccountsDb() {
   try {
     localStorage.setItem("ci4m_accounts_db", JSON.stringify(accountsDb));
     if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush();
   } catch (e) { }
 }
-
 // Current logged-in user state
 let currentUser = (() => {
   try {
@@ -167,7 +174,6 @@ let currentUser = (() => {
     return null;
   }
 })();
-
 // Watchlist Alerts persisted in localStorage
 let watchlistAlerts = (() => {
   try {
@@ -177,14 +183,12 @@ let watchlistAlerts = (() => {
     return [];
   }
 })();
-
 function saveWatchlistAlerts() {
   try {
     localStorage.setItem("ci4m_watchlist_alerts", JSON.stringify(watchlistAlerts));
     if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush();
   } catch (e) { }
 }
-
 // GDPR & ePrivacy Consent State (Reg. EU 2016/679)
 let gdprConsent = (() => {
   try {
@@ -193,13 +197,11 @@ let gdprConsent = (() => {
   } catch (e) { }
   return { essential: true, functional: true, decided: false, timestamp: null };
 })();
-
 function saveGdprConsentState() {
   try {
     localStorage.setItem("ci4m_gdpr_consent_v1", JSON.stringify(gdprConsent));
   } catch (e) { }
 }
-
 function getGdprUiCopy() {
   const map = {
     ro: {
@@ -415,7 +417,6 @@ function getGdprUiCopy() {
   };
   return map[currentLang] || map.en;
 }
-
 function renderGdprBannerText() {
   const g = getGdprUiCopy();
   const titleEl = document.getElementById("gdprBannerTitle");
@@ -430,7 +431,6 @@ function renderGdprBannerText() {
   if (btnEss) btnEss.textContent = g.btnEssential;
   if (btnAll) btnAll.textContent = g.btnAcceptAll;
   if (footLink) footLink.textContent = g.footerLink;
-
   const sampleChipCopy = {
     ro: { cars: "+ Auto (Porsche / BMW)", re: "+ Imobiliare (Apartament / Vilă)", tech: "+ Tech (iPhone 16 / MacBook)" },
     en: { cars: "+ Cars (Porsche / BMW)", re: "+ Real Estate (Apartment / Villa)", tech: "+ Tech (iPhone 16 / MacBook)" },
@@ -447,7 +447,6 @@ function renderGdprBannerText() {
   if (cRe) cRe.textContent = sampleChipCopy.re;
   if (cTech) cTech.textContent = sampleChipCopy.tech;
 }
-
 function initGdprBanner() {
   renderGdprBannerText();
   const banner = document.getElementById("gdprConsentBanner");
@@ -458,7 +457,6 @@ function initGdprBanner() {
     banner.style.display = "none";
   }
 }
-
 function acceptGdprConsent(mode = "all") {
   gdprConsent = {
     essential: true,
@@ -478,14 +476,12 @@ function acceptGdprConsent(mode = "all") {
   }
   showToast(getGdprUiCopy().savedToast);
 }
-
 function openGdprPreferencesModal() {
   const g = getGdprUiCopy();
   const content = document.getElementById("guideModalContent");
   if (!content) return;
   const funcChecked = gdprConsent.functional !== false ? "checked" : "";
   const cancelWord = { ro: "Anulează", en: "Cancel", de: "Abbrechen", fr: "Annuler", it: "Annulla", es: "Cancelar", ru: "Отмена" }[currentLang] || "Cancel";
-
   content.innerHTML = `
     <div class="hig-sheet-toolbar">
       <button type="button" class="hig-btn-cancel" onclick="closeGuideModal()">${cancelWord}</button>
@@ -494,7 +490,6 @@ function openGdprPreferencesModal() {
     </div>
     <span style="background:#f1f5f4;color:#0f172a;border:1px solid rgba(15,23,42,0.08);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${g.modalBadge}</span>
     <p style="font-size:13px;color:var(--muted);margin:10px 0 16px;">${g.modalSub}</p>
-
     <form onsubmit="saveGdprPreferences(event)" style="display:grid;gap:12px;">
       <div style="padding:14px 16px;background:#f5f7f7;border:1px solid rgba(15,23,42,0.08);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
         <div>
@@ -503,7 +498,6 @@ function openGdprPreferencesModal() {
         </div>
         <span style="background:#0f172a;color:#ffffff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;">✓ ${g.alwaysActive}</span>
       </div>
-
       <label style="padding:14px 16px;background:#ffffff;border:1px solid rgba(15,23,42,0.1);border-radius:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div>
           <strong style="font-size:14px;color:#0f172a;display:block;margin-bottom:4px;">${g.catFuncTitle}</strong>
@@ -511,12 +505,10 @@ function openGdprPreferencesModal() {
         </div>
         <input type="checkbox" id="gdprFuncToggle" ${funcChecked} style="width:20px;height:20px;accent-color:#0f172a;margin-top:2px;flex-shrink:0;" />
       </label>
-
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
         <button type="submit" class="btn btn-dark" style="flex:1;border-radius:999px;">✓ ${g.savePrefsBtn}</button>
       </div>
     </form>
-
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;">
       <a href="#before-trade" onclick="openGuideModal('privacy-policy'); return false;" style="color:var(--forest);font-weight:700;text-decoration:underline;">${t("footerPrivacyLink")}</a>
       <a href="#before-trade" onclick="openGuideModal('cookies-policy'); return false;" style="color:var(--forest);font-weight:700;text-decoration:underline;">${t("footerCookiesLink")}</a>
@@ -526,14 +518,12 @@ function openGdprPreferencesModal() {
   document.getElementById("guideModal")?.classList.add("open");
   document.body.classList.add("modal-open");
 }
-
 function saveGdprPreferences(e) {
   if (e) e.preventDefault();
   const funcToggle = document.getElementById("gdprFuncToggle");
   const allowFunc = funcToggle ? Boolean(funcToggle.checked) : true;
   acceptGdprConsent(allowFunc ? "all" : "essential");
 }
-
 function exportUserGdprData() {
   const emailKey = String(currentUser?.email || "").trim().toLowerCase();
   const nameNorm = normalizeSearchText(currentUser?.name || "");
@@ -576,7 +566,6 @@ function exportUserGdprData() {
   showToast(getGdprUiCopy().exportedToast);
   return payload;
 }
-
 function deleteUserGdprAccount() {
   const emailKey = String(currentUser?.email || "").trim().toLowerCase();
   if (emailKey && accountsDb[emailKey]) {
@@ -619,7 +608,6 @@ function deleteUserGdprAccount() {
   closeDashboardModal();
   showToast(getGdprUiCopy().deletedToast);
 }
-
 function reportOfferListing(offerId, reason = "", notes = "") {
   const item = offers.find(o => o.id === Number(offerId));
   const g = getGdprUiCopy();
@@ -641,7 +629,6 @@ function reportOfferListing(offerId, reason = "", notes = "") {
   const reasonSuffix = reason ? ` [${cleanReason}]` : "";
   showToast(`${g.dsaReportedToast} (#${offerId}${item ? " · " + item.title : ""}${reasonSuffix})`);
 }
-
 function openReportOfferSheet(offerId) {
   const item = offers.find(o => o.id === Number(offerId));
   const modal = document.getElementById("appleSheetModal");
@@ -663,7 +650,6 @@ function openReportOfferSheet(offerId) {
     ru: { cancel: "Отмена", title: "Пожаловаться (EU DSA)", send: "Отправить", reasonLbl: "Причина жалобы (ст. 16 DSA)", r1: "Недостоверная цена / оценка", r2: "Подозрительное объявление", r3: "Дубликат / Спам", r4: "Неверные контактные данные", notesLbl: "Дополнительные детали (необязательно)", notesPh: "Кратко опишите проблему..." }
   };
   const dc = dsaCopyMap[currentLang] || dsaCopyMap.en;
-
   content.innerHTML = `
     <form onsubmit="event.preventDefault(); const r = this.querySelector('select[name=dsaReason]')?.value || ''; const n = this.querySelector('input[name=dsaNotes]')?.value || ''; closeAppleSheetModal(); reportOfferListing(${Number(offerId)}, r, n);">
       <div class="hig-sheet-toolbar">
@@ -694,7 +680,6 @@ function openReportOfferSheet(offerId) {
   modal.classList.add("open");
   document.body.classList.add("modal-open");
 }
-
 // ============================================================================
 // MONETIZATION: FIRST 10 SWAPS FREE, THEN CREDIT PACKS OR PRO SUBSCRIPTION
 // ============================================================================
@@ -706,7 +691,6 @@ let guestFreeSwaps = (() => {
     return 10;
   }
 })();
-
 function getSubscriptionUiCopy() {
   const map = {
     ro: {
@@ -971,7 +955,6 @@ function getSubscriptionUiCopy() {
   };
   return map[currentLang] || map.en;
 }
-
 function updatePricingCardsUI() {
   const s = getSubscriptionUiCopy();
   const p1Head = document.getElementById("plan1Heading");
@@ -984,7 +967,6 @@ function updatePricingCardsUI() {
   const p3List = document.getElementById("plan3List");
   const p3Btn = document.getElementById("plan3ActionBtn");
   const dashUpBtn = document.getElementById("dashUpgradeBtn");
-
   if (p1Head) p1Head.textContent = s.plan1Heading;
   if (pPackPrice) pPackPrice.textContent = formatCurrency(9, currentCurrency);
   if (pPerPack) pPerPack.textContent = s.perPack;
@@ -1002,7 +984,6 @@ function updatePricingCardsUI() {
   if (p3Btn) p3Btn.textContent = s.proBtn;
   if (dashUpBtn) dashUpBtn.textContent = s.dashUpgradeBtn;
 }
-
 function canPerformSwapOrPost() {
   if (currentUser) {
     if (currentUser.plan === "pro") return true;
@@ -1024,12 +1005,10 @@ function canPerformSwapOrPost() {
     return true;
   }
 }
-
 function openSubscriptionModal(preselectedTier = "pro") {
   const s = getSubscriptionUiCopy();
   const content = document.getElementById("guideModalContent");
   if (!content) return;
-
   const pricePack = formatCurrency(9, currentCurrency);
   const priceProM = formatCurrency(19, currentCurrency);
   const priceProY = formatCurrency(149, currentCurrency);
@@ -1039,20 +1018,17 @@ function openSubscriptionModal(preselectedTier = "pro") {
   const selPack = preselectedTier === "pack15";
   const selYearly = preselectedTier === "pro_yearly";
   const selMonthly = !selPack && !selYearly;
-
   content.innerHTML = `
     <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
     <span style="background:#f1f5f4;color:#0f172a;border:1px solid rgba(15,23,42,0.08);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${s.modalBadge}</span>
     <h2 style="font-size:24px;margin:10px 0 6px;">${s.modalTitle}</h2>
     <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">${s.modalSub}</p>
-
     <div style="padding:12px 15px;background:${remSwaps <= 0 && !isPro ? '#fff1f2' : '#f5f7f7'};border:1px solid ${remSwaps <= 0 && !isPro ? '#fecdd3' : 'rgba(15,23,42,0.08)'};border-radius:16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
       <strong style="font-size:13px;color:#0f172a;">${s.statusLabel}</strong>
       <span style="font-size:13px;font-weight:800;color:${remSwaps <= 0 && !isPro ? '#be123c' : '#0f172a'};font-variant-numeric:tabular-nums;">
         ${isPro ? `✓ ${s.statusPro}` : `${s.statusCredits} ${remSwaps} / ${maxSwaps}`}
       </span>
     </div>
-
     <form onsubmit="activateSubscriptionPlan(event)" style="display:grid;gap:10px;">
       <label data-tier-card="pack15" style="padding:13px 15px;background:${selPack ? '#f8fafc' : '#ffffff'};border:1.5px solid ${selPack ? '#0f172a' : 'rgba(15,23,42,0.1)'};border-radius:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div style="display:flex;gap:10px;align-items:flex-start;">
@@ -1064,7 +1040,6 @@ function openSubscriptionModal(preselectedTier = "pro") {
         </div>
         <strong style="font-size:16px;color:#0f172a;white-space:nowrap;font-variant-numeric:tabular-nums;">${pricePack}</strong>
       </label>
-
       <label data-tier-card="pro_monthly" style="padding:13px 15px;background:${selMonthly ? '#f8fafc' : '#ffffff'};border:1.5px solid ${selMonthly ? '#0f172a' : 'rgba(15,23,42,0.1)'};border-radius:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div style="display:flex;gap:10px;align-items:flex-start;">
           <input type="radio" name="subTier" value="pro_monthly" ${selMonthly ? "checked" : ""} onchange="highlightSubscriptionTierCard(this.value)" style="width:18px;height:18px;margin-top:3px;accent-color:#0f172a;" />
@@ -1075,7 +1050,6 @@ function openSubscriptionModal(preselectedTier = "pro") {
         </div>
         <strong style="font-size:16px;color:#0f172a;white-space:nowrap;font-variant-numeric:tabular-nums;">${priceProM}${s.perMonth}</strong>
       </label>
-
       <label data-tier-card="pro_yearly" style="padding:13px 15px;background:${selYearly ? '#f8fafc' : '#ffffff'};border:1.5px solid ${selYearly ? '#0f172a' : 'rgba(15,23,42,0.1)'};border-radius:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div style="display:flex;gap:10px;align-items:flex-start;">
           <input type="radio" name="subTier" value="pro_yearly" ${selYearly ? "checked" : ""} onchange="highlightSubscriptionTierCard(this.value)" style="width:18px;height:18px;margin-top:3px;accent-color:#0f172a;" />
@@ -1086,7 +1060,6 @@ function openSubscriptionModal(preselectedTier = "pro") {
         </div>
         <strong style="font-size:16px;color:#0f172a;white-space:nowrap;font-variant-numeric:tabular-nums;">${priceProY}</strong>
       </label>
-
       <div class="field-group" style="margin:4px 0;">
         <label style="font-size:12px;font-weight:700;color:var(--ink);">${s.payMethodLabel}</label>
         <select name="payMethod" class="input-light">
@@ -1095,7 +1068,6 @@ function openSubscriptionModal(preselectedTier = "pro") {
           <option value="bank">${s.payBank}</option>
         </select>
       </div>
-
       <button type="submit" class="btn btn-dark btn-block" style="margin-top:4px;">
         ✓ ${s.activateBtn}
       </button>
@@ -1104,7 +1076,6 @@ function openSubscriptionModal(preselectedTier = "pro") {
   document.getElementById("guideModal")?.classList.add("open");
   document.body.classList.add("modal-open");
 }
-
 function highlightSubscriptionTierCard(tierVal) {
   document.querySelectorAll("#guideModalContent label[data-tier-card]").forEach(lbl => {
     const isSel = lbl.getAttribute("data-tier-card") === tierVal;
@@ -1112,12 +1083,10 @@ function highlightSubscriptionTierCard(tierVal) {
     lbl.style.background = isSel ? "#f8fafc" : "#ffffff";
   });
 }
-
 function getRemainingFreeSwaps() {
   if (currentUser && currentUser.plan === "pro") return 999;
   return currentUser ? (currentUser.freeSwaps ?? 10) : guestFreeSwaps;
 }
-
 function applyPurchasedPlanLocally(chosenTier) {
   const s = getSubscriptionUiCopy();
   if (!currentUser) {
@@ -1147,7 +1116,6 @@ function applyPurchasedPlanLocally(chosenTier) {
   }
   guestFreeSwaps = chosenTier === "pack15" ? guestFreeSwaps + 15 : 999;
   localStorage.setItem("ci4m_guest_free_swaps", String(guestFreeSwaps));
-
   renderUserHeaderState();
   closeGuideModal();
   if (document.getElementById("dashboardModal")?.classList.contains("open")) {
@@ -1155,25 +1123,21 @@ function applyPurchasedPlanLocally(chosenTier) {
   }
   showToast(chosenTier === "pack15" ? s.packActivatedToast : s.proActivatedToast);
 }
-
 function activateSubscriptionPlan(e) {
   if (e) e.preventDefault();
   const fd = e && e.target ? new FormData(e.target) : null;
   const chosenTier = (fd && fd.get("subTier")) || document.querySelector('input[name="subTier"]:checked')?.value || "pro_monthly";
-
   const gw = typeof getAuthGatewaysConfig === "function" ? getAuthGatewaysConfig() : {};
   const directLink = chosenTier === "pack15"
     ? gw.stripePack15Url
     : chosenTier === "pro_yearly"
       ? gw.stripeProYearlyUrl
       : gw.stripeProMonthlyUrl;
-
   if (directLink && /^https:\/\/(buy|checkout)\.stripe\.com\//i.test(directLink) && typeof fetch === "function") {
     showToast("↻ Redirecting to secure Stripe Checkout...");
     window.location.href = directLink;
     return;
   }
-
   if ((gw.stripeSecretKey || serverConfiguredGateways.stripe) && typeof fetch === "function") {
     showToast("↻ Opening secure Stripe Checkout...");
     fetch("/api/sync", {
@@ -1197,10 +1161,8 @@ function activateSubscriptionPlan(e) {
       .catch(() => applyPurchasedPlanLocally(chosenTier));
     return;
   }
-
   applyPurchasedPlanLocally(chosenTier);
 }
-
 function checkStripeCheckoutReturnUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -1214,7 +1176,6 @@ function checkStripeCheckoutReturnUrl() {
     }
   } catch (err) { }
 }
-
 function simulateZeroFreeSwaps() {
   if (currentUser) {
     currentUser.plan = "starter";
@@ -1235,7 +1196,6 @@ function simulateZeroFreeSwaps() {
   }
   showToast(getSubscriptionUiCopy().zeroSimulatedToast);
 }
-
 // 7-Step Wizard State (Persisted in localStorage so refresh never loses data)
 const DEFAULT_WIZ_DATA = {
   editingOfferId: null,
@@ -1256,12 +1216,10 @@ const DEFAULT_WIZ_DATA = {
   email: "",
   phone: ""
 };
-
 let wizStep = 1;
 let currentOpenOfferId = null;
 let currentAuthMode = "register";
 let isRestoringRouteState = false;
-
 let wizData = (() => {
   try {
     const saved = localStorage.getItem("ci4m_wiz_draft_v1");
@@ -1277,18 +1235,15 @@ let wizData = (() => {
   } catch (e) { }
   return { ...DEFAULT_WIZ_DATA };
 })();
-
 function persistWizardDraft() {
   try {
     localStorage.setItem("ci4m_wiz_draft_v1", JSON.stringify({ wizStep, wizData }));
   } catch (e) { }
 }
-
 function isLocalhostServer() {
   const h = window.location.hostname;
   return h === "localhost" || h === "127.0.0.1" || window.location.protocol === "file:";
 }
-
 function syncUrlWithRoute(routePath, replace = false) {
   if (isRestoringRouteState) return;
   const cleanRoute = routePath && routePath.startsWith("/") ? routePath : `/${routePath || ""}`;
@@ -1303,7 +1258,6 @@ function syncUrlWithRoute(routePath, replace = false) {
       currentCategoryFilter
     }));
   } catch (e) { }
-
   try {
     let targetUrl = cleanRoute;
     if (isLocalhostServer()) {
@@ -1319,7 +1273,6 @@ function syncUrlWithRoute(routePath, replace = false) {
     }
   } catch (e) { }
 }
-
 function getRouteFromUrlOrStorage() {
   const params = new URLSearchParams(window.location.search);
   const pageParam = params.get("page");
@@ -1348,14 +1301,12 @@ function getRouteFromUrlOrStorage() {
   } catch (e) { }
   return "/";
 }
-
 function closeAllModalsSilently() {
   ["wizardModal", "offerModal", "authModal", "dashboardModal", "guideModal", "adminModal", "appleSheetModal"].forEach(id => {
     document.getElementById(id)?.classList.remove("open");
   });
   document.body.classList.remove("modal-open");
 }
-
 function navigateToPageRoute(routePath, replace = false) {
   const clean = routePath && routePath.startsWith("/") ? routePath : `/${routePath || ""}`;
   isRestoringRouteState = true;
@@ -1399,7 +1350,7 @@ function navigateToPageRoute(routePath, replace = false) {
     } else if (clean === "/dashboard") {
       document.body.classList.add("mobile-started");
       if (currentUser) {
-        openDashboardModal(currentDashTab || "proposals");
+        openDashboardModal(currentDashTab || "mylistings");
       } else {
         openAuthModal("login");
       }
@@ -1416,12 +1367,10 @@ function navigateToPageRoute(routePath, replace = false) {
   }
   syncUrlWithRoute(clean, replace);
 }
-
 function t(key) {
   const dict = window.TRANSLATIONS[currentLang] || window.TRANSLATIONS.en;
   return dict[key] || window.TRANSLATIONS.en[key] || key;
 }
-
 function getOfferLocalized(offer) {
   if (offer.i18n && offer.i18n[currentLang]) {
     return offer.i18n[currentLang];
@@ -1435,7 +1384,6 @@ function getOfferLocalized(offer) {
     desc: offer.desc || ""
   };
 }
-
 function getCategoryLabel(catCode) {
   const map = {
     "cars": t("catCars"),
@@ -1447,14 +1395,12 @@ function getCategoryLabel(catCode) {
   };
   return map[catCode] || catCode;
 }
-
 function getDealTypeLabel(dealType) {
   if (dealType === "1to1") return t("deal1to1");
   if (dealType === "cash") return t("dealCashAdd");
   if (dealType === "sale") return t("dealSaleOnly");
   return t("dealSwapOrSale");
 }
-
 // ============================================================================
 // PREMIUM VECTOR SVG ICONS (No Emojis — Clean Architectural & Luxury Line Icons)
 // ============================================================================
@@ -1471,7 +1417,6 @@ const PREMIUM_ICONS = {
   "heartFilled": `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`,
   "heartOutline": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
 };
-
 // ============================================================================
 // MULTI-CURRENCY SYSTEM (Exact Client-Price Parity + Live FX Sync)
 // ============================================================================
@@ -1479,7 +1424,6 @@ function getCurrencyObj(code = currentCurrency) {
   const list = window.CURRENCIES || [{ code: "EUR", symbol: "€", short: "EUR", label: "Euro (EUR)", rateFromEur: 1.0 }];
   return list.find(c => c.code === code) || list[0];
 }
-
 // Universal numeric parser resilient to empty strings "", comma decimals ("15.500,50" or "15000,50"), thousands commas ("15,000"), and whitespace
 function sanitizeNumericAmount(rawVal, fallback = 0) {
   if (typeof rawVal === "number") {
@@ -1509,7 +1453,6 @@ function sanitizeNumericAmount(rawVal, fallback = 0) {
   const parsed = Number(str);
   return (Number.isFinite(parsed) && parsed >= 0) ? parsed : fallback;
 }
-
 // Exact unrounded conversion to EUR base (prevents any round-trip drift)
 function convertToEur(valInCurr, code = currentCurrency) {
   const c = getCurrencyObj(code);
@@ -1517,13 +1460,11 @@ function convertToEur(valInCurr, code = currentCurrency) {
   if (!c.rateFromEur) return num;
   return num / c.rateFromEur;
 }
-
 function convertFromEur(valEur, code = currentCurrency) {
   const c = getCurrencyObj(code);
   const num = sanitizeNumericAmount(valEur, 0);
   return Math.round(num * c.rateFromEur);
 }
-
 // Direct cross-currency conversion respecting exact parity with client-set price
 function convertBetweenCurrencies(amount, fromCode, toCode = currentCurrency) {
   const num = sanitizeNumericAmount(amount, 0);
@@ -1536,7 +1477,6 @@ function convertBetweenCurrencies(amount, fromCode, toCode = currentCurrency) {
   const exactInEur = num / (fromObj.rateFromEur || 1);
   return Math.round(exactInEur * (toObj.rateFromEur || 1));
 }
-
 // Returns the exact value of an offer in targetCode, preserving 100% of the client's original price
 function getOfferValueInCurrency(item, targetCode = currentCurrency) {
   if (!item) return 0;
@@ -1549,7 +1489,6 @@ function getOfferValueInCurrency(item, targetCode = currentCurrency) {
   }
   return convertBetweenCurrencies(origAmt, origCurr, targetCode);
 }
-
 function formatAmountInCurrentCurrency(rawAmount, code = currentCurrency) {
   const c = getCurrencyObj(code);
   const rounded = Math.round(sanitizeNumericAmount(rawAmount, 0));
@@ -1561,29 +1500,46 @@ function formatAmountInCurrentCurrency(rawAmount, code = currentCurrency) {
   if (c.code === "USD") return `$${rounded.toLocaleString("en-US")}`;
   return `€${rounded.toLocaleString("en-US")}`;
 }
-
 function formatOfferPrice(item, code = currentCurrency) {
   const val = getOfferValueInCurrency(item, code);
   return formatAmountInCurrentCurrency(val, code);
 }
-
 function formatCurrency(valEur, code = currentCurrency) {
   const converted = convertFromEur(valEur, code);
   return formatAmountInCurrentCurrency(converted, code);
 }
-
 function buildParityPreviewHtml(amount, baseCurrCode) {
   const num = sanitizeNumericAmount(amount, 0);
   if (num <= 0) return "";
   const others = (window.CURRENCIES || []).filter(c => c.code !== baseCurrCode);
-  const pills = others.map(c => {
-    const eq = convertBetweenCurrencies(num, baseCurrCode, c.code);
-    return `<span style="display:inline-block;background:rgba(12,44,40,0.08);border:1px solid rgba(12,44,40,0.15);border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;color:var(--forest);">~ ${formatAmountInCurrentCurrency(eq, c.code)}</span>`;
-  }).join(" ");
+  if (!others.length) return "";
   const parityText = (typeof getSmartUiLabels === "function" && getSmartUiLabels().parityLabel) || "Parity";
-  return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:6px;"><span style="font-size:11.5px;color:var(--muted);font-weight:700;">⇄ ${parityText}:</span>${pills}</div>`;
+  const optionsHtml = others.map(c => {
+    const eq = convertBetweenCurrencies(num, baseCurrCode, c.code);
+    return `<option value="${c.code}">${c.code} (${c.symbol}) — ~${formatAmountInCurrentCurrency(eq, c.code)}</option>`;
+  }).join("");
+  return `
+    <div class="hig-parity-bar">
+      <span class="hig-parity-label">⇄ ${parityText}:</span>
+      <select class="hig-parity-select" aria-label="${parityText}">
+        ${optionsHtml}
+      </select>
+    </div>
+  `;
 }
-
+function setBuyOfferQuickPct(offerId, factor) {
+  const item = offers.find(o => o.id === Number(offerId));
+  if (!item) return;
+  const currEl = document.getElementById("buyOfferCurrencySelect");
+  const valEl = document.getElementById("buyOfferAmountInput");
+  const chosenCurr = currEl?.value || currentCurrency;
+  const baseVal = getOfferValueInCurrency(item, chosenCurr);
+  const nextVal = Math.round(baseVal * Number(factor || 1));
+  if (valEl) {
+    valEl.value = String(nextVal);
+  }
+  onBuyOfferPriceChange(offerId);
+}
 async function syncLiveExchangeRates() {
   try {
     const res = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD,RON,GBP,CHF");
@@ -1602,7 +1558,6 @@ async function syncLiveExchangeRates() {
     // Keep default reference rates if offline
   }
 }
-
 function getDefaultCurrencyForLanguage(langCode, isoCountryCode = "") {
   const upperIso = String(isoCountryCode || "").toUpperCase();
   if (upperIso && window.COUNTRY_TO_CURRENCY && window.COUNTRY_TO_CURRENCY[upperIso]) {
@@ -1613,13 +1568,11 @@ function getDefaultCurrencyForLanguage(langCode, isoCountryCode = "") {
   }
   return (window.LANG_TO_CURRENCY && window.LANG_TO_CURRENCY[langCode]) || "EUR";
 }
-
 function initCurrencyDropdown() {
   const listEl = document.getElementById("currencyList");
   const triggerBtn = document.getElementById("currencyTriggerBtn");
   const dropdown = document.getElementById("currencyDropdown");
   if (!listEl || !triggerBtn || !dropdown) return;
-
   const currencies = window.CURRENCIES || [];
   listEl.innerHTML = currencies.map(c => `
     <li role="presentation">
@@ -1632,14 +1585,12 @@ function initCurrencyDropdown() {
       </button>
     </li>
   `).join("");
-
   triggerBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     document.getElementById("langDropdown")?.classList.remove("is-open");
     const isOpen = dropdown.classList.toggle("is-open");
     triggerBtn.setAttribute("aria-expanded", String(isOpen));
   });
-
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target)) {
       dropdown.classList.remove("is-open");
@@ -1647,7 +1598,6 @@ function initCurrencyDropdown() {
     }
   });
 }
-
 function updateCurrencyDependentLabels() {
   const c = getCurrencyObj(currentCurrency);
   const symEl = document.getElementById("currentCurrencySymbol");
@@ -1659,21 +1609,17 @@ function updateCurrencyDependentLabels() {
     symEl.style.display = hasDistinctSymbol ? "inline" : "none";
   }
   if (codeEl) codeEl.textContent = shortText;
-
   document.querySelectorAll("#currencyList .lang-option").forEach(btn => {
     btn.setAttribute("aria-selected", String(btn.dataset.currency === currentCurrency));
   });
-
   ["inlineRegCurrencySelect", "modalRegCurrencySelect", "quickPostCurrencySelect", "wizCurrencySelect"].forEach(id => {
     const sel = document.getElementById(id);
     if (sel) sel.value = currentCurrency;
   });
-
   const minInput = document.getElementById("catalogMinEur");
   const maxInput = document.getElementById("catalogMaxEur");
   if (minInput) minInput.setAttribute("placeholder", `Min ${c.symbol}`);
   if (maxInput) maxInput.setAttribute("placeholder", `Max ${c.symbol}`);
-
   const quickValLabel = document.getElementById("quickValueLabel");
   if (quickValLabel) {
     quickValLabel.textContent = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(MDL\)|\(RUB\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${c.short || c.code})`);
@@ -1681,7 +1627,6 @@ function updateCurrencyDependentLabels() {
   onQuickPostPriceChange();
   updatePricingCardsUI();
 }
-
 function setCurrency(currCode, isManualUserAction = false) {
   const c = getCurrencyObj(currCode);
   currentCurrency = c.code;
@@ -1689,12 +1634,10 @@ function setCurrency(currCode, isManualUserAction = false) {
   if (isManualUserAction) {
     localStorage.setItem("ci4m_currency_manual", currentCurrency);
   }
-
   document.getElementById("currencyDropdown")?.classList.remove("is-open");
   updateCurrencyDependentLabels();
   renderOffers();
   renderMapPinsAndPanel();
-
   if (document.getElementById("wizardModal")?.classList.contains("open")) {
     saveCurrentWizStepInputs();
     renderWizStep();
@@ -1706,13 +1649,11 @@ function setCurrency(currCode, isManualUserAction = false) {
     renderDashboardContent();
   }
 }
-
 function onRegLangSelectChange(newLang, targetCurrencySelectId) {
   setLanguage(newLang, true);
   const sel = document.getElementById(targetCurrencySelectId);
   if (sel) sel.value = currentCurrency;
 }
-
 // ============================================================================
 // EUROPEAN GEO-IP AUTO-DETECTION (Default: EN -> European Country Native Lang)
 // ============================================================================
@@ -1721,12 +1662,10 @@ function resolveLanguageFromCountryCode(isoCode) {
   const upper = String(isoCode).trim().toUpperCase();
   return window.COUNTRY_TO_LANG[upper] || "en";
 }
-
 function updateGeoIpBannerUI() {
   document.getElementById("geoIpStatusPill")?.remove();
   document.querySelectorAll(".lang-geo-footer, [data-tab='geoip']").forEach(el => el.remove());
 }
-
 async function detectLanguageByGeoIP(forceOverwriteManual = false) {
   // 1. Check URL ?lang= parameter first
   const urlParams = new URLSearchParams(window.location.search);
@@ -1737,7 +1676,6 @@ async function detectLanguageByGeoIP(forceOverwriteManual = false) {
     updateGeoIpBannerUI();
     return;
   }
-
   // 2. Check if user explicitly selected a language manually in this browser
   const manualLang = localStorage.getItem("ci4m_lang_manual");
   if (manualLang && window.TRANSLATIONS[manualLang] && !forceOverwriteManual) {
@@ -1746,7 +1684,6 @@ async function detectLanguageByGeoIP(forceOverwriteManual = false) {
     // Baseline default before IP resolves is always English ("en")
     setLanguage("en", false);
   }
-
   // 3. Query Geo-IP APIs to detect visitor's European country (only if functional GDPR consent allows it)
   if (gdprConsent && gdprConsent.decided && gdprConsent.functional === false) {
     updateGeoIpBannerUI();
@@ -1766,7 +1703,6 @@ async function detectLanguageByGeoIP(forceOverwriteManual = false) {
       parse: (d) => d && d.country ? { code: d.country, name: d.country, city: "", ip: d.ip || "" } : null
     }
   ];
-
   for (const ep of endpoints) {
     try {
       const controller = new AbortController();
@@ -1786,7 +1722,6 @@ async function detectLanguageByGeoIP(forceOverwriteManual = false) {
           autoLang: mappedLang,
           source: "geoip"
         };
-
         // If user hasn't manually locked another language (or if forced), apply the IP-matched language
         if (!manualLang || forceOverwriteManual) {
           localStorage.removeItem("ci4m_lang_manual");
@@ -1800,11 +1735,9 @@ async function detectLanguageByGeoIP(forceOverwriteManual = false) {
       // Try next Geo-IP endpoint
     }
   }
-
   // Fallback if offline/blocked: keep English ("en") as default
   updateGeoIpBannerUI();
 }
-
 // ============================================================================
 // LANGUAGE SWITCHER (EN Default + DE, FR, IT, ES, RO, RU)
 // ============================================================================
@@ -1812,7 +1745,6 @@ function initLanguageDropdown() {
   const listEl = document.getElementById("langList");
   const triggerBtn = document.getElementById("langTriggerBtn");
   const dropdown = document.getElementById("langDropdown");
-
   listEl.innerHTML = window.LANGUAGES.map(l => `
     <li role="presentation">
       <button type="button" role="option" class="lang-option" data-lang="${l.code}" aria-selected="${l.code === currentLang}" onclick="setLanguage('${l.code}', true)">
@@ -1824,14 +1756,12 @@ function initLanguageDropdown() {
       </button>
     </li>
   `).join("");
-
   triggerBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     document.getElementById("currencyDropdown")?.classList.remove("is-open");
     const isOpen = dropdown.classList.toggle("is-open");
     triggerBtn.setAttribute("aria-expanded", String(isOpen));
   });
-
   document.addEventListener("click", (e) => {
     if (!dropdown.contains(e.target)) {
       dropdown.classList.remove("is-open");
@@ -1839,7 +1769,6 @@ function initLanguageDropdown() {
     }
   });
 }
-
 function setLanguage(langCode, isManualUserAction = false) {
   if (!window.TRANSLATIONS[langCode]) langCode = "en";
   currentLang = langCode;
@@ -1848,7 +1777,6 @@ function setLanguage(langCode, isManualUserAction = false) {
     localStorage.setItem("ci4m_lang_manual", langCode);
   }
   document.documentElement.lang = langCode;
-
   // Automatically adapt currency by language (unless user locked a manual currency on initial load)
   const manualCurr = localStorage.getItem("ci4m_currency_manual");
   if (isManualUserAction || !manualCurr) {
@@ -1856,42 +1784,35 @@ function setLanguage(langCode, isManualUserAction = false) {
     currentCurrency = autoCurr;
     localStorage.setItem("ci4m_currency", currentCurrency);
   }
-
   // Update header flag & short label
   const langObj = window.LANGUAGES.find(l => l.code === langCode) || window.LANGUAGES[0];
   const flagEl = document.getElementById("currentLangFlag");
   const shortEl = document.getElementById("currentLangShort");
   if (flagEl) flagEl.innerHTML = langObj.flagSvg;
   if (shortEl) shortEl.textContent = langObj.short;
-
   // Update selected state in dropdown
   document.querySelectorAll("#langList .lang-option").forEach(btn => {
     btn.setAttribute("aria-selected", String(btn.dataset.lang === langCode));
   });
   document.getElementById("langDropdown")?.classList.remove("is-open");
-
   // Sync language selects in forms
   const inlineSel = document.getElementById("inlineRegLangSelect");
   if (inlineSel) inlineSel.value = langCode;
   const modalSel = document.getElementById("modalRegLangSelect");
   if (modalSel) modalSel.value = langCode;
-
   // Translate all static DOM nodes
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     el.textContent = t(key);
   });
-
   document.querySelectorAll("[data-i18n-html]").forEach(el => {
     const key = el.getAttribute("data-i18n-html");
     el.innerHTML = t(key);
   });
-
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     const key = el.getAttribute("data-i18n-placeholder");
     el.setAttribute("placeholder", t(key));
   });
-
   updateCurrencyDependentLabels();
   updateGeoIpBannerUI();
   renderGdprBannerText();
@@ -1916,7 +1837,6 @@ function setLanguage(langCode, isManualUserAction = false) {
   if (scEl) scEl.textContent = sc.el;
   const qPhotoIn = document.getElementById("quickPhotoUrlInput");
   if (qPhotoIn) qPhotoIn.placeholder = getWizValidationCopy().pasteUrlPlaceholder;
-
   if (document.getElementById("wizardModal")?.classList.contains("open")) {
     saveCurrentWizStepInputs();
     renderWizStep();
@@ -1928,7 +1848,6 @@ function setLanguage(langCode, isManualUserAction = false) {
     renderDashboardContent();
   }
 }
-
 // ============================================================================
 // OFFERS CATALOG, FAVORITES & SMART FILTERING
 // ============================================================================
@@ -1956,7 +1875,6 @@ function updateFavCountUI() {
     userFilterLbl.textContent = lblMap[currentLang] || lblMap.en;
   }
 }
-
 function toggleFavorite(offerId, ev) {
   if (ev) ev.stopPropagation();
   const favMsgMap = {
@@ -1988,7 +1906,6 @@ function toggleFavorite(offerId, ev) {
     }
   }
 }
-
 function filterByCategory(catCode) {
   document.body.classList.add("mobile-started");
   currentCategoryFilter = catCode;
@@ -2002,7 +1919,6 @@ function filterByCategory(catCode) {
     offersSec.scrollIntoView({ behavior: "smooth" });
   }
 }
-
 function filterByDealMode(mode) {
   currentDealModeFilter = mode;
   document.querySelectorAll("#dealModePills .cat-pill").forEach(btn => {
@@ -2017,7 +1933,6 @@ function filterByDealMode(mode) {
   }
   renderOffers();
 }
-
 function invertMatcherCategories() {
   const haveSel = document.getElementById("matcherHave");
   const wantSel = document.getElementById("matcherWant");
@@ -2025,17 +1940,14 @@ function invertMatcherCategories() {
   haveSel.value = wantSel.value;
   wantSel.value = tmp;
 }
-
 function handleHeroMatcher(e) {
   e.preventDefault();
   const wantCat = document.getElementById("matcherWant").value;
   const country = document.getElementById("matcherCountry").value;
-
   currentCategoryFilter = wantCat;
   document.querySelectorAll("#categoryFilterPills .cat-pill").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.cat === wantCat);
   });
-
   if (country !== "all") {
     document.getElementById("catalogSearchInput").value = country;
   } else {
@@ -2045,12 +1957,10 @@ function handleHeroMatcher(e) {
     const mobSearch = document.getElementById("mobileSmartSearchInput");
     if (mobSearch) mobSearch.value = "";
   }
-
   renderOffers();
   document.getElementById("offers").scrollIntoView({ behavior: "smooth" });
   showToast(`✓ ${t("navOffers")}: ${wantCat === "all" ? t("catAll") : getCategoryLabel(wantCat)}`);
 }
-
 const SEARCH_SYNONYMS = {
   "casa": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "дом", "вилла"],
   "casă": ["villa", "house", "chalet", "casă", "vilă", "haus", "maison", "дом", "вилла"],
@@ -2090,7 +2000,6 @@ const SEARCH_SYNONYMS = {
   "bucurești": ["bucharest", "bucuresti", "bucurești"],
   "bucharest": ["bucharest", "bucuresti", "bucurești"]
 };
-
 const STOP_PREFIX_TOKENS = new Set([
   "sport", "sports", "sportback", "sportpaket", "sportivo", "deportivo",
   "commercial", "commerciale", "comercial", "comercială",
@@ -2098,20 +2007,17 @@ const STOP_PREFIX_TOKENS = new Set([
   "transport", "import", "export", "support", "opportunity", "portion", "portal",
   "portatil", "portátil", "portbagaj", "portable", "portiere", "port", "por"
 ]);
-
 function normalizeSearchText(str) {
   return String(str || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 }
-
 function extractSearchTokens(str) {
   return normalizeSearchText(str)
     .split(/[^a-z0-9ßа-яё]+/i)
     .filter(Boolean);
 }
-
 function tokensMatchQueryWords(tokens, queryWords, allowSynonyms = true) {
   return queryWords.every(w => {
     if (tokens.some(tok => tok.startsWith(w) && !(w.length <= 4 && STOP_PREFIX_TOKENS.has(tok) && tok !== w))) {
@@ -2129,7 +2035,6 @@ function tokensMatchQueryWords(tokens, queryWords, allowSynonyms = true) {
     return false;
   });
 }
-
 function getOfferPrimaryTokens(item) {
   const activeTr = (item.i18n && item.i18n[currentLang]) || {};
   const enTr = (item.i18n && item.i18n.en) || {};
@@ -2137,36 +2042,30 @@ function getOfferPrimaryTokens(item) {
   const primaryText = `${item.id || ""} ${item.category || ""} ${item.country || ""} ${item.city || ""} ${item.owner || ""} ${item.ownerEmail || ""} ${item.specs || ""} ${item.title || ""} ${item.desc || ""} ${item.want || ""} ${activeTr.title || ""} ${activeTr.desc || ""} ${activeTr.want || ""} ${enTr.title || ""} ${enTr.desc || ""} ${roTr.title || ""} ${roTr.desc || ""}`;
   return extractSearchTokens(primaryText);
 }
-
 function getOfferWantTokens(item) {
   const activeTr = (item.i18n && item.i18n[currentLang]) || {};
   const enTr = (item.i18n && item.i18n.en) || {};
   const wantText = `${item.want || ""} ${activeTr.want || ""} ${enTr.want || ""}`;
   return extractSearchTokens(wantText);
 }
-
 function matchesSmartSearchQuery(item, rawQuery) {
   if (!rawQuery) return true;
   const q = rawQuery.trim().toLowerCase();
   if (!q) return true;
   const words = extractSearchTokens(q);
   if (words.length === 0) return true;
-
   const primaryTokens = getOfferPrimaryTokens(item);
   return tokensMatchQueryWords(primaryTokens, words, true);
 }
-
 function matchesWantSearchQuery(item, rawQuery) {
   if (!rawQuery) return false;
   const q = rawQuery.trim().toLowerCase();
   if (!q) return false;
   const words = extractSearchTokens(q);
   if (words.length === 0) return false;
-
   const wantTokens = getOfferWantTokens(item);
   return tokensMatchQueryWords(wantTokens, words, false);
 }
-
 function inferSearchCategory(rawQuery, exactMatches) {
   if (exactMatches && exactMatches.length > 0) {
     return exactMatches[0].category;
@@ -2183,7 +2082,6 @@ function inferSearchCategory(rawQuery, exactMatches) {
   }
   return null;
 }
-
 function getSmartUiLabels() {
   const map = {
     en: {
@@ -2413,14 +2311,12 @@ function getSmartUiLabels() {
   };
   return map[currentLang] || map.en;
 }
-
 function buildAiSmartRecommendations(rawQuery, exactMatches, candidatePool) {
   const q = String(rawQuery || "").trim().toLowerCase();
   const words = extractSearchTokens(q);
   const ui = getSmartUiLabels();
   const exactIds = new Set((exactMatches || []).map(it => it.id));
   const pool = (candidatePool || offers).filter(it => !exactIds.has(it.id));
-
   const hasPrefix = (prefList) => words.some(w => prefList.some(p => w.startsWith(p) || p.startsWith(w)));
   const isIphone = hasPrefix(["iph", "telefon", "smartph", "айф", "телеф"]);
   const isIpad = hasPrefix(["ipad", "tablet", "айпад", "планш"]);
@@ -2428,7 +2324,6 @@ function buildAiSmartRecommendations(rawQuery, exactMatches, candidatePool) {
   const isHouse = hasPrefix(["cas", "vil", "hous", "haus", "mais", "chal", "дом", "вилл"]);
   const isApt = hasPrefix(["apart", "penth", "wohn", "piso", "triloc", "attic", "кварт"]);
   const isCar = hasPrefix(["merc", "bmw", "por", "aud", "tes", "auto", "masin", "mașin", "car", "suv", "coche", "voitur", "авто", "машин"]);
-
   const lang = currentLang || "en";
   const aiCopyMap = {
     ro: {
@@ -2524,10 +2419,8 @@ function buildAiSmartRecommendations(rawQuery, exactMatches, candidatePool) {
     }
   };
   const copy = aiCopyMap[lang] || aiCopyMap.en;
-
   let relatedChips = [];
   let aiSubtext = ui.altSectionSub;
-
   if (isIphone) {
     relatedChips = ["iPad", "MacBook", "Sony Alpha"];
     aiSubtext = copy.subIphone;
@@ -2547,14 +2440,12 @@ function buildAiSmartRecommendations(rawQuery, exactMatches, candidatePool) {
     relatedChips = ["Porsche", "Mercedes", "BMW", "Audi", "Tesla"];
     aiSubtext = copy.subCar;
   }
-
   const inferredCat = inferSearchCategory(q, exactMatches);
   const wantMatches = pool.filter(it => matchesWantSearchQuery(it, q));
   const wantIds = new Set(wantMatches.map(it => it.id));
   const catPeers = inferredCat
     ? pool.filter(it => !wantIds.has(it.id) && it.category === inferredCat)
     : [];
-
   // Score and order peers so the most relevant AI cross-suggestions come first (e.g. iPad Pro first for iPhone)
   catPeers.sort((a, b) => {
     const aText = `${a.specs || ""} ${a.i18n?.en?.title || ""}`.toLowerCase();
@@ -2571,7 +2462,6 @@ function buildAiSmartRecommendations(rawQuery, exactMatches, candidatePool) {
     }
     return (b.matchScore || 90) - (a.matchScore || 90);
   });
-
   const getCustomAltBadge = (item, isWant) => {
     const enTitle = (item.i18n?.en?.title || "").toLowerCase();
     if (isIphone || isIpad || isMac) {
@@ -2589,17 +2479,14 @@ function buildAiSmartRecommendations(rawQuery, exactMatches, candidatePool) {
     if (item.category === "cars") return copy.ecoCar;
     return `${copy.aiTag} · ${ui.altBadge}`;
   };
-
   // For iPhone/iPad/Mac or House/Apt, put same-category ecosystem matches first, then cross-category want matches
   const sameCatWant = wantMatches.filter(it => !inferredCat || it.category === inferredCat);
   const crossCatWant = wantMatches.filter(it => inferredCat && it.category !== inferredCat);
-
   const items = [
     ...sameCatWant.map(item => ({ item, altType: "want", badgeLabel: getCustomAltBadge(item, true) })),
     ...catPeers.map(item => ({ item, altType: "alt", badgeLabel: getCustomAltBadge(item, false) })),
     ...crossCatWant.map(item => ({ item, altType: "want", badgeLabel: getCustomAltBadge(item, true) }))
   ];
-
   return {
     items,
     relatedChips,
@@ -2608,7 +2495,6 @@ function buildAiSmartRecommendations(rawQuery, exactMatches, candidatePool) {
     aiSubtext
   };
 }
-
 function buildLiveSearchDropdownHtml(val) {
   const q = String(val || "").trim();
   if (q.length < 1) return "";
@@ -2621,10 +2507,10 @@ function buildLiveSearchDropdownHtml(val) {
   const adminShortcutHtml = isAdminQuery ? `
     <button type="button" class="smart-dd-item" style="background:#0a2520;color:#fff;" onclick="document.getElementById('heroSmartDropdown').style.display='none'; document.getElementById('mobileSmartDropdown').style.display='none'; openAdminModal('listings');">
       <div class="smart-dd-info">
-        <strong style="color:#a9ffca;">★ Admin & Diagnostics Console (/admin)</strong>
+        <strong style="color:#ffffff;">★ Admin & Diagnostics Console (/admin)</strong>
         <span style="color:#c9dfdb;">${adminSubText}</span>
       </div>
-      <span class="smart-dd-price" style="background:#a9ffca;color:#0c2c28;">${adminOpenWord}</span>
+      <span class="smart-dd-price" style="background:#0d8a5e;color:#0c2c28;">${adminOpenWord}</span>
     </button>
   ` : "";
   const qTokens = extractSearchTokens(q);
@@ -2641,10 +2527,8 @@ function buildLiveSearchDropdownHtml(val) {
       return bInTitle - aInTitle;
     })
     .slice(0, 4);
-
   const aiRecs = buildAiSmartRecommendations(q, exactMatches, offers);
   const alternatives = aiRecs.items.slice(0, 3);
-
   if (exactMatches.length === 0 && alternatives.length === 0 && !adminShortcutHtml) {
     return `
       <div class="smart-dd-empty" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
@@ -2653,7 +2537,6 @@ function buildLiveSearchDropdownHtml(val) {
       </div>
     `;
   }
-
   const renderRow = (item, badgeText = "", isWant = false) => {
     const loc = getOfferLocalized(item);
     const price = formatOfferPrice(item, currentCurrency);
@@ -2671,14 +2554,12 @@ function buildLiveSearchDropdownHtml(val) {
       </button>
     `;
   };
-
   const chipsHtml = aiRecs.relatedChips.length > 0
     ? `<div style="padding:7px 14px;background:#f0fdf4;border-top:1px solid rgba(12,44,40,0.08);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:800;color:var(--forest);">${aiRecs.tryAlso}</span>
         ${aiRecs.relatedChips.map(chip => `<button type="button" style="background:#ffffff;color:var(--forest);border:1px solid rgba(12,44,40,0.22);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;" onclick="event.stopPropagation(); executeQuickKeywordSearch('${chip.replace(/'/g, "\\'")}')">${chip}</button>`).join("")}
       </div>`
     : "";
-
   return `
     ${adminShortcutHtml}
     ${exactMatches.map(item => renderRow(item)).join("")}
@@ -2694,7 +2575,6 @@ function buildLiveSearchDropdownHtml(val) {
     </button>
   `;
 }
-
 function handleHeroLiveSearch(val) {
   const dd = document.getElementById("heroSmartDropdown");
   if (!dd) return;
@@ -2702,7 +2582,6 @@ function handleHeroLiveSearch(val) {
   dd.innerHTML = html;
   dd.style.display = html ? "block" : "none";
 }
-
 function handleMobileLiveSearch(val) {
   const dd = document.getElementById("mobileSmartDropdown");
   if (!dd) return;
@@ -2710,14 +2589,12 @@ function handleMobileLiveSearch(val) {
   dd.innerHTML = html;
   dd.style.display = html ? "block" : "none";
 }
-
 function executeQuickKeywordSearch(keyword) {
   const clean = String(keyword || "").trim();
   const heroDd = document.getElementById("heroSmartDropdown");
   const mobDd = document.getElementById("mobileSmartDropdown");
   if (heroDd) heroDd.style.display = "none";
   if (mobDd) mobDd.style.display = "none";
-
   currentCategoryFilter = "all";
   currentDealModeFilter = "all";
   document.querySelectorAll("#categoryFilterPills .cat-pill").forEach(btn => {
@@ -2726,18 +2603,15 @@ function executeQuickKeywordSearch(keyword) {
   document.querySelectorAll("#dealModePills .cat-pill").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.mode === "all");
   });
-
   const catSearch = document.getElementById("catalogSearchInput");
   if (catSearch) catSearch.value = clean;
   const heroInput = document.getElementById("heroSmartSearchInput");
   if (heroInput && clean) heroInput.value = clean;
   const mobInput = document.getElementById("mobileSmartSearchInput");
   if (mobInput && clean) mobInput.value = clean;
-
   renderOffers();
   document.getElementById("offers")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
 document.addEventListener("click", (e) => {
   const heroWrap = document.getElementById("heroSmartSearchWrap");
   const heroDd = document.getElementById("heroSmartDropdown");
@@ -2750,19 +2624,15 @@ document.addEventListener("click", (e) => {
     mobDd.style.display = "none";
   }
 });
-
 function renderOffers() {
   const grid = document.getElementById("offersGrid");
   if (!grid) return;
-
   updateFavCountUI();
-
   const query = (document.getElementById("catalogSearchInput")?.value || "").trim().toLowerCase();
   const dealFilter = document.getElementById("catalogDealSelect")?.value || "all";
   const sortMode = document.getElementById("catalogSortSelect")?.value || "match";
   const minVal = sanitizeNumericAmount(document.getElementById("catalogMinEur")?.value, 0);
   const maxVal = sanitizeNumericAmount(document.getElementById("catalogMaxEur")?.value, 0);
-
   const passesBaseFilters = (item) => {
     if (currentCategoryFilter === "favs") {
       if (!favoriteIds.includes(item.id)) return false;
@@ -2788,12 +2658,10 @@ function renderOffers() {
     if (maxVal > 0 && itemValInCurrentCurr > maxVal) return false;
     return true;
   };
-
   const baseCandidates = offers.filter(passesBaseFilters);
   let filtered = query
     ? baseCandidates.filter(item => matchesSmartSearchQuery(item, query))
     : [...baseCandidates];
-
   const sortList = (list) => {
     if (sortMode === "valDesc") {
       list.sort((a, b) => (b.valueEur || 0) - (a.valueEur || 0));
@@ -2821,9 +2689,7 @@ function renderOffers() {
     }
   };
   sortList(filtered);
-
   const ui = getSmartUiLabels();
-
   // Compute AI Smart Recommendations & Swap Matches when a search query is active
   let alternativesList = [];
   let aiRecs = null;
@@ -2831,7 +2697,6 @@ function renderOffers() {
     aiRecs = buildAiSmartRecommendations(query, filtered, baseCandidates);
     alternativesList = aiRecs.items;
   }
-
   if (filtered.length === 0 && alternativesList.length === 0) {
     grid.innerHTML = `
       <div style="grid-column: 1 / -1; background: #fff; border-radius: 24px; padding: 42px; text-align: center; border: 1px solid var(--line);">
@@ -2847,7 +2712,6 @@ function renderOffers() {
     `;
     return;
   }
-
   const renderCardHtml = (item, extraBadge = null, isWantHighlight = false) => {
     const loc = getOfferLocalized(item);
     const valFormatted = formatOfferPrice(item, currentCurrency);
@@ -2855,7 +2719,6 @@ function renderOffers() {
     const dealLabel = getDealTypeLabel(item.dealType);
     const catLabel = getCategoryLabel(item.category);
     const topGlassPillText = extraBadge ? `${catLabel} · ${extraBadge}` : `${catLabel} · ${dealLabel}`;
-
     return `
       <article class="swap-card">
         <div class="swap-card-media" style="background-image:url('${item.image}');cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">
@@ -2903,9 +2766,7 @@ function renderOffers() {
       </article>
     `;
   };
-
   let htmlOut = filtered.map(item => renderCardHtml(item)).join("");
-
   if (query && alternativesList.length > 0 && aiRecs) {
     const chipsBannerHtml = aiRecs.relatedChips.length > 0
       ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;">
@@ -2913,7 +2774,6 @@ function renderOffers() {
           ${aiRecs.relatedChips.map(chip => `<button type="button" style="background:#ffffff;color:var(--forest);border:1px solid rgba(12,44,40,0.25);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.05);" onclick="executeQuickKeywordSearch('${chip.replace(/'/g, "\\'")}')">${chip}</button>`).join("")}
         </div>`
       : "";
-
     htmlOut += `
       <div style="grid-column: 1 / -1; margin-top: ${filtered.length > 0 ? '14px' : '0'}; padding: 18px 22px; background: linear-gradient(90deg, rgba(12,44,40,0.06) 0%, rgba(169,255,202,0.22) 100%); border: 1px solid rgba(12,44,40,0.16); border-radius: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
         <div style="max-width:820px;">
@@ -2929,33 +2789,26 @@ function renderOffers() {
       ${alternativesList.map(entry => renderCardHtml(entry.item, entry.badgeLabel, entry.altType === "want")).join("")}
     `;
   }
-
   grid.innerHTML = htmlOut;
-
   initScrollRevealAnimations();
 }
-
 // ============================================================================
 // INTERACTIVE LEAFLET WORLD MAP & COUNTRY PANEL
 // ============================================================================
 function initWorldMap() {
   const mapEl = document.getElementById("worldMap");
   if (!mapEl || typeof window.L === "undefined") return;
-
   leafletMap = window.L.map(mapEl, {
     scrollWheelZoom: false,
     zoomSnap: 0.5,
     minZoom: 2
   }).setView([47.0, 12.0], 4);
-
   window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap",
     maxZoom: 10
   }).addTo(leafletMap);
-
   renderMapPinsAndPanel();
 }
-
 function getLocalizedCountryName(country) {
   const map = {
     "Germany": { en: "Germany", ro: "Germania", de: "Deutschland", fr: "Allemagne", it: "Germania", es: "Alemania", ru: "Германия" },
@@ -2970,7 +2823,6 @@ function getLocalizedCountryName(country) {
   };
   return (map[country] && map[country][currentLang]) || country;
 }
-
 function renderMapPinsAndPanel() {
   const grouped = new Map();
   offers.forEach(o => {
@@ -2984,12 +2836,10 @@ function renderMapPinsAndPanel() {
     }
     grouped.get(o.country).items.push(o);
   });
-
   const countries = Array.from(grouped.values());
   if (!selectedMapCountry && countries.length > 0) {
     selectedMapCountry = countries[0].country;
   }
-
   const chipsEl = document.getElementById("countryChipsContainer");
   if (chipsEl) {
     chipsEl.innerHTML = countries.map(g => `
@@ -2998,14 +2848,11 @@ function renderMapPinsAndPanel() {
       </button>
     `).join("");
   }
-
   if (leafletMap) {
     mapMarkers.forEach(m => m.remove());
     mapMarkers = [];
-
     const swapsWordMap = { ro: "oferte", en: "swaps", de: "Angebote", fr: "offres", it: "offerte", es: "ofertas", ru: "обменов" };
     const swapsWord = swapsWordMap[currentLang] || swapsWordMap.en;
-
     countries.forEach(g => {
       const isSelected = g.country === selectedMapCountry;
       const icon = window.L.divIcon({
@@ -3014,7 +2861,6 @@ function renderMapPinsAndPanel() {
         iconSize: [28, 28],
         iconAnchor: [14, 14]
       });
-
       const locC = getLocalizedCountryName(g.country);
       const marker = window.L.marker([g.lat, g.lng], { icon, title: locC }).addTo(leafletMap);
       marker.bindTooltip(`${locC} · ${g.items.length} ${swapsWord}`, {
@@ -3027,11 +2873,9 @@ function renderMapPinsAndPanel() {
       mapMarkers.push(marker);
     });
   }
-
   const activeGroup = grouped.get(selectedMapCountry);
   const headingEl = document.getElementById("selectedCountryHeading");
   const listEl = document.getElementById("countryOffersList");
-
   if (activeGroup && listEl) {
     headingEl.innerHTML = `${PREMIUM_ICONS.pin}${getLocalizedCountryName(activeGroup.country)} (${activeGroup.items.length})`;
     listEl.innerHTML = activeGroup.items.map(item => {
@@ -3046,7 +2890,6 @@ function renderMapPinsAndPanel() {
     }).join("");
   }
 }
-
 function selectCountryOnMap(countryName) {
   selectedMapCountry = countryName;
   renderMapPinsAndPanel();
@@ -3057,7 +2900,6 @@ function selectCountryOnMap(countryName) {
     }
   }
 }
-
 // ============================================================================
 // USER REGISTRATION, LOGIN & INLINE ENROLLMENT HUB
 // ============================================================================
@@ -3071,7 +2913,6 @@ function renderUserHeaderState() {
   const mobileDashBtn = document.getElementById("mobileDashboardBtn");
   const mobileRegBtn = document.getElementById("mobileRegisterBtn");
   if (!guestBtns || !userPill) return;
-
   const isProPlan = Boolean(currentUser && currentUser.plan === "pro");
   const remCount = currentUser ? (currentUser.freeSwaps ?? 10) : guestFreeSwaps;
   const maxCredits = remCount > 10 ? remCount : 10;
@@ -3110,7 +2951,6 @@ function renderUserHeaderState() {
     };
     dashProfBtn.textContent = profTabMap[currentLang] || profTabMap.en;
   }
-
   if (currentUser) {
     guestBtns.style.display = "none";
     userPill.style.display = "inline-flex";
@@ -3127,7 +2967,7 @@ function renderUserHeaderState() {
     const firstName = escapeHtml(currentUser.name.split(" ")[0]);
     const badgeLabel = isProPlan ? subCopy.proBadgeText : `${remCount} ${subCopy.swapsWord}`;
     userPill.innerHTML = `
-      <div class="user-pill" onclick="openDashboardModal('proposals')" title="${t('navDashboard')}">
+      <div class="user-pill" onclick="openDashboardModal('mylistings')" title="${t('navDashboard')}">
         <span class="user-pill-avatar">${initials}</span>
         <span>${firstName}</span>
         <span class="user-swaps-badge" onclick="event.stopPropagation(); openSubscriptionModal('pro');" title="Upgrade / Top-up Swaps">${badgeLabel}</span>
@@ -3151,7 +2991,6 @@ function renderUserHeaderState() {
     }
   }
 }
-
 function handleUserLogout() {
   currentUser = null;
   localStorage.removeItem("ci4m_user");
@@ -3168,7 +3007,6 @@ function handleUserLogout() {
   };
   showToast(logoutMsgMap[currentLang] || logoutMsgMap.en);
 }
-
 function activateUserAccount(userData) {
   const emailKey = String(userData.email || "").trim().toLowerCase();
   const existingAcc = emailKey && accountsDb[emailKey] ? accountsDb[emailKey] : null;
@@ -3199,7 +3037,6 @@ function activateUserAccount(userData) {
     setCurrency(userData.prefCurrency, true);
   }
   renderUserHeaderState();
-
   const counterEl = document.getElementById("liveUserCount");
   if (counterEl) {
     counterEl.textContent = "1,481";
@@ -3208,7 +3045,6 @@ function activateUserAccount(userData) {
   const creditLabel = currentUser.plan === "pro" ? subCopy.proBadgeText : `${currentUser.freeSwaps} ${subCopy.swapsWord}`;
   showToast(`✓ ${currentUser.name} — ${creditLabel}!`);
 }
-
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
   "mailinator.com", "10minutemail.com", "tempmail.com", "temp-mail.org",
   "guerrillamail.com", "yopmail.com", "trashmail.com", "sharklasers.com",
@@ -3216,7 +3052,6 @@ const DISPOSABLE_EMAIL_DOMAINS = new Set([
   "fake.com", "example.com", "asdf.com", "qwerty.com", "mailnesia.com",
   "dispostable.com", "tempmailaddress.com", "burnermail.io"
 ]);
-
 function isValidRealEmail(rawEmail) {
   const email = String(rawEmail || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,12}$/.test(email)) return false;
@@ -3227,7 +3062,6 @@ function isValidRealEmail(rawEmail) {
   if (["fake", "asdf", "qwerty", "12345", "123456", "000000", "none", "null"].includes(localPart)) return false;
   return true;
 }
-
 function isValidRealPhone(rawPhone) {
   const raw = String(rawPhone || "").trim();
   if (!raw) return false;
@@ -3240,7 +3074,6 @@ function isValidRealPhone(rawPhone) {
   }
   return true;
 }
-
 function validateLiveAuthField(inputEl) {
   if (!inputEl) return;
   const val = String(inputEl.value || "").trim();
@@ -3256,7 +3089,6 @@ function validateLiveAuthField(inputEl) {
   inputEl.classList.toggle("hig-field-valid", ok);
   inputEl.classList.toggle("hig-field-invalid", !ok);
 }
-
 let serverConfiguredGateways = {
   brevo: false,
   resend: false,
@@ -3265,7 +3097,6 @@ let serverConfiguredGateways = {
   twilio: false,
   stripe: false
 };
-
 // Pure-JS SHA-256 implementation (works synchronously in Browser & Node VM Sandbox)
 function sha256HexSync(asciiInput) {
   let ascii = unescape(encodeURIComponent(String(asciiInput || "")));
@@ -3312,7 +3143,6 @@ function sha256HexSync(asciiInput) {
   }
   return result;
 }
-
 function hashUserPassword(emailKey, rawPass) {
   const s = String(rawPass || "");
   if (!s) return "";
@@ -3320,7 +3150,6 @@ function hashUserPassword(emailKey, rawPass) {
   const cleanEmail = String(emailKey || "").trim().toLowerCase();
   return "sha256$" + sha256HexSync(`ci4m_usr_v1:${cleanEmail}:${s}`);
 }
-
 function verifyUserPassword(emailKey, enteredPass, storedPass) {
   if (!enteredPass || !storedPass) return false;
   if (String(storedPass).startsWith("sha256$")) {
@@ -3328,12 +3157,10 @@ function verifyUserPassword(emailKey, enteredPass, storedPass) {
   }
   return storedPass === enteredPass;
 }
-
 function verifyAdminPasswordSync(enteredPass) {
   if (!enteredPass) return false;
   return sha256HexSync("ci4m_admin_v1:" + String(enteredPass).trim()) === BACKOFFICE_ADMIN_PASS_HASH;
 }
-
 function getAuthGatewaysConfig() {
   try {
     const raw = localStorage.getItem("ci4m_auth_gateways_v1");
@@ -3374,7 +3201,6 @@ function getAuthGatewaysConfig() {
     stripeProYearlyUrl: ""
   };
 }
-
 function saveAuthGatewaysConfig(e) {
   if (e && typeof e.preventDefault === "function") e.preventDefault();
   const prev = getAuthGatewaysConfig();
@@ -3407,7 +3233,6 @@ function saveAuthGatewaysConfig(e) {
   renderAdminModalContent();
   showToast("✓ Configuration saved & synced to Cloud!");
 }
-
 async function testAuthGatewaysLive() {
   const gw = getAuthGatewaysConfig();
   const testCode = String(Math.floor(100000 + Math.random() * 900000));
@@ -3421,7 +3246,6 @@ async function testAuthGatewaysLive() {
   const emailLive = Boolean((res && res.emailSent) || gw.brevoApiKey || serverConfiguredGateways.brevo || gw.resendApiKey);
   showToast(`✓ Test Email OTP #${testCode} → ${testEmail} (${emailLive ? "LIVE SENT ✓ via Brevo" : "Sandbox"})`);
 }
-
 function getAuthMsg() {
   const map = {
     en: {
@@ -3525,7 +3349,6 @@ function getAuthMsg() {
   };
   return map[currentLang] || map.en;
 }
-
 function handleInlineRegistration(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
@@ -3535,7 +3358,6 @@ function handleInlineRegistration(e) {
   const pass = String(fd.get("password") || "");
   const confirm = String(fd.get("confirmPassword") || "");
   const am = getAuthMsg();
-
   if (name.length < 3 || /^(test|fake|asdf|qwerty|1234)/i.test(name)) {
     showToast(am.invalidName);
     return;
@@ -3571,7 +3393,6 @@ function handleInlineRegistration(e) {
   });
   e.target.reset();
 }
-
 function switchEnrollTab(tab) {
   const isAccount = tab === "account";
   const isSignIn = tab === "signin";
@@ -3586,7 +3407,6 @@ function switchEnrollTab(tab) {
   if (signInPanel) signInPanel.style.display = isSignIn ? "block" : "none";
   if (quickPanel) quickPanel.style.display = isQuickPost ? "block" : "none";
 }
-
 function onQuickDealTypeChange() {
   const dealSel = document.getElementById("quickDealTypeSelect");
   const wantInput = document.getElementById("quickWantInput");
@@ -3602,7 +3422,6 @@ function onQuickDealTypeChange() {
     if (wantLabel) wantLabel.textContent = t("quickTitleWant");
   }
 }
-
 function parseSmartLocationString(rawLoc) {
   const raw = String(rawLoc || "").trim();
   if (!raw) {
@@ -3664,7 +3483,6 @@ function parseSmartLocationString(rawLoc) {
   const coords = COUNTRY_COORDS[detectedCountry] || { lat: 46.77, lng: 23.62 };
   return { country: detectedCountry, city: detectedCity, lat: coords.lat, lng: coords.lng };
 }
-
 function fillQuickPostSample(cat) {
   const samples = {
     "cars": {
@@ -3701,7 +3519,6 @@ function fillQuickPostSample(cat) {
   const locIn = document.getElementById("quickLocationInput");
   const descIn = document.getElementById("quickDescInput");
   const photoIn = document.getElementById("quickPhotoUrlInput");
-
   if (catSel) catSel.value = cat;
   const activeCurr = currSel?.value || currentCurrency;
   if (valIn) valIn.value = String(convertFromEur(s.eur, activeCurr));
@@ -3712,13 +3529,11 @@ function fillQuickPostSample(cat) {
   if (photoIn) photoIn.value = s.img;
   onQuickPostPriceChange();
 }
-
 function handleInlineQuickPost(e) {
   e.preventDefault();
   if (!canPerformSwapOrPost()) return;
   const fd = new FormData(e.target);
   const parsedLoc = parseSmartLocationString(fd.get("location"));
-
   const cat = fd.get("category") || "cars";
   const defaultImages = {
     "cars": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
@@ -3728,7 +3543,6 @@ function handleInlineQuickPost(e) {
     "auto-parts": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1000&q=80",
     "clothing": "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1000&q=80"
   };
-
   const enteredVal = sanitizeNumericAmount(fd.get("valueEur"), 15000) || 15000;
   const enteredCurr = String(fd.get("valueCurrency") || currentCurrency).toUpperCase();
   const normalizedValueEur = convertToEur(enteredVal, enteredCurr);
@@ -3742,7 +3556,6 @@ function handleInlineQuickPost(e) {
     : (defaultImages[cat] || defaultImages.cars);
   const pool = (typeof CATEGORY_GALLERY_POOLS !== "undefined" && CATEGORY_GALLERY_POOLS[cat]) ? CATEGORY_GALLERY_POOLS[cat] : [];
   const galleryImages = [primaryImage, ...pool.filter(u => u !== primaryImage).slice(0, 2)];
-
   const newOffer = {
     id: Date.now(),
     createdByUser: true,
@@ -3766,7 +3579,6 @@ function handleInlineQuickPost(e) {
     want: titleWant,
     desc
   };
-
   offers.unshift(newOffer);
   saveOffersToStorage();
   consumeFreeSwapIfLogged();
@@ -3781,7 +3593,6 @@ function handleInlineQuickPost(e) {
   document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
   showToast(`✓ ${titleHave} — Live!`);
 }
-
 // ============================================================================
 // AUTH MODAL (REGISTER / LOGIN)
 // ============================================================================
@@ -3792,7 +3603,6 @@ let generatedVerifyCode = "";
 let verifyCodeExpiresAt = 0;
 let verifyFailedAttempts = 0;
 let socialAuthProvider = "google";
-
 function openAuthModal(mode = "register") {
   currentAuthMode = mode;
   document.getElementById("authModal").classList.add("open");
@@ -3800,7 +3610,6 @@ function openAuthModal(mode = "register") {
   switchAuthTab(mode);
   syncUrlWithRoute(mode === "login" ? "/login" : "/register");
 }
-
 function closeAuthModal() {
   document.getElementById("authModal").classList.remove("open");
   document.body.classList.remove("modal-open");
@@ -3810,9 +3619,7 @@ function closeAuthModal() {
   }
   syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
-
 let lastOtpDeliveryMode = "sandbox";
-
 function switchAuthTab(mode) {
   currentAuthMode = mode;
   const isReg = mode === "register";
@@ -3823,22 +3630,18 @@ function switchAuthTab(mode) {
   if (document.getElementById("authModal")?.classList.contains("open") && (isReg || isLogin)) {
     syncUrlWithRoute(isLogin ? "/login" : "/register", true);
   }
-
   document.getElementById("authTabRegisterBtn")?.classList.toggle("active", isReg);
   document.getElementById("authTabLoginBtn")?.classList.toggle("active", isLogin);
-
   const regForm = document.getElementById("modalRegisterForm");
   const loginForm = document.getElementById("modalLoginForm");
   const verifyForm = document.getElementById("modalVerifyForm");
   const resetForm = document.getElementById("modalResetForm");
   const googleForm = document.getElementById("modalGoogleForm");
-
   if (regForm) regForm.style.display = isReg ? "flex" : "none";
   if (loginForm) loginForm.style.display = isLogin ? "flex" : "none";
   if (verifyForm) verifyForm.style.display = isVerify ? "flex" : "none";
   if (resetForm) resetForm.style.display = isReset ? "flex" : "none";
   if (googleForm) googleForm.style.display = isGoogle ? "flex" : "none";
-
   const titleEl = document.getElementById("authModalTitle");
   if (titleEl) {
     if (isVerify) {
@@ -3920,7 +3723,6 @@ function switchAuthTab(mode) {
     }
   }
 }
-
 async function dispatchOtpCodeToServer(userData, code) {
   if (typeof fetch !== "function") return;
   try {
@@ -3935,7 +3737,6 @@ async function dispatchOtpCodeToServer(userData, code) {
     if (gw.twilioSid) headers["x-twilio-sid"] = gw.twilioSid;
     if (gw.twilioToken) headers["x-twilio-token"] = gw.twilioToken;
     if (gw.twilioFrom) headers["x-twilio-from"] = gw.twilioFrom;
-
     const resp = await fetch("/api/sync", {
       method: "POST",
       headers,
@@ -3958,13 +3759,11 @@ async function dispatchOtpCodeToServer(userData, code) {
   } catch (err) { }
   return null;
 }
-
 function renderVerifySentHelper() {
   const statusEl = document.getElementById("verifySentStatus");
   if (!statusEl) return;
   const am = getAuthMsg();
   const targetEmail = escapeHtml(pendingRegistrationUser?.email || "email");
-
   if (lastOtpDeliveryMode === "live") {
     statusEl.innerHTML = `
       <span style="display:block;margin-bottom:4px;">✓ ${t("authCodeSentMsg")} (<strong>${targetEmail}</strong>)</span>
@@ -3973,13 +3772,12 @@ function renderVerifySentHelper() {
   } else {
     statusEl.innerHTML = `
       <span style="display:block;margin-bottom:8px;">✓ ${t("authCodeSentMsg")} (<strong>${targetEmail}</strong>)</span>
-      <button type="button" onclick="autoFillVerificationCode()" style="background:rgba(169,255,202,0.22);border:1px solid #a9ffca;color:#a9ffca;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;">
+      <button type="button" onclick="autoFillVerificationCode()" style="background:rgba(169,255,202,0.22);border:1px solid #a9ffca;color:#ffffff;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;">
         ${am.codeAutoFill} ${escapeHtml(generatedVerifyCode)} · ${am.clickToFill}
       </button>
     `;
   }
 }
-
 function autoFillVerificationCode() {
   const codeInput = document.getElementById("verifyCodeInput");
   if (codeInput) {
@@ -3987,7 +3785,6 @@ function autoFillVerificationCode() {
     codeInput.focus();
   }
 }
-
 function startEmailVerification(userData) {
   pendingRegistrationUser = userData;
   generatedVerifyCode = String(Math.floor(100000 + Math.random() * 900000));
@@ -3997,25 +3794,21 @@ function startEmailVerification(userData) {
   document.getElementById("authModal").classList.add("open");
   document.body.classList.add("modal-open");
   switchAuthTab("verify");
-
   const codeInput = document.getElementById("verifyCodeInput");
   if (codeInput) {
     codeInput.value = "";
     setTimeout(() => codeInput.focus(), 80);
   }
-
   renderVerifySentHelper();
   startVerifyCountdown(60);
   dispatchOtpCodeToServer(userData, generatedVerifyCode);
   showToast(`✓ ${t("authCodeSentMsg")} (${userData?.email || ""})`);
 }
-
 function startVerifyCountdown(seconds = 60) {
   if (verifyTimerInterval) clearInterval(verifyTimerInterval);
   verifySecondsRemaining = seconds;
   const resendBtn = document.getElementById("verifyResendBtn");
   const resendText = document.getElementById("verifyResendText");
-
   const updateTick = () => {
     if (!resendBtn || !resendText) return;
     if (verifySecondsRemaining > 0) {
@@ -4028,14 +3821,12 @@ function startVerifyCountdown(seconds = 60) {
       verifyTimerInterval = null;
     }
   };
-
   updateTick();
   verifyTimerInterval = setInterval(() => {
     verifySecondsRemaining--;
     updateTick();
   }, 1000);
 }
-
 function handleResendVerificationCode() {
   generatedVerifyCode = String(Math.floor(100000 + Math.random() * 900000));
   verifyCodeExpiresAt = Date.now() + 10 * 60 * 1000;
@@ -4045,7 +3836,6 @@ function handleResendVerificationCode() {
   dispatchOtpCodeToServer(pendingRegistrationUser, generatedVerifyCode);
   showToast(`✓ ${t("authCodeSentMsg")}`);
 }
-
 function handleVerifyEmailCode(e) {
   e.preventDefault();
   const codeInput = document.getElementById("verifyCodeInput");
@@ -4098,7 +3888,6 @@ function handleVerifyEmailCode(e) {
   pendingRegistrationUser = null;
   closeAuthModal();
 }
-
 function togglePasswordVisibility(inputId, btnEl) {
   const input = document.getElementById(inputId);
   if (!input) return;
@@ -4110,7 +3899,6 @@ function togglePasswordVisibility(inputId, btnEl) {
       : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
   }
 }
-
 function updatePasswordStrength(val, barsContainerId) {
   const container = document.getElementById(barsContainerId);
   if (!container) return;
@@ -4120,13 +3908,11 @@ function updatePasswordStrength(val, barsContainerId) {
   if (val.length >= 9) score++;
   if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val) || val.length >= 12) score++;
-
   const cls = score <= 1 ? "active-weak" : score === 2 ? "active-fair" : "active-strong";
   bars.forEach((b, idx) => {
     b.className = idx < score ? cls : "";
   });
 }
-
 function handleForgotPassword() {
   document.getElementById("authModal")?.classList.add("open");
   document.body.classList.add("modal-open");
@@ -4140,7 +3926,6 @@ function handleForgotPassword() {
     setTimeout(() => resetEmailEl.focus(), 60);
   }
 }
-
 function handleResetPasswordSubmit(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
@@ -4162,7 +3947,6 @@ function handleResetPasswordSubmit(e) {
     switchAuthTab("register");
     return;
   }
-
   startEmailVerification({
     name: existing.name || "Verified Member",
     email,
@@ -4176,7 +3960,6 @@ function handleResetPasswordSubmit(e) {
   });
   e.target.reset();
 }
-
 function handleModalRegister(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
@@ -4186,7 +3969,6 @@ function handleModalRegister(e) {
   const pass = String(fd.get("password") || "");
   const confirm = String(fd.get("confirmPassword") || "");
   const am = getAuthMsg();
-
   if (name.length < 3 || /^(test|fake|asdf|qwerty|1234)/i.test(name)) {
     showToast(am.invalidName);
     return;
@@ -4211,7 +3993,6 @@ function handleModalRegister(e) {
     if (loginEmailInput) loginEmailInput.value = email;
     return;
   }
-
   startEmailVerification({
     name,
     email,
@@ -4225,7 +4006,6 @@ function handleModalRegister(e) {
   });
   e.target.reset();
 }
-
 function handleModalLogin(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
@@ -4233,12 +4013,10 @@ function handleModalLogin(e) {
   const password = String(fd.get("password") || "");
   const emailKey = email.toLowerCase();
   const am = getAuthMsg();
-
   if (!emailKey || !password) {
     showToast(am.wrongPwd);
     return;
   }
-
   // Super-Admin Backoffice Authentication Check (SHA-256 Hash Verifier)
   if ((emailKey === BACKOFFICE_ADMIN_EMAIL || emailKey === "jeka7ro@gmail.com") && verifyAdminPasswordSync(password)) {
     adminAuthenticated = true;
@@ -4260,9 +4038,7 @@ function handleModalLogin(e) {
     openAdminModal("users");
     return;
   }
-
   const savedAcc = accountsDb[emailKey];
-
   if (savedAcc) {
     if (savedAcc.password) {
       if (!verifyUserPassword(emailKey, password, savedAcc.password)) {
@@ -4305,11 +4081,9 @@ function handleModalLogin(e) {
     if (regEmailInput) regEmailInput.value = email;
   }
 }
-
 function renderSocialAccountChooserList(isApple = false) {
   const listEl = document.getElementById("socialAccountChooserList");
   if (!listEl) return;
-
   const accountsToShow = [];
   const seenEmails = new Set();
   const pushCandidate = (name, email, badge = "") => {
@@ -4318,7 +4092,6 @@ function renderSocialAccountChooserList(isApple = false) {
     seenEmails.add(cleanEm);
     accountsToShow.push({ name: String(name || "Member").trim(), email: cleanEm, badge });
   };
-
   try {
     const savedRaw = localStorage.getItem("ci4m_saved_google_user_v1");
     if (savedRaw) {
@@ -4328,9 +4101,7 @@ function renderSocialAccountChooserList(isApple = false) {
       }
     }
   } catch (err) { }
-
   pushCandidate("Eugeniu Cazmal", "jeka7ro@gmail.com", isApple ? "Apple ID" : "Google");
-
   Object.values(accountsDb).forEach(acc => {
     if (!acc || !acc.email) return;
     const em = String(acc.email).toLowerCase();
@@ -4338,18 +4109,16 @@ function renderSocialAccountChooserList(isApple = false) {
       pushCandidate(acc.name || em.split("@")[0], em, acc.plan === "pro" ? "PRO ∞" : "");
     }
   });
-
   const providerIcon = isApple
     ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>`
     : `<svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>`;
-
   listEl.innerHTML = accountsToShow.slice(0, 3).map(acc => {
     const initials = acc.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "G";
     return `
       <button type="button" onclick="signInWithSocialAccountInstant('${acc.email.replace(/'/g, "\\'")}', '${acc.name.replace(/'/g, "\\'")}')"
         style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:999px !important;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#ffffff;cursor:pointer;text-align:left;transition:background 0.15s ease;">
         <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <span style="width:34px;height:34px;border-radius:50%;background:#a9ffca;color:#071d1a;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0;">${escapeHtml(initials)}</span>
+          <span style="width:34px;height:34px;border-radius:50%;background:#0d8a5e;color:#071d1a;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0;">${escapeHtml(initials)}</span>
           <div style="min-width:0;">
             <strong style="display:block;font-size:13.5px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(acc.name)}</strong>
             <span style="display:block;font-size:11.5px;color:rgba(236,255,245,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(acc.email)}</span>
@@ -4363,7 +4132,6 @@ function renderSocialAccountChooserList(isApple = false) {
     `;
   }).join("");
 }
-
 function signInWithSocialAccountInstant(email, name) {
   const emailKey = String(email || "").trim().toLowerCase();
   if (!emailKey) return;
@@ -4398,7 +4166,6 @@ function signInWithSocialAccountInstant(email, name) {
   updateAdminHeaderButtonsVisibility();
   closeAuthModal();
 }
-
 function handleGoogleAuth() {
   socialAuthProvider = "google";
   const gw = getAuthGatewaysConfig();
@@ -4428,19 +4195,16 @@ function handleGoogleAuth() {
       return;
     } catch (err) { }
   }
-
   // Open the 1-Click Google Account Chooser inside #authModal
   document.getElementById("authModal")?.classList.add("open");
   document.body.classList.add("modal-open");
   switchAuthTab("google");
 }
-
 function handleGoogleFormSubmit(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
   const email = String(fd.get("email") || document.getElementById("googleAuthEmailInput")?.value || "").trim().toLowerCase();
   const am = getAuthMsg();
-
   if (!isValidRealEmail(email)) {
     showToast(am.invalidEmail);
     return;
@@ -4449,7 +4213,6 @@ function handleGoogleFormSubmit(e) {
     showToast(am.invalidGmail);
     return;
   }
-
   const existing = accountsDb[email];
   if (existing || email === "jeka7ro@gmail.com" || email === BACKOFFICE_ADMIN_EMAIL) {
     const derivedName = existing?.name || email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -4457,7 +4220,6 @@ function handleGoogleFormSubmit(e) {
     e.target.reset();
     return;
   }
-
   const derivedName = email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "Google Member";
   startEmailVerification({
     name: derivedName,
@@ -4473,14 +4235,12 @@ function handleGoogleFormSubmit(e) {
   });
   e.target.reset();
 }
-
 function handleAppleAuth() {
   socialAuthProvider = "apple";
   document.getElementById("authModal")?.classList.add("open");
   document.body.classList.add("modal-open");
   switchAuthTab("google");
 }
-
 // ============================================================================
 // 7-STEP SWAP LISTING WIZARD
 // ============================================================================
@@ -4501,7 +4261,6 @@ function openWizardModal(stepOverride) {
   renderWizStep();
   syncUrlWithRoute(`/wizard/step-${wizStep}`);
 }
-
 function closeWizardModal() {
   saveCurrentWizStepInputs();
   document.getElementById("wizardModal").classList.remove("open");
@@ -4514,7 +4273,6 @@ function closeWizardModal() {
     syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
   }
 }
-
 function getWizValidationCopy() {
   const map = {
     en: {
@@ -4632,7 +4390,6 @@ function getWizValidationCopy() {
   };
   return map[currentLang] || map.en;
 }
-
 function highlightInvalidWizInput(id) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -4644,7 +4401,6 @@ function highlightInvalidWizInput(id) {
     el.style.boxShadow = "";
   }, 2200);
 }
-
 function validateWizStep(stepNum) {
   saveCurrentWizStepInputs();
   const vc = getWizValidationCopy();
@@ -4698,7 +4454,6 @@ function validateWizStep(stepNum) {
   }
   return true;
 }
-
 function goToWizStep(stepNum) {
   saveCurrentWizStepInputs();
   if (stepNum > wizStep) {
@@ -4709,7 +4464,6 @@ function goToWizStep(stepNum) {
   wizStep = stepNum;
   renderWizStep();
 }
-
 function prevWizStep() {
   if (wizStep > 1) {
     saveCurrentWizStepInputs();
@@ -4717,7 +4471,6 @@ function prevWizStep() {
     renderWizStep();
   }
 }
-
 function nextWizStep() {
   saveCurrentWizStepInputs();
   if (!validateWizStep(wizStep)) return;
@@ -4728,7 +4481,6 @@ function nextWizStep() {
     publishWizardOffer();
   }
 }
-
 function resetWizardDraft() {
   wizStep = 1;
   wizData = { ...DEFAULT_WIZ_DATA };
@@ -4740,7 +4492,6 @@ function resetWizardDraft() {
   persistWizardDraft();
   renderWizStep();
 }
-
 function generateSmartWizDesc() {
   const title = wizData.titleHave || getCategoryLabel(wizData.category);
   const specs = wizData.specs || "Verified condition";
@@ -4760,10 +4511,38 @@ function generateSmartWizDesc() {
   if (descEl) descEl.value = desc;
   persistWizardDraft();
 }
-
+function isSameUserEmailAlias(e1, e2) {
+  const a = String(e1 || "").trim().toLowerCase();
+  const b = String(e2 || "").trim().toLowerCase();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const adminAliases = new Set(["jeka7ro@gmail.com", "jeka7ro@mail.com"]);
+  return adminAliases.has(a) && adminAliases.has(b);
+}
+function isListingOwnedByCurrentUser(item) {
+  if (!item || !currentUser) return false;
+  const uEmail = String(currentUser.email || "").trim().toLowerCase();
+  const oEmail = String(item.ownerEmail || "").trim().toLowerCase();
+  if (uEmail && oEmail) {
+    return isSameUserEmailAlias(uEmail, oEmail);
+  }
+  const uName = String(currentUser.name || "").trim().toLowerCase();
+  const oName = String(item.owner || "").trim().toLowerCase();
+  return Boolean(uName && oName && uName === oName);
+}
+function canCurrentUserManageListing(item) {
+  if (!item) return false;
+  const isBackofficeOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
+  if (isBackofficeOpen) return true;
+  return isListingOwnedByCurrentUser(item);
+}
 function editListingInWizard(offerId) {
   const item = offers.find(o => o.id === offerId);
   if (!item) return;
+  if (!canCurrentUserManageListing(item)) {
+    showToast(currentLang === "ro" ? "! Doar proprietarul anunțului poate edita acest anunț." : "! Only the listing owner can edit this listing.");
+    return;
+  }
   const loc = getOfferLocalized(item);
   closeDashboardModal();
   closeOfferModal();
@@ -4794,8 +4573,14 @@ function editListingInWizard(offerId) {
   persistWizardDraft();
   openWizardModal(2);
 }
-
 function deleteUserListing(offerId, silent = false) {
+  const targetItem = offers.find(o => o.id === offerId);
+  if (targetItem && !canCurrentUserManageListing(targetItem)) {
+    if (!silent) {
+      showToast(currentLang === "ro" ? "! Doar proprietarul anunțului poate șterge acest anunț." : "! Only the listing owner can delete this listing.");
+    }
+    return;
+  }
   const idx = offers.findIndex(o => o.id === offerId);
   if (idx >= 0) {
     offers.splice(idx, 1);
@@ -4822,12 +4607,10 @@ function deleteUserListing(offerId, silent = false) {
     showToast(delMsgMap[currentLang] || delMsgMap.en);
   }
 }
-
 function saveCurrentWizStepInputs() {
   const c = document.getElementById("wizStepContainer");
   if (!c) return;
   const val = (id) => c.querySelector(`#${id}`)?.value;
-
   if (val("wizTitleHave") !== undefined) wizData.titleHave = val("wizTitleHave");
   if (val("wizValueEur") !== undefined) {
     const rawStr = val("wizValueEur");
@@ -4854,7 +4637,6 @@ function saveCurrentWizStepInputs() {
   if (val("wizPhone") !== undefined) wizData.phone = val("wizPhone");
   persistWizardDraft();
 }
-
 function onWizPriceInputChange() {
   const valEl = document.getElementById("wizValueEur");
   const currEl = document.getElementById("wizCurrencySelect");
@@ -4874,7 +4656,6 @@ function onWizPriceInputChange() {
     previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
   }
 }
-
 // ============================================================================
 // MEGA-SMART CATEGORY ASSISTANT & LIVE LOCATION GEOCODER FOR WIZARD
 // ============================================================================
@@ -4950,7 +4731,6 @@ const SMART_WIZ_CATALOG = {
     ]
   }
 };
-
 const SMART_EUROPEAN_CITIES = [
   { city: "Bucharest", region: "Sector 1 / Herăstrău", country: "Romania", lat: 44.4268, lng: 26.1025 },
   { city: "Cluj-Napoca", region: "Centru / Sopor", country: "Romania", lat: 46.7712, lng: 23.6236 },
@@ -4977,20 +4757,17 @@ const SMART_EUROPEAN_CITIES = [
   { city: "Marbella", region: "Costa del Sol", country: "Spain", lat: 36.5101, lng: -4.8824 },
   { city: "London", region: "Greater London", country: "United Kingdom", lat: 51.5072, lng: -0.1276 }
 ];
-
 function applyWizSmartTemplate(idx) {
   const cfg = SMART_WIZ_CATALOG[wizData.category] || SMART_WIZ_CATALOG.electronics;
   const tpl = cfg.templates[idx];
   if (!tpl) return;
   const activeCurr = document.getElementById("wizCurrencySelect")?.value || wizData.originalCurrency || currentCurrency;
   const convertedAmt = convertFromEur(tpl.eur, activeCurr);
-
   wizData.titleHave = tpl.title;
   wizData.specs = tpl.specs;
   wizData.originalCurrency = activeCurr;
   wizData.originalAmount = convertedAmt;
   wizData.valueEur = tpl.eur;
-
   const titleEl = document.getElementById("wizTitleHave");
   const specsEl = document.getElementById("wizSpecsPreview");
   const valEl = document.getElementById("wizValueEur");
@@ -5002,7 +4779,6 @@ function applyWizSmartTemplate(idx) {
   onWizPriceInputChange();
   showToast(`✓ ${tpl.title}`);
 }
-
 function appendWizSmartChip(chipText) {
   const titleEl = document.getElementById("wizTitleHave");
   const specsEl = document.getElementById("wizSpecsPreview");
@@ -5019,7 +4795,6 @@ function appendWizSmartChip(chipText) {
     if (specsEl) specsEl.value = nextSpecs;
   }
 }
-
 function onWizTitleHaveInput(val) {
   wizData.titleHave = val;
   const suggEl = document.getElementById("wizTitleSuggestions");
@@ -5032,7 +4807,6 @@ function onWizTitleHaveInput(val) {
   const activeCurr = document.getElementById("wizCurrencySelect")?.value || wizData.originalCurrency || currentCurrency;
   const catKeyActive = wizData.category || "electronics";
   const catCfg = SMART_WIZ_CATALOG[catKeyActive] || SMART_WIZ_CATALOG.electronics;
-
   const allTemplates = [];
   // Prioritize templates from the selected category first
   (catCfg.templates || []).forEach((tObj, i) => {
@@ -5044,11 +4818,9 @@ function onWizTitleHaveInput(val) {
       allTemplates.push({ ...tObj, catKey, idx: i, priority: 2 });
     });
   });
-
   let matches = allTemplates.filter(item =>
     `${item.title} ${item.specs} ${item.catKey}`.toLowerCase().includes(q)
   ).slice(0, 4);
-
   if (matches.length === 0) {
     matches = (catCfg.templates || []).slice(0, 3).map((tObj, i) => ({
       ...tObj,
@@ -5056,14 +4828,12 @@ function onWizTitleHaveInput(val) {
       idx: i
     }));
   }
-
   const allChips = [];
   (catCfg.groups || []).forEach(grp => {
     (grp.chips || []).forEach(ch => allChips.push(ch));
   });
   const matchingChips = allChips.filter(ch => ch.toLowerCase().includes(q));
   const chipsToShow = (matchingChips.length > 0 ? matchingChips : allChips).slice(0, 8);
-
   const templatesHtml = matches.map(m => {
     const priceStr = formatAmountInCurrentCurrency(convertFromEur(m.eur, activeCurr), activeCurr);
     return `
@@ -5076,7 +4846,6 @@ function onWizTitleHaveInput(val) {
       </button>
     `;
   }).join("");
-
   const chipsHtml = chipsToShow.length > 0 ? `
     <div style="padding:8px 10px;background:var(--mint-soft);border-top:1px solid rgba(13,43,34,0.08);display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
       ${chipsToShow.map(ch => `
@@ -5084,16 +4853,13 @@ function onWizTitleHaveInput(val) {
       `).join("")}
     </div>
   ` : "";
-
   suggEl.innerHTML = templatesHtml + chipsHtml;
   suggEl.style.display = "block";
 }
-
 function selectCrossCategoryWizTemplate(catKey, idx) {
   wizData.category = catKey;
   applyWizSmartTemplate(idx);
 }
-
 let geoSearchTimer = null;
 async function handleWizGeoSearchInput(val) {
   const dd = document.getElementById("wizGeoDropdown");
@@ -5103,12 +4869,10 @@ async function handleWizGeoSearchInput(val) {
     dd.style.display = "none";
     return;
   }
-
   // 1. Instant local match from curated European cities
   const localMatches = SMART_EUROPEAN_CITIES.filter(c =>
     `${c.city} ${c.region} ${c.country}`.toLowerCase().includes(q.toLowerCase())
   ).slice(0, 4);
-
   const renderGeoList = (items) => {
     const ui = getSmartUiLabels();
     if (!items.length) {
@@ -5126,9 +4890,7 @@ async function handleWizGeoSearchInput(val) {
     `).join("");
     dd.style.display = "block";
   };
-
   renderGeoList(localMatches);
-
   // 2. Live OpenStreetMap Photon Geocoding API (Streets, Cities, Postcodes across Europe)
   if (geoSearchTimer) clearTimeout(geoSearchTimer);
   geoSearchTimer = setTimeout(async () => {
@@ -5154,7 +4916,6 @@ async function handleWizGeoSearchInput(val) {
     } catch (e) { }
   }, 240);
 }
-
 function selectWizGeoPlace(country, city, lat, lng) {
   wizData.country = country;
   wizData.city = city;
@@ -5183,7 +4944,6 @@ function selectWizGeoPlace(country, city, lat, lng) {
     badge.innerHTML = `✓ GPS: <strong>${city}, ${country}</strong> (${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)})`;
   }
 }
-
 function detectWizLocationGPS() {
   if (detectedIpInfo && detectedIpInfo.city && detectedIpInfo.countryName) {
     const cCoords = COUNTRY_COORDS[detectedIpInfo.countryName] || { lat: 47.0, lng: 14.0 };
@@ -5209,7 +4969,6 @@ function detectWizLocationGPS() {
     });
   }
 }
-
 function onQuickPostPriceChange() {
   const valEl = document.getElementById("quickPostValueInput");
   const currEl = document.getElementById("quickPostCurrencySelect");
@@ -5220,7 +4979,6 @@ function onQuickPostPriceChange() {
     previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
   }
 }
-
 const CATEGORY_GALLERY_POOLS = {
   "cars": [
     "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
@@ -5256,7 +5014,6 @@ const CATEGORY_GALLERY_POOLS = {
     "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1000&q=80"
   ]
 };
-
 function getOfferGalleryImages(item) {
   if (!item) return [DEFAULT_WIZ_DATA.image];
   if (Array.isArray(item.images) && item.images.length > 0) {
@@ -5267,13 +5024,11 @@ function getOfferGalleryImages(item) {
   const extras = pool.filter(u => u !== primary).slice(0, 2);
   return [primary, ...extras];
 }
-
 function ensureWizImagesArray() {
   if (!Array.isArray(wizData.images) || wizData.images.length === 0) {
     wizData.images = [wizData.image || DEFAULT_WIZ_DATA.image];
   }
 }
-
 function selectWizPresetPhoto(url) {
   ensureWizImagesArray();
   if (!wizData.images.includes(url)) {
@@ -5282,7 +5037,6 @@ function selectWizPresetPhoto(url) {
   wizData.image = url;
   renderWizStep();
 }
-
 function setWizPrimaryPhoto(idx) {
   ensureWizImagesArray();
   const chosen = wizData.images[idx];
@@ -5291,7 +5045,6 @@ function setWizPrimaryPhoto(idx) {
   wizData.images = [chosen, ...wizData.images.filter((_, i) => i !== idx)];
   renderWizStep();
 }
-
 function removeWizPhoto(idx) {
   ensureWizImagesArray();
   if (wizData.images.length <= 1) return;
@@ -5299,7 +5052,6 @@ function removeWizPhoto(idx) {
   wizData.image = wizData.images[0];
   renderWizStep();
 }
-
 function handleWizImageUrlInput(val) {
   const cleanUrl = String(val || "").trim();
   if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
@@ -5313,14 +5065,12 @@ function handleWizImageUrlInput(val) {
     persistWizardDraft();
   }
 }
-
 function compressAndUploadPhotoFile(file, onDone) {
   if (!file || typeof onDone !== "function") return;
   const reader = new FileReader();
   reader.onload = (ev) => {
     const rawDataUrl = String(ev?.target?.result || "");
     if (!rawDataUrl) return;
-
     const uploadToServer = (finalDataUrl) => {
       if (typeof fetch !== "function") {
         onDone(finalDataUrl);
@@ -5345,7 +5095,6 @@ function compressAndUploadPhotoFile(file, onDone) {
         })
         .catch(() => onDone(finalDataUrl));
     };
-
     try {
       const img = new Image();
       if (typeof img.onload === "undefined" && !("src" in img)) {
@@ -5402,7 +5151,6 @@ function compressAndUploadPhotoFile(file, onDone) {
   };
   reader.readAsDataURL(file);
 }
-
 function handleWizFileUpload(e) {
   const files = Array.from(e.target.files || []).slice(0, 5);
   if (!files.length) return;
@@ -5422,7 +5170,6 @@ function handleWizFileUpload(e) {
     });
   });
 }
-
 const WIZ_CATEGORY_PHOTOS = {
   "cars": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
   "real-estate": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1000&q=80",
@@ -5431,7 +5178,6 @@ const WIZ_CATEGORY_PHOTOS = {
   "auto-parts": "https://images.unsplash.com/photo-1600706432502-77a0e2e32795?auto=format&fit=crop&w=1000&q=80",
   "clothing": "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=1000&q=80"
 };
-
 function selectWizCategoryCard(cat) {
   wizData.category = cat;
   if (WIZ_CATEGORY_PHOTOS[cat]) {
@@ -5441,7 +5187,6 @@ function selectWizCategoryCard(cat) {
   wizStep = 2;
   renderWizStep();
 }
-
 function onWizCountryChange(newCountry) {
   wizData.country = newCountry;
   const matchCities = SMART_EUROPEAN_CITIES.filter(c => c.country === newCountry);
@@ -5456,7 +5201,6 @@ function onWizCountryChange(newCountry) {
   }
   renderWizStep();
 }
-
 function renderWizStep() {
   const uiTop = getSmartUiLabels();
   const vc = getWizValidationCopy();
@@ -5479,14 +5223,12 @@ function renderWizStep() {
     quickSaveBtn.textContent = saveChangesMap[currentLang] || saveChangesMap.en;
     quickSaveBtn.style.display = (wizData.editingOfferId && wizStep < 7) ? "inline-flex" : "none";
   }
-
   const stepBtns = document.querySelectorAll("#wizStepsBar .wiz-step-btn");
   stepBtns.forEach((btn, idx) => {
     const s = idx + 1;
     btn.classList.toggle("active", s === wizStep);
     btn.classList.toggle("done", s < wizStep);
   });
-
   const c = document.getElementById("wizStepContainer");
   if (wizStep === 1) {
     const cats = ["cars", "real-estate", "electronics", "home-garden", "auto-parts", "clothing"];
@@ -5516,7 +5258,6 @@ function renderWizStep() {
     const quickTemplates = (catCfg.templates || []).slice(0, 4);
     c.innerHTML = `
       <h3 style="margin:0 0 10px;font-size:22px;">2. ${t("wizStep3")} (${t("haveBadge")})</h3>
-
       <div style="margin-bottom:12px;padding:10px 12px;background:var(--mint-soft);border:1px solid rgba(12,44,40,0.12);border-radius:14px;">
         <span style="display:block;font-size:11.5px;font-weight:800;color:var(--forest);margin-bottom:6px;">${vc.quickTemplatesLabel}</span>
         <div class="wiz-chip-row">
@@ -5525,18 +5266,15 @@ function renderWizStep() {
           `).join("")}
         </div>
       </div>
-
       <div class="field-group" style="position:relative;">
         <label style="color:var(--ink);">${t("quickTitleHave")}</label>
         <input type="text" id="wizTitleHave" class="input-light" placeholder="${ui.titlePlaceholder}" value="${wizData.titleHave}" autocomplete="off" oninput="onWizTitleHaveInput(this.value)" />
         <div id="wizTitleSuggestions" class="wiz-autocomplete-list" style="display:none;"></div>
       </div>
-
       <div class="field-group">
         <label style="color:var(--ink);">${ui.specsLabel}</label>
         <input type="text" id="wizSpecsPreview" class="input-light" placeholder="${ui.specsPlaceholder}" value="${wizData.specs || ''}" onfocus="const s=document.getElementById('wizTitleSuggestions');if(s)s.style.display='none';" oninput="wizData.specs = this.value" />
       </div>
-
       <div class="field-group">
         <label id="wizValueCurrencyLabel" style="color:var(--ink);">${valLabel}</label>
         <div style="display:grid;grid-template-columns:1fr 145px;gap:10px;">
@@ -5572,7 +5310,6 @@ function renderWizStep() {
           <span style="position:absolute;top:10px;left:10px;background:rgba(15,23,42,0.58);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.22);color:#ffffff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;">1. Cover</span>
         </div>
       </div>
-
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         ${wizData.images.map((imgUrl, idx) => `
           <div style="position:relative;width:78px;height:56px;border-radius:10px;overflow:hidden;border:2px solid ${idx === 0 ? '#0f172a' : 'rgba(15,23,42,0.12)'};cursor:pointer;" onclick="setWizPrimaryPhoto(${idx})">
@@ -5582,7 +5319,6 @@ function renderWizStep() {
           </div>
         `).join("")}
       </div>
-
       <div class="field-group" style="margin-top:12px;margin-bottom:8px;">
         <input type="url" id="wizImageUrlInput" class="input-light" placeholder="${vc.pasteUrlPlaceholder}" value="" oninput="handleWizImageUrlInput(this.value)" />
       </div>
@@ -5709,7 +5445,6 @@ function renderWizStep() {
           <input type="tel" id="wizPhone" class="input-light" value="${escapeHtml(wizData.phone || (currentUser ? currentUser.phone : ''))}" placeholder="+40 / +49 / +43..." oninput="wizData.phone = this.value" />
         </div>
       </div>
-
       <div style="margin-top:12px;padding:12px 14px;background:#f5f7f7;border:1px solid rgba(15,23,42,0.09);border-radius:18px;display:flex;align-items:center;gap:14px;">
         <img src="${wizData.image}" style="width:84px;height:64px;object-fit:cover;border-radius:12px;border:1px solid rgba(15,23,42,0.1);flex-shrink:0;" alt="" />
         <div style="min-width:0;flex:1;">
@@ -5726,7 +5461,6 @@ function renderWizStep() {
       </label>
     `;
   }
-
   c.oninput = () => {
     saveCurrentWizStepInputs();
   };
@@ -5738,9 +5472,7 @@ function renderWizStep() {
     syncUrlWithRoute(`/wizard/step-${wizStep}`);
   }
 }
-
 const renderWizardStep = renderWizStep;
-
 function publishWizardOffer() {
   saveCurrentWizStepInputs();
   for (const s of [2, 5, 6, 7]) {
@@ -5784,7 +5516,6 @@ function publishWizardOffer() {
     want: wizData.titleWant || (wizData.dealType === "sale" ? t("dealSaleOnly") : "Direct 1:1 Swap"),
     desc: wizData.desc || `${wizData.titleHave} (${wizData.specs || "Verified"}).`
   };
-
   if (isEditing) {
     const idx = offers.findIndex(o => o.id === wizData.editingOfferId);
     if (idx >= 0) {
@@ -5795,7 +5526,6 @@ function publishWizardOffer() {
   } else {
     offers.unshift(offerPayload);
   }
-
   saveOffersToStorage();
   if (!isEditing) consumeFreeSwapIfLogged();
   wizStep = 1;
@@ -5817,42 +5547,104 @@ function publishWizardOffer() {
   }
   showToast(isEditing ? getWizValidationCopy().savedToast : `✓ ${offerPayload.title} — Live!`);
 }
-
 // ============================================================================
 // OFFER DETAIL, 1:1 VALUE CALCULATOR & "PROPOSE A SWAP" MODAL
 // ============================================================================
 let currentGalleryIndex = 0;
 let selectedMySwapOfferId = null;
 let activeProposalThreadId = null;
-
+let lightboxOfferId = null;
 function selectOfferGalleryPhoto(offerId, idx) {
-  const item = offers.find(o => o.id === offerId);
+  const item = offers.find(o => o.id === Number(offerId));
   if (!item) return;
   const imgs = getOfferGalleryImages(item);
   currentGalleryIndex = ((idx % imgs.length) + imgs.length) % imgs.length;
   const mainBox = document.getElementById("offerModalGalleryMain");
   const countBadge = document.getElementById("offerModalGalleryCount");
-  if (mainBox) mainBox.style.backgroundImage = `url('${imgs[currentGalleryIndex]}')`;
+  if (mainBox) mainBox.style.backgroundImage = `url("${imgs[currentGalleryIndex]}")`;
   if (countBadge) countBadge.textContent = `${currentGalleryIndex + 1} / ${imgs.length}`;
   document.querySelectorAll("#offerModalThumbsRow img").forEach((imgEl, i) => {
-    imgEl.style.borderColor = i === currentGalleryIndex ? "var(--forest)" : "transparent";
+    imgEl.style.borderColor = i === currentGalleryIndex ? "#0d8a5e" : "transparent";
     imgEl.style.opacity = i === currentGalleryIndex ? "1" : "0.68";
   });
+  renderPhotoLightboxState();
 }
-
-function stepOfferGalleryPhoto(offerId, delta) {
+function stepOfferGalleryPhoto(offerId, delta, ev) {
+  if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
   selectOfferGalleryPhoto(offerId, currentGalleryIndex + delta);
 }
-
+function ensurePhotoLightboxModal() {
+  let lb = document.getElementById("photoLightboxModal");
+  if (!lb) {
+    lb = document.createElement("div");
+    lb.id = "photoLightboxModal";
+    lb.className = "hig-lightbox-backdrop";
+    lb.onclick = (e) => { if (e.target === lb || e.target.classList.contains("hig-lightbox-stage")) closePhotoLightbox(); };
+    document.body.appendChild(lb);
+  }
+  return lb;
+}
+function openPhotoLightbox(offerId, idx) {
+  const item = offers.find(o => o.id === Number(offerId));
+  if (!item) return;
+  lightboxOfferId = item.id;
+  if (typeof idx === "number") {
+    selectOfferGalleryPhoto(item.id, idx);
+  }
+  const lb = ensurePhotoLightboxModal();
+  lb.classList.add("open");
+  renderPhotoLightboxState();
+}
+function closePhotoLightbox() {
+  const lb = document.getElementById("photoLightboxModal");
+  if (lb) lb.classList.remove("open");
+}
+function stepPhotoLightbox(delta, ev) {
+  if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+  if (!lightboxOfferId) return;
+  selectOfferGalleryPhoto(lightboxOfferId, currentGalleryIndex + delta);
+}
+function renderPhotoLightboxState() {
+  const lb = document.getElementById("photoLightboxModal");
+  if (!lb || !lb.classList.contains("open") || !lightboxOfferId) return;
+  const item = offers.find(o => o.id === Number(lightboxOfferId));
+  if (!item) return;
+  const imgs = getOfferGalleryImages(item);
+  const loc = getOfferLocalized(item);
+  const curImg = imgs[currentGalleryIndex] || imgs[0];
+  lb.innerHTML = `
+    <div class="hig-lightbox-topbar">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+        <span class="hig-sla-pill" style="background:rgba(13,138,94,0.25);color:#a7f3d0;border-color:rgba(167,243,208,0.3);font-variant-numeric:tabular-nums;">${currentGalleryIndex + 1} / ${imgs.length}</span>
+        <strong style="font-size:15px;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(loc.title)}</strong>
+      </div>
+      <button type="button" onclick="closePhotoLightbox()" style="width:40px;height:40px;min-height:40px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.12);color:#ffffff;font-size:18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;" title="Close (Esc)">✕</button>
+    </div>
+    <div class="hig-lightbox-stage">
+      ${imgs.length > 1 ? `<button type="button" class="hig-lightbox-nav-btn is-prev" onclick="stepPhotoLightbox(-1, event)" title="Previous photo (←)">‹</button>` : ""}
+      <img src="${curImg}" class="hig-lightbox-img" onclick="stepPhotoLightbox(1, event)" alt="${escapeHtml(loc.title)}" title="Click for next photo" />
+      ${imgs.length > 1 ? `<button type="button" class="hig-lightbox-nav-btn is-next" onclick="stepPhotoLightbox(1, event)" title="Next photo (→)">›</button>` : ""}
+    </div>
+    ${imgs.length > 1 ? `
+      <div class="hig-lightbox-thumbs">
+        ${imgs.map((u, i) => `<img src="${u}" class="hig-lightbox-thumb ${i === currentGalleryIndex ? "active" : ""}" onclick="event.stopPropagation(); selectOfferGalleryPhoto(${item.id}, ${i});" alt="" />`).join("")}
+      </div>
+    ` : "<div></div>"}
+  `;
+}
 function buildSwapSideBySideHtml(targetOfferId) {
   const target = offers.find(o => o.id === targetOfferId);
   if (!target) return "";
   const targetLoc = getOfferLocalized(target);
   const myOffer = selectedMySwapOfferId ? offers.find(o => o.id === selectedMySwapOfferId) : null;
   const myTypedTitle = document.getElementById("swapOfferedItemInput")?.value?.trim();
-  const myTitle = myTypedTitle || (myOffer ? getOfferLocalized(myOffer).title : "—");
-  const myImg = myOffer ? myOffer.image : WIZ_CATEGORY_PHOTOS[target.category] || DEFAULT_WIZ_DATA.image;
-
+  const fallbackMyOffer = (!myOffer && currentUser && typeof getAccountLinkedOffers === "function")
+    ? getAccountLinkedOffers(currentUser).find(o => o.id !== target.id)
+    : null;
+  const activeMyOffer = myOffer || fallbackMyOffer;
+  const defaultOfferPlaceholder = currentLang === "ro" ? "Bunul propus la schimb" : "Your proposed asset";
+  const myTitle = myTypedTitle || (activeMyOffer ? getOfferLocalized(activeMyOffer).title : defaultOfferPlaceholder);
+  const myImg = activeMyOffer ? activeMyOffer.image : WIZ_CATEGORY_PHOTOS[target.category] || DEFAULT_WIZ_DATA.image;
   const rawInputVal = document.getElementById("calcMyValueInput")?.value;
   const myVal = (rawInputVal !== undefined && String(rawInputVal).trim() !== "")
     ? sanitizeNumericAmount(rawInputVal, 0)
@@ -5866,7 +5658,6 @@ function buildSwapSideBySideHtml(targetOfferId) {
   const diffLabel = Math.abs(diff) < threshold
     ? "1:1"
     : (diff > 0 ? `+${formatAmountInCurrentCurrency(diff, currentCurrency)}` : `-${formatAmountInCurrentCurrency(Math.abs(diff), currentCurrency)}`);
-
   const sideLabels = {
     ro: { youOffer: "TU OFERI", youGet: "PRIMEȘTI" },
     en: { youOffer: "YOU OFFER", youGet: "YOU RECEIVE" },
@@ -5876,32 +5667,30 @@ function buildSwapSideBySideHtml(targetOfferId) {
     es: { youOffer: "TÚ OFRECES", youGet: "TÚ RECIBES" },
     ru: { youOffer: "ВЫ ОТДАЁТЕ", youGet: "ВЫ ПОЛУЧАЕТЕ" }
   }[currentLang] || { youOffer: "YOU OFFER", youGet: "YOU RECEIVE" };
-
   return `
-    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:10px;background:#fff;border:1px solid rgba(15,23,42,0.08);border-radius:16px;margin-top:10px;">
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:10px;background:#fff;border:1px solid #e6ebf1;border-radius:16px;margin-top:10px;">
       <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <img src="${myImg}" style="width:44px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
+        <img src="${myImg}" style="width:42px;height:34px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
         <div style="min-width:0;">
-          <span style="display:block;font-size:9.5px;font-weight:800;color:var(--muted);">${sideLabels.youOffer}</span>
-          <strong style="display:block;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(myTitle)}</strong>
-          <span style="font-size:11px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">~${formatAmountInCurrentCurrency(myVal, myCurr)}</span>
+          <span style="display:block;font-size:9.5px;font-weight:800;color:#64748b;">${sideLabels.youOffer}</span>
+          <strong style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;line-height:1.25;color:#0f172a;">${escapeHtml(myTitle)}</strong>
+          <span style="font-size:11px;font-weight:700;color:#0d8a5e;font-variant-numeric:tabular-nums;">~${formatAmountInCurrentCurrency(myVal, myCurr)}</span>
         </div>
       </div>
-      <div style="background:#0f172a;color:#ffffff;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;">
+      <div style="background:#eaf7f1;color:#0d8a5e;border:1px solid #ccece0;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;">
         ⇄ ${diffLabel}
       </div>
       <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <img src="${target.image}" style="width:44px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
+        <img src="${target.image}" style="width:42px;height:34px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
         <div style="min-width:0;">
-          <span style="display:block;font-size:9.5px;font-weight:800;color:var(--muted);">${sideLabels.youGet}</span>
-          <strong style="display:block;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(targetLoc.title)}</strong>
-          <span style="font-size:11px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">~${formatOfferPrice(target, currentCurrency)}</span>
+          <span style="display:block;font-size:9.5px;font-weight:800;color:#64748b;">${sideLabels.youGet}</span>
+          <strong style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;line-height:1.25;color:#0f172a;">${escapeHtml(targetLoc.title)}</strong>
+          <span style="font-size:11px;font-weight:700;color:#0d8a5e;font-variant-numeric:tabular-nums;">~${formatOfferPrice(target, currentCurrency)}</span>
         </div>
       </div>
     </div>
   `;
 }
-
 function updateSwapValueCalculator(offerId) {
   const item = offers.find(o => o.id === offerId);
   if (!item) return;
@@ -5909,26 +5698,30 @@ function updateSwapValueCalculator(offerId) {
   const myCurr = document.getElementById("calcMyCurrencySelect")?.value || currentCurrency;
   const resEl = document.getElementById("calcResultBanner");
   if (!resEl) return;
-
   const theirValueInCurrentCurrency = getOfferValueInCurrency(item, currentCurrency);
   const myValueInCurrentCurrency = convertBetweenCurrencies(myVal, myCurr, currentCurrency);
-
+  const calcParityEl = document.getElementById("calcParityPreview");
+  if (calcParityEl) {
+    calcParityEl.innerHTML = buildParityPreviewHtml(myVal, myCurr);
+  }
   const cObj = getCurrencyObj(currentCurrency);
   const threshold = Math.round(250 * cObj.rateFromEur);
   const diff = theirValueInCurrentCurrency - myValueInCurrentCurrency;
   if (Math.abs(diff) < threshold) {
-    resEl.innerHTML = `<span>⇄ ${t("calcEven")}</span> <span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>`;
+    resEl.className = "hig-balance-pill is-even";
+    resEl.innerHTML = `<span>⇄ ${t("calcEven")}</span><strong>${formatAmountInCurrentCurrency(0, currentCurrency)}</strong>`;
   } else if (diff > 0) {
-    resEl.innerHTML = `<span>${t("calcYouAdd")}</span> <span>+ ${formatAmountInCurrentCurrency(diff, currentCurrency)}</span>`;
+    resEl.className = "hig-balance-pill is-add";
+    resEl.innerHTML = `<span>${t("calcYouAdd")}</span><strong>+ ${formatAmountInCurrentCurrency(diff, currentCurrency)}</strong>`;
   } else {
-    resEl.innerHTML = `<span>${t("calcTheyAdd")}</span> <span>+ ${formatAmountInCurrentCurrency(Math.abs(diff), currentCurrency)}</span>`;
+    resEl.className = "hig-balance-pill is-receive";
+    resEl.innerHTML = `<span>${t("calcTheyAdd")}</span><strong>+ ${formatAmountInCurrentCurrency(Math.abs(diff), currentCurrency)}</strong>`;
   }
   const sbsBox = document.getElementById("swapSideBySideBox");
   if (sbsBox) {
     sbsBox.innerHTML = buildSwapSideBySideHtml(offerId);
   }
 }
-
 function switchOfferActionTab(tab) {
   const isBuy = tab === "buy";
   const swapBtn = document.getElementById("offerTabSwapBtn");
@@ -5940,7 +5733,6 @@ function switchOfferActionTab(tab) {
   if (swapPanel) swapPanel.style.display = isBuy ? "none" : "block";
   if (buyPanel) buyPanel.style.display = isBuy ? "block" : "none";
 }
-
 function onBuyOfferPriceChange(offerId) {
   const valEl = document.getElementById("buyOfferAmountInput");
   const currEl = document.getElementById("buyOfferCurrencySelect");
@@ -5951,7 +5743,6 @@ function onBuyOfferPriceChange(offerId) {
     previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
   }
 }
-
 function getProposalToastCopy() {
   const map = {
     ro: {
@@ -6083,7 +5874,6 @@ function getProposalToastCopy() {
   };
   return map[currentLang] || map.en;
 }
-
 function copyOfferShareLink(offerId) {
   const url = `${window.location.origin}/offer/${offerId}`;
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -6091,7 +5881,6 @@ function copyOfferShareLink(offerId) {
   }
   showToast(getProposalToastCopy().linkCopied);
 }
-
 function pickMyListingForSwap(targetOfferId, myOfferIdStr) {
   const myId = Number(myOfferIdStr);
   selectedMySwapOfferId = myId || null;
@@ -6111,7 +5900,6 @@ function pickMyListingForSwap(targetOfferId, myOfferIdStr) {
   }
   updateSwapValueCalculator(targetOfferId);
 }
-
 function saveSwapProposals() {
   try {
     localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
@@ -6120,7 +5908,6 @@ function saveSwapProposals() {
     scheduleCloudSyncPush();
   }
 }
-
 async function dispatchPartnerNotificationToServer({ toEmail, toPhone, subject, message }) {
   if (typeof fetch !== "function" || (!toEmail && !toPhone)) return;
   try {
@@ -6135,7 +5922,6 @@ async function dispatchPartnerNotificationToServer({ toEmail, toPhone, subject, 
     if (gw.twilioSid) headers["x-twilio-sid"] = gw.twilioSid;
     if (gw.twilioToken) headers["x-twilio-token"] = gw.twilioToken;
     if (gw.twilioFrom) headers["x-twilio-from"] = gw.twilioFrom;
-
     await fetch("/api/sync", {
       method: "POST",
       headers,
@@ -6149,7 +5935,6 @@ async function dispatchPartnerNotificationToServer({ toEmail, toPhone, subject, 
     });
   } catch (err) { }
 }
-
 function getProposalStatusLabel(p) {
   if (!p) return "";
   const ptc = getProposalToastCopy();
@@ -6203,17 +5988,14 @@ function getProposalStatusLabel(p) {
   }
   return p.status || ptc.statusSentSwap;
 }
-
 function getProposalPartnerContact(p) {
   if (!p) return { email: "", phone: "" };
   const targetOffer = p.offerId ? offers.find(o => o.id === Number(p.offerId)) : null;
-  const emailCandidates = [
-    p.ownerEmail,
-    p.senderEmail,
-    targetOffer?.ownerEmail,
-    String(p.partner || "").includes("@") ? String(p.partner).trim() : ""
-  ].filter(Boolean);
-  let email = emailCandidates[0] || "";
+  const isIncoming = p.direction === "Incoming";
+  const emailCandidates = isIncoming
+    ? [p.senderEmail, String(p.partner || "").includes("@") ? String(p.partner).trim() : "", p.ownerEmail]
+    : [p.ownerEmail, targetOffer?.ownerEmail, p.senderEmail, String(p.partner || "").includes("@") ? String(p.partner).trim() : ""];
+  let email = emailCandidates.filter(Boolean)[0] || "";
   let phone = p.partnerPhone || p.senderContact || "";
   if (email && accountsDb[email.toLowerCase()]) {
     const acc = accountsDb[email.toLowerCase()];
@@ -6229,7 +6011,6 @@ function getProposalPartnerContact(p) {
   }
   return { email, phone };
 }
-
 function submitDirectBuyOffer(e, offerId) {
   e.preventDefault();
   if (!canPerformSwapOrPost()) return;
@@ -6244,7 +6025,6 @@ function submitDirectBuyOffer(e, offerId) {
   const note = String(fd.get("proposalNote") || "").trim();
   const senderName = String(fd.get("senderName") || currentUser?.name || "Verified Member").trim();
   const senderContact = String(fd.get("senderContact") || currentUser?.phone || currentUser?.email || "").trim();
-
   const newProp = {
     id: Date.now(),
     direction: "Buy Offer",
@@ -6275,7 +6055,6 @@ function submitDirectBuyOffer(e, offerId) {
   closeOfferModal();
   showToast(`${ptc.buySentPrefix} (${formattedOffer}) ${ptc.buySentTo} ${item ? item.owner : "Seller"}!`);
 }
-
 function openOfferModal(offerId, mode = "details") {
   const item = offers.find(o => o.id === offerId);
   if (!item) return;
@@ -6297,13 +6076,13 @@ function openOfferModal(offerId, mode = "details") {
   const startInBuyMode = mode === "buy" || item.dealType === "sale";
   const ptc = getProposalToastCopy();
   const isFav = favoriteIds.includes(item.id);
-  const isCustomOwner = Boolean(item.createdByUser || item.id > 100000);
-  const userPickableAds = offers.filter(o => o.id !== item.id && (o.createdByUser || o.id > 100000)).concat(offers.filter(o => o.id !== item.id).slice(0, 4)).slice(0, 6);
-
+  const isCustomOwner = isListingOwnedByCurrentUser(item);
+  const userPickableAds = (currentUser && typeof getAccountLinkedOffers === "function")
+    ? getAccountLinkedOffers(currentUser).filter(o => o.id !== item.id).slice(0, 6)
+    : [];
   const modal = document.getElementById("offerModal");
   const content = document.getElementById("offerModalContent");
   content.classList.add("offer-detail-modal");
-
   const modalUiMap = {
     ro: {
       ownerVerified: "Proprietar",
@@ -6398,14 +6177,18 @@ function openOfferModal(offerId, mode = "details") {
     }
   };
   const mUi = modalUiMap[currentLang] || modalUiMap.en;
-  const isFromBackoffice = Boolean(document.getElementById("adminModal")?.classList.contains("open"));
-
+  const isFromBackoffice = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
   content.innerHTML = `
-    <button type="button" class="modal-close" style="position:absolute;top:18px;right:20px;color:#0f172a;background:#f1f5f4;border:1px solid rgba(15,23,42,0.08);z-index:10;" onclick="closeOfferModal()" aria-label="Close">✕</button>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;padding-right:52px;border-bottom:1px solid rgba(15,23,42,0.08);flex-wrap:wrap;">
-      <span style="margin:0;font-size:13px;color:#64748b;font-weight:600;display:inline-flex;align-items:center;">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ${mUi.ownerVerified}: <strong style="color:#0f172a;margin:0 3px;">${item.owner}</strong> (${mUi.verifiedWord}) · ${getDealTypeLabel(item.dealType)}</span>
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        ${isFromBackoffice ? `<button type="button" class="btn btn-dark" style="height:34px;padding:0 14px;font-size:12.5px;border-radius:999px;" onclick="closeOfferModal()">← Back to Backoffice</button>` : ""}
+    <div class="hig-offer-header">
+      <div class="hig-offer-meta">
+        <span class="hig-offer-loc">${PREMIUM_ICONS.pin}${escapeHtml(item.city)}, ${escapeHtml(item.country)}</span>
+        <span class="hig-offer-dot">·</span>
+        <span class="hig-offer-owner">${mUi.ownerVerified}: <strong>${escapeHtml(item.owner)}</strong> <span class="hig-verified-pill">${mUi.verifiedWord}</span></span>
+        <span class="hig-offer-dot">·</span>
+        <span class="hig-offer-deal">${escapeHtml(getDealTypeLabel(item.dealType))}</span>
+      </div>
+      <div class="hig-offer-actions">
+        ${isFromBackoffice ? `<button type="button" class="btn btn-dark" style="height:34px;padding:0 14px;font-size:12px;border-radius:999px;" onclick="closeOfferModal()">← Backoffice</button>` : ""}
         ${(isCustomOwner || isFromBackoffice) ? `
           <button type="button" class="bo-icon-btn" onclick="openQuickEditListingSheet(${item.id})" title="${escapeHtml(ptc.editBtn)}" aria-label="${escapeHtml(ptc.editBtn)}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -6421,18 +6204,25 @@ function openOfferModal(offerId, mode = "details") {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         </button>
         <button type="button" id="offerModalFavBtn" class="bo-icon-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite(${item.id})" style="background:${isFav ? '#fff1f2' : '#f1f5f4'};color:${isFav ? '#e11d48' : '#0f172a'};font-size:15px;" title="Favorite" aria-label="Favorite">${isFav ? "♥" : "♡"}</button>
+        <span style="width:1px;height:20px;background:rgba(15,23,42,0.1);margin:0 2px;"></span>
+        <button type="button" class="bo-icon-btn" onclick="closeOfferModal()" title="Close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
     </div>
-
     <div class="offer-modal-grid">
       <div>
-        <div id="offerModalGalleryMain" style="height:225px;border-radius:20px;background:url('${galleryImgs[0]}') 50%/cover no-repeat;margin-bottom:10px;position:relative;transition:background-image 0.2s ease;">
+        <div id="offerModalGalleryMain" onclick="openPhotoLightbox(${item.id})" title="Click to open fullscreen photo" style="height:245px;border-radius:20px;background:url('${galleryImgs[0]}') 50%/cover no-repeat;margin-bottom:10px;position:relative;transition:background-image 0.2s ease;cursor:zoom-in;">
+          <button type="button" onclick="event.stopPropagation(); openPhotoLightbox(${item.id});" style="position:absolute;top:12px;left:12px;background:rgba(15,23,42,0.62);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.24);color:#fff;padding:4px 11px;height:28px;min-height:28px !important;border-radius:999px;font-size:11.5px;font-weight:650;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Open fullscreen photo">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            <span>Zoom</span>
+          </button>
           ${galleryImgs.length > 1 ? `
-            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, -1)" style="position:absolute;top:50%;left:10px;transform:translateY(-50%);width:32px;height:32px;min-height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(15,23,42,0.55);backdrop-filter:blur(12px);color:#fff;font-weight:800;cursor:pointer;">‹</button>
-            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, 1)" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:32px;height:32px;min-height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(15,23,42,0.55);backdrop-filter:blur(12px);color:#fff;font-weight:800;cursor:pointer;">›</button>
-            <span id="offerModalGalleryCount" style="position:absolute;top:12px;right:12px;background:rgba(15,23,42,0.58);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.22);color:#fff;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;">1 / ${galleryImgs.length}</span>
+            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, -1, event)" style="position:absolute;top:50%;left:10px;transform:translateY(-50%);width:36px;height:36px;min-height:36px !important;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(15,23,42,0.65);backdrop-filter:blur(12px);color:#fff;font-size:18px;font-weight:800;cursor:pointer;z-index:2;" title="Previous photo">‹</button>
+            <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, 1, event)" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:36px;height:36px;min-height:36px !important;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(15,23,42,0.65);backdrop-filter:blur(12px);color:#fff;font-size:18px;font-weight:800;cursor:pointer;z-index:2;" title="Next photo">›</button>
+            <span id="offerModalGalleryCount" style="position:absolute;top:12px;right:12px;background:rgba(15,23,42,0.62);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.22);color:#fff;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;">1 / ${galleryImgs.length}</span>
           ` : ""}
-          <span style="position:absolute;bottom:14px;left:14px;background:rgba(15,23,42,0.58);color:#ffffff;backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:1px solid rgba(255,255,255,0.24);padding:6px 14px;border-radius:999px;font-weight:600;font-size:13px;">
+          <span style="position:absolute;bottom:14px;left:14px;background:rgba(15,23,42,0.62);color:#ffffff;backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:1px solid rgba(255,255,255,0.24);padding:6px 14px;border-radius:999px;font-weight:600;font-size:13px;">
             ${getCategoryLabel(item.category)} · ${valFormatted}${clientBaseNote}
           </span>
         </div>
@@ -6443,9 +6233,8 @@ function openOfferModal(offerId, mode = "details") {
             `).join("")}
           </div>
         ` : ""}
-        <h2 style="font-size:21px;font-weight:700;letter-spacing:-0.02em;color:#0f172a;margin:0 0 8px;line-height:1.25;">${loc.title}</h2>
-        <p style="color:#475569;margin:0 0 14px;font-size:13.5px;line-height:1.45;">${loc.desc || item.specs}</p>
-
+        <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em;color:#0f172a;margin:0 0 8px;line-height:1.28;">${loc.title}</h2>
+        <p style="color:#475569;margin:0 0 14px;font-size:13.5px;line-height:1.48;">${loc.desc || item.specs}</p>
         <div class="swap-exchange-box" style="margin-bottom:0;">
           <div class="swap-row">
             <span class="swap-tag have">${t("haveBadge")}</span>
@@ -6457,7 +6246,6 @@ function openOfferModal(offerId, mode = "details") {
           </div>
         </div>
       </div>
-
       <div>
         <!-- ACTION MODE SWITCHER: SWAP vs BUY / CASH OFFER -->
         <div class="catalog-pills" style="margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;width:100%;gap:4px;">
@@ -6468,118 +6256,130 @@ function openOfferModal(offerId, mode = "details") {
             ${t("buyOfferBtn")}
           </button>
         </div>
-
-        <!-- PANEL 1: 1:1 SWAP + VALUE BALANCE CALCULATOR -->
+        <!-- PANEL 1: UNIFIED APPLE HIG 1:1 SWAP PROPOSAL & BALANCE CARD -->
         <div id="offerActionSwapPanel" style="display:${startInBuyMode ? 'none' : 'block'};">
-          <div class="calc-box" style="margin:0 0 12px;background:#f5f7f7;border:1px solid rgba(15,23,42,0.08);border-radius:20px;padding:16px;">
-            <strong style="display:flex;align-items:center;font-size:13.5px;color:#0f172a;margin-bottom:10px;">${PREMIUM_ICONS.scale}${t("calcTitle")} (${cObj.code})</strong>
-            <div style="display:grid;grid-template-columns:1.25fr 0.95fr;gap:10px;margin-bottom:10px;align-items:end;">
+          <form onsubmit="submitDirectSwapProposal(event, ${item.id})" class="hig-action-card">
+            <div class="hig-action-card-head">
               <div>
-                <label style="display:block;font-size:11.5px;color:#64748b;font-weight:600;margin-bottom:4px;">${yourValLabel}</label>
-                <div style="display:grid;grid-template-columns:1fr 88px;gap:6px;">
-                  <input type="text" inputmode="decimal" id="calcMyValueInput" class="input-light" style="padding:0 12px;font-weight:700;font-variant-numeric:tabular-nums;" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
-                  <select id="calcMyCurrencySelect" class="input-light" style="padding:0 26px 0 10px;font-size:12.5px;font-weight:700;" onchange="updateSwapValueCalculator(${item.id})">
-                    ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code}</option>`).join("")}
-                  </select>
-                </div>
+                <strong class="hig-action-title">${t("proposeSwapBtn")}</strong>
+                <span class="hig-action-sub">${mUi.zeroFeeDirect}</span>
               </div>
-              <div>
-                <label style="display:block;font-size:11.5px;color:#64748b;font-weight:600;margin-bottom:4px;">${theirValLabel}</label>
-                <input type="text" class="input-light" style="padding:0 12px;font-weight:700;font-variant-numeric:tabular-nums;background:#eef2f1;color:#475569;" value="${theirValConverted}" disabled />
-              </div>
+              <span class="hig-price-badge">${valFormatted}</span>
             </div>
-            <div class="calc-result-banner" id="calcResultBanner" style="border-radius:999px;padding:10px 16px;">
-              <span>⇄ ${t("calcEven")}</span> <span>${formatAmountInCurrentCurrency(0, currentCurrency)}</span>
-            </div>
-            <div id="swapSideBySideBox">${buildSwapSideBySideHtml(item.id)}</div>
-          </div>
-
-          <form onsubmit="submitDirectSwapProposal(event, ${item.id})" style="background:#f5f7f7;padding:18px;border-radius:20px;border:1px solid rgba(15,23,42,0.08);">
-            <strong style="display:block;margin-bottom:10px;color:#0f172a;font-size:14.5px;">⇄ ${t("proposeSwapBtn")} (${mUi.zeroFeeDirect})</strong>
-            <div class="field-group" style="margin-bottom:10px;">
-              <label style="font-size:11.5px;color:#64748b;font-weight:600;">${ptc.pickMyAdLabel}</label>
-              <select class="input-light" style="font-size:13px;" onchange="pickMyListingForSwap(${item.id}, this.value)">
-                <option value="">${ptc.pickMyAdDefault}</option>
-                ${userPickableAds.map(ad => {
+            <div class="hig-grouped-section">
+              <div class="field-group" style="margin-bottom:10px;">
+                <label class="hig-field-label">${ptc.pickMyAdLabel}</label>
+                <select class="input-light" style="font-size:13px;" onchange="pickMyListingForSwap(${item.id}, this.value)">
+                  <option value="">${ptc.pickMyAdDefault}</option>
+                  ${userPickableAds.map(ad => {
     const adLoc = getOfferLocalized(ad);
     return `<option value="${ad.id}">${adLoc.title} (~${formatOfferPrice(ad, currentCurrency)})</option>`;
   }).join("")}
-              </select>
-            </div>
-            <div class="field-group" style="margin-bottom:10px;">
-              <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("quickTitleHave")}</label>
-              <input type="text" id="swapOfferedItemInput" name="offeredItem" class="input-light" required oninput="updateSwapValueCalculator(${item.id})" />
-            </div>
-            <div class="field-group" style="margin-bottom:10px;">
-              <label style="font-size:11.5px;color:#334155;font-weight:600;">${ptc.messageLabel}</label>
-              <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
-            </div>
-            <div class="form-grid-2">
-              <div class="field-group" style="margin-bottom:0;">
-                <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("formFullName")}</label>
-                <input type="text" name="senderName" class="input-light" required value="${currentUser ? currentUser.name : ''}" />
+                </select>
               </div>
-              <div class="field-group" style="margin-bottom:0;">
-                <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("formPhone")} / Email</label>
-                <input type="text" name="senderContact" class="input-light" required value="${currentUser ? (currentUser.phone || currentUser.email) : ''}" />
+              <div class="hig-swap-input-grid">
+                <div>
+                  <label class="hig-field-label">${t("quickTitleHave")}</label>
+                  <input type="text" id="swapOfferedItemInput" name="offeredItem" class="input-light" placeholder="${escapeHtml(t('quickHavePlaceholder'))}" required oninput="updateSwapValueCalculator(${item.id})" />
+                </div>
+                <div>
+                  <label class="hig-field-label">${yourValLabel}</label>
+                  <div style="display:grid;grid-template-columns:1fr 118px;gap:8px;">
+                    <input type="text" inputmode="decimal" id="calcMyValueInput" class="input-light" style="padding:0 12px;font-weight:700;font-variant-numeric:tabular-nums;" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
+                    <select id="calcMyCurrencySelect" class="input-light" style="padding:0 24px 0 10px;font-size:12.5px;font-weight:700;" onchange="updateSwapValueCalculator(${item.id})">
+                      ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code}</option>`).join("")}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div id="calcParityPreview">${buildParityPreviewHtml(theirValConverted, currentCurrency)}</div>
+              <div class="hig-balance-pill is-even" id="calcResultBanner">
+                <span>⇄ ${t("calcEven")}</span><strong>${formatAmountInCurrentCurrency(0, currentCurrency)}</strong>
+              </div>
+              <div id="swapSideBySideBox">${buildSwapSideBySideHtml(item.id)}</div>
+            </div>
+            <div class="hig-grouped-section" style="margin-top:10px;">
+              <div class="field-group" style="margin-bottom:10px;">
+                <label class="hig-field-label">${ptc.messageLabel}</label>
+                <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
+              </div>
+              <div class="form-grid-2">
+                <div class="field-group" style="margin-bottom:0;">
+                  <label class="hig-field-label">${t("formFullName")}</label>
+                  <input type="text" name="senderName" class="input-light" required value="${escapeHtml(currentUser ? currentUser.name : '')}" />
+                </div>
+                <div class="field-group" style="margin-bottom:0;">
+                  <label class="hig-field-label">${t("formPhone")} / Email</label>
+                  <input type="text" name="senderContact" class="input-light" required value="${escapeHtml(currentUser ? (currentUser.phone || currentUser.email) : '')}" />
+                </div>
               </div>
             </div>
-            <button type="submit" class="btn btn-dark btn-block" style="margin-top:14px;border-radius:999px;height:44px;background:#0f172a;color:#ffffff;">
-              ${mUi.sendSwapTo} ${item.owner} →
+            <button type="submit" class="btn btn-mint btn-block hig-submit-btn">
+              ${mUi.sendSwapTo} ${escapeHtml(item.owner)} →
             </button>
-            <p style="margin:8px 0 0;font-size:11px;color:#64748b;line-height:1.35;">✓ ${getGdprUiCopy().gdprContactNote}</p>
+            <p class="hig-gdpr-footnote">✓ ${getGdprUiCopy().gdprContactNote}</p>
           </form>
         </div>
-
-        <!-- PANEL 2: DIRECT BUY / CASH OFFER -->
+        <!-- PANEL 2: APPLE HIG DIRECT BUY / CASH OFFER CARD -->
         <div id="offerActionBuyPanel" style="display:${startInBuyMode ? 'block' : 'none'};">
-          <form onsubmit="submitDirectBuyOffer(event, ${item.id})" style="background:#f5f7f7;padding:18px;border-radius:20px;border:1px solid rgba(15,23,42,0.08);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <strong style="color:#0f172a;font-size:14.5px;">${t("buyOfferBtn")} · ${mUi.zeroCommission}</strong>
-              <span style="background:#0f172a;color:#ffffff;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${valFormatted}</span>
+          <form onsubmit="submitDirectBuyOffer(event, ${item.id})" class="hig-action-card">
+            <div class="hig-action-card-head">
+              <div>
+                <strong class="hig-action-title">${t("buyOfferBtn")}</strong>
+                <span class="hig-action-sub">${mUi.zeroCommission}</span>
+              </div>
+              <span class="hig-price-badge">${valFormatted}</span>
             </div>
-            <div class="field-group">
-              <label style="font-size:11.5px;color:#334155;font-weight:600;">${mUi.yourCashOffer}</label>
-              <div style="display:grid;grid-template-columns:1fr 134px;gap:8px;">
-                <input type="text" inputmode="decimal" id="buyOfferAmountInput" name="buyAmount" class="input-light" style="font-weight:700;font-variant-numeric:tabular-nums;" value="${theirValConverted}" required oninput="onBuyOfferPriceChange(${item.id})" />
-                <select id="buyOfferCurrencySelect" name="buyCurrency" class="input-light" style="font-weight:700;" onchange="onBuyOfferPriceChange(${item.id})">
+            <div class="hig-grouped-section">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+                <label class="hig-field-label" style="margin:0;">${mUi.yourCashOffer}</label>
+                <div class="hig-quick-pct-pills">
+                  <button type="button" class="hig-pct-pill" onclick="setBuyOfferQuickPct(${item.id}, 0.9)">-10%</button>
+                  <button type="button" class="hig-pct-pill" onclick="setBuyOfferQuickPct(${item.id}, 0.95)">-5%</button>
+                  <button type="button" class="hig-pct-pill" onclick="setBuyOfferQuickPct(${item.id}, 1)">100%</button>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 124px;gap:8px;">
+                <input type="text" inputmode="decimal" id="buyOfferAmountInput" name="buyAmount" class="input-light" style="font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;" value="${theirValConverted}" required oninput="onBuyOfferPriceChange(${item.id})" />
+                <select id="buyOfferCurrencySelect" name="buyCurrency" class="input-light" style="font-weight:700;font-size:13px;" onchange="onBuyOfferPriceChange(${item.id})">
                   ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
                 </select>
               </div>
               <div id="buyOfferParityPreview">${buildParityPreviewHtml(theirValConverted, currentCurrency)}</div>
             </div>
-            <div class="field-group">
-              <label style="font-size:11.5px;color:#334155;font-weight:600;">${mUi.paymentPref}</label>
-              <select name="paymentMethod" class="input-light">
-                <option value="Bank Transfer / Cash on Handover">${mUi.payOpt1}</option>
-                <option value="Buy Now at Asking Price">${mUi.payOpt2} (${valFormatted})</option>
-                <option value="Notary / Verified Escrow Contract">${mUi.payOpt3}</option>
-              </select>
-            </div>
-            <div class="field-group" style="margin-bottom:10px;">
-              <label style="font-size:11.5px;color:#334155;font-weight:600;">${ptc.messageLabel}</label>
-              <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
-            </div>
-            <div class="form-grid-2">
-              <div class="field-group" style="margin-bottom:0;">
-                <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("formFullName")}</label>
-                <input type="text" name="senderName" class="input-light" required value="${currentUser ? currentUser.name : ''}" />
+            <div class="hig-grouped-section" style="margin-top:10px;">
+              <div class="field-group" style="margin-bottom:10px;">
+                <label class="hig-field-label">${mUi.paymentPref}</label>
+                <select name="paymentMethod" class="input-light">
+                  <option value="Bank Transfer / Cash on Handover">${mUi.payOpt1}</option>
+                  <option value="Buy Now at Asking Price">${mUi.payOpt2} (${valFormatted})</option>
+                  <option value="Notary / Verified Escrow Contract">${mUi.payOpt3}</option>
+                </select>
               </div>
-              <div class="field-group" style="margin-bottom:0;">
-                <label style="font-size:11.5px;color:#334155;font-weight:600;">${t("formPhone")} / Email</label>
-                <input type="text" name="senderContact" class="input-light" required value="${currentUser ? (currentUser.phone || currentUser.email) : ''}" />
+              <div class="field-group" style="margin-bottom:10px;">
+                <label class="hig-field-label">${ptc.messageLabel}</label>
+                <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
+              </div>
+              <div class="form-grid-2">
+                <div class="field-group" style="margin-bottom:0;">
+                  <label class="hig-field-label">${t("formFullName")}</label>
+                  <input type="text" name="senderName" class="input-light" required value="${escapeHtml(currentUser ? currentUser.name : '')}" />
+                </div>
+                <div class="field-group" style="margin-bottom:0;">
+                  <label class="hig-field-label">${t("formPhone")} / Email</label>
+                  <input type="text" name="senderContact" class="input-light" required value="${escapeHtml(currentUser ? (currentUser.phone || currentUser.email) : '')}" />
+                </div>
               </div>
             </div>
-            <button type="submit" class="btn btn-dark btn-block" style="margin-top:14px;border-radius:999px;height:44px;background:#0f172a;color:#ffffff;">
-              ${mUi.sendBuyTo} ${item.owner} →
+            <button type="submit" class="btn btn-mint btn-block hig-submit-btn">
+              ${mUi.sendBuyTo} ${escapeHtml(item.owner)} →
             </button>
-            <p style="margin:8px 0 0;font-size:11px;color:#64748b;line-height:1.35;">✓ ${getGdprUiCopy().gdprContactNote}</p>
+            <p class="hig-gdpr-footnote">✓ ${getGdprUiCopy().gdprContactNote}</p>
           </form>
         </div>
       </div>
     </div>
   `;
-
   modal.classList.add("open");
   document.body.classList.add("modal-open");
   document.body.classList.add("mobile-started");
@@ -6587,7 +6387,6 @@ function openOfferModal(offerId, mode = "details") {
     syncUrlWithRoute(`/offer/${offerId}`);
   }
 }
-
 function closeOfferModal() {
   document.getElementById("offerModal").classList.remove("open");
   if (document.getElementById("adminModal")?.classList.contains("open")) {
@@ -6599,7 +6398,6 @@ function closeOfferModal() {
     syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
   }
 }
-
 function consumeFreeSwapIfLogged() {
   if (currentUser) {
     if (currentUser.plan === "pro") {
@@ -6622,9 +6420,7 @@ function consumeFreeSwapIfLogged() {
     renderUserHeaderState();
   }
 }
-
 const consumeFreeSwapCredit = consumeFreeSwapIfLogged;
-
 function submitDirectSwapProposal(e, offerId) {
   e.preventDefault();
   if (!canPerformSwapOrPost()) return;
@@ -6637,7 +6433,6 @@ function submitDirectSwapProposal(e, offerId) {
   const note = String(fd.get("proposalNote") || "").trim();
   const senderName = String(fd.get("senderName") || currentUser?.name || "Verified Member").trim();
   const senderContact = String(fd.get("senderContact") || currentUser?.phone || currentUser?.email || "").trim();
-
   const offeredTitle = String(fd.get("offeredItem") || "").trim();
   const newProp = {
     id: Date.now(),
@@ -6669,7 +6464,6 @@ function submitDirectSwapProposal(e, offerId) {
   closeOfferModal();
   showToast(ptc.swapSent);
 }
-
 function acceptSwapProposal(propId) {
   const p = swapProposals.find(x => x.id === propId);
   if (!p) return;
@@ -6682,7 +6476,6 @@ function acceptSwapProposal(propId) {
   renderDashboardContent();
   showToast(`${ptc.acceptedPrefix} ${p.partner} ${ptc.acceptedSuffix}`);
 }
-
 function declineSwapProposal(propId) {
   const p = swapProposals.find(x => x.id === propId);
   if (!p) return;
@@ -6693,7 +6486,6 @@ function declineSwapProposal(propId) {
   saveSwapProposals();
   renderDashboardContent();
 }
-
 function counterSwapProposal(propId, customCounterText = "") {
   const p = swapProposals.find(x => x.id === propId);
   if (!p) return;
@@ -6707,18 +6499,16 @@ function counterSwapProposal(propId, customCounterText = "") {
     renderDashboardContent();
   }
 }
-
 function deleteSwapProposal(propId) {
   swapProposals = swapProposals.filter(x => x.id !== propId);
   saveSwapProposals();
   updateFavCountUI();
   renderDashboardContent();
 }
-
 // ============================================================================
 // PERSONAL DASHBOARD MODAL (PROPOSALS, MY LISTINGS, FAVORITES, PROFILE)
 // ============================================================================
-function openDashboardModal(tab = "proposals") {
+function openDashboardModal(tab = "mylistings") {
   if (!currentUser) {
     openAuthModal("login");
     return;
@@ -6731,13 +6521,11 @@ function openDashboardModal(tab = "proposals") {
   switchDashboardTab(tab);
   syncUrlWithRoute("/dashboard");
 }
-
 function closeDashboardModal() {
   document.getElementById("dashboardModal").classList.remove("open");
   document.body.classList.remove("modal-open");
   syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
-
 function switchDashboardTab(tab) {
   currentDashTab = tab;
   document.querySelectorAll("#dashTabsBar .cat-pill").forEach(btn => {
@@ -6745,7 +6533,6 @@ function switchDashboardTab(tab) {
   });
   renderDashboardContent();
 }
-
 function saveDashboardProfile(e) {
   e.preventDefault();
   if (!currentUser) return;
@@ -6757,7 +6544,6 @@ function saveDashboardProfile(e) {
   const nextCurr = String(fd.get("prefCurrency") || currentCurrency);
   currentUser.prefLang = nextLang;
   currentUser.prefCurrency = nextCurr;
-
   localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
   const emailKey = String(currentUser.email || "").trim().toLowerCase();
   if (emailKey) {
@@ -6773,7 +6559,6 @@ function saveDashboardProfile(e) {
   renderDashboardContent();
   showToast(getProposalToastCopy().profileSaved);
 }
-
 function ensureProposalMessages(p) {
   if (!Array.isArray(p.messages) || p.messages.length === 0) {
     const initReplyMap = {
@@ -6796,12 +6581,10 @@ function ensureProposalMessages(p) {
   }
   return p.messages;
 }
-
 function toggleProposalThread(propId) {
   activeProposalThreadId = activeProposalThreadId === propId ? null : propId;
   renderDashboardContent();
 }
-
 function sendProposalMessage(e, propId) {
   e.preventDefault();
   const input = document.getElementById(`propChatInput_${propId}`);
@@ -6809,13 +6592,10 @@ function sendProposalMessage(e, propId) {
   if (!text) return;
   appendProposalMessage(propId, text);
 }
-
 const sendProposalChatMessage = sendProposalMessage;
-
 function sendQuickProposalChip(propId, text) {
   appendProposalMessage(propId, text);
 }
-
 function appendProposalMessage(propId, text) {
   const p = swapProposals.find(x => x.id === propId);
   if (!p) return;
@@ -6837,7 +6617,6 @@ function appendProposalMessage(propId, text) {
   });
   activeProposalThreadId = propId;
   renderDashboardContent();
-
   setTimeout(() => {
     const autoReplyMap = {
       ro: "Perfect, sunt de acord! Putem face verificarea și semna Acordul de Schimb 1:1 direct fără comision.",
@@ -6860,7 +6639,6 @@ function appendProposalMessage(propId, text) {
     }
   }, 650);
 }
-
 function openSwapAgreementModal(propId) {
   const p = swapProposals.find(x => x.id === propId);
   if (!p) return;
@@ -6986,13 +6764,11 @@ function openSwapAgreementModal(propId) {
     }
   };
   const ac = agrCopy[currentLang] || agrCopy.en;
-
   content.innerHTML = `
     <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
     <span style="background:#f1f5f4;color:#0f172a;border:1px solid rgba(15,23,42,0.08);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${ac.badge}</span>
     <h2 style="font-size:24px;margin:10px 0 6px;">${ac.title}</h2>
     <p style="font-size:12.5px;color:var(--muted);margin:0 0 14px;">ID #CI4M-${p.id} · ${ac.dateLabel}: <strong>${todayStr}</strong></p>
-
     <div style="background:#f5f7f7;border:1px solid rgba(15,23,42,0.09);border-radius:18px;padding:14px 16px;margin-bottom:14px;display:grid;gap:8px;font-size:13.5px;">
       <div><strong>${ac.partyALabel}:</strong> ${escapeHtml(partyA)}</div>
       <div><strong>${ac.partyBLabel}:</strong> ${escapeHtml(partyB)}</div>
@@ -7001,276 +6777,385 @@ function openSwapAgreementModal(propId) {
       <div><strong>${ac.itemBLabel}:</strong> ${escapeHtml(p.targetTitle)}</div>
       <div><strong>${ac.balanceLabel}:</strong> <span style="color:#0f172a;font-weight:800;">${escapeHtml(p.cashBalance)}</span></div>
     </div>
-
     <strong style="display:block;font-size:13.5px;margin-bottom:8px;">${ac.clausesTitle}</strong>
     <ul class="checks" style="margin-bottom:18px;font-size:13px;">
-      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#a9ffca"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c1}</span></li>
-      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#a9ffca"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c2}</span></li>
-      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#a9ffca"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c3}</span></li>
+      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#eaf7f1"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0d8a5e" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c1}</span></li>
+      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#eaf7f1"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0d8a5e" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c2}</span></li>
+      <li><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#eaf7f1"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0d8a5e" stroke-width="1.7" stroke-linecap="round"/></svg><span>${ac.c3}</span></li>
     </ul>
-
-    <button type="button" class="btn btn-dark btn-block" onclick="window.print()">
+    <button type="button" class="btn btn-mint btn-block" onclick="window.print()">
       ✓ ${ac.printBtn}
     </button>
   `;
   document.getElementById("guideModal").classList.add("open");
   document.body.classList.add("modal-open");
 }
-
 const openPrintableSwapAgreement = openSwapAgreementModal;
-
 function deleteWatchlistAlert(alertId) {
   watchlistAlerts = watchlistAlerts.filter(a => a.id !== alertId);
   saveWatchlistAlerts();
   renderDashboardContent();
 }
-
+let currentProposalDirFilter = "all";
+function setProposalDirFilter(mode) {
+  currentProposalDirFilter = mode || "all";
+  renderDashboardContent();
+}
 function renderDashboardContent() {
   const container = document.getElementById("dashboardBodyContent");
   if (!container) return;
-
+  swapProposals = normalizeSeedProposals(swapProposals);
+  const myItems = (currentUser && typeof getAccountLinkedOffers === "function")
+    ? getAccountLinkedOffers(currentUser)
+    : [];
+  const favOffers = offers.filter(o => favoriteIds.includes(o.id));
+  const cMy = document.getElementById("dashCountMyListings");
+  const cPr = document.getElementById("dashCountProposals");
+  const cFv = document.getElementById("dashCountFavorites");
+  if (cMy) cMy.textContent = String(myItems.length);
+  if (cPr) cPr.textContent = String(swapProposals.length);
+  if (cFv) cFv.textContent = String(favOffers.length);
+  if (currentUser) {
+    const initials = (currentUser.name || "U").split(" ").filter(Boolean).map(p => p[0]).join("").slice(0, 2).toUpperCase();
+    const avEl = document.getElementById("dashHeaderAvatar");
+    const nmEl = document.getElementById("dashUserNameHeading");
+    const sbEl = document.getElementById("dashUserSubline");
+    if (avEl) avEl.textContent = initials || "ME";
+    if (nmEl) nmEl.textContent = currentUser.name || t("dashTitle");
+    if (sbEl) sbEl.textContent = [currentUser.email, currentUser.country].filter(Boolean).join(" · ") || "Verified Member";
+  }
   const dashLabelsMap = {
-    en: { partner: "Partner", view: "View", edit: "Edit", del: "Delete", accept: "Accept", chat: "Chat", contract: "1:1 Agreement", sendMsg: "Send", chatPlaceholder: "Write a message to your swap partner...", chip1: "Propose technical inspection", chip2: "Accept 1:1 key-for-key", chip3: "When can we meet?", emptyFav: "No saved favorites yet. Click the heart icon on any swap offer card to save it here.", emptyProps: "No active swap proposals yet. Open any listing and click Propose Swap.", incoming: "Incoming", outgoing: "Outgoing", yourAd: "Your Ad", saveBtn: "Save Profile & Preferences", watchlistTitle: "Active Watchlist Alerts" },
-    de: { partner: "Partner", view: "Ansehen", edit: "Bearbeiten", del: "Löschen", accept: "Annehmen", chat: "Nachrichten", contract: "1:1-Vertrag", sendMsg: "Senden", chatPlaceholder: "Nachricht an Tauschpartner schreiben...", chip1: "Besichtigung vorschlagen", chip2: "1:1-Tausch annehmen", chip3: "Wann können wir uns treffen?", emptyFav: "Noch keine Favoriten gespeichert. Klicken Sie auf das Herz-Symbol bei einem Angebot.", emptyProps: "Noch keine aktiven Tauschvorschläge.", incoming: "Eingehend", outgoing: "Ausgehend", yourAd: "Ihr Inserat", saveBtn: "Profil & Einstellungen speichern", watchlistTitle: "Aktive Suchaufträge (Watchlist)" },
-    fr: { partner: "Partenaire", view: "Voir", edit: "Modifier", del: "Supprimer", accept: "Accepter", chat: "Messages", contract: "Accord 1:1", sendMsg: "Envoyer", chatPlaceholder: "Écrire un message au partenaire...", chip1: "Proposer une inspection", chip2: "Accepter l'échange 1:1", chip3: "Quand pouvons-nous nous voir ?", emptyFav: "Aucun favori enregistré. Cliquez sur l'icône cœur sur une annonce pour la sauvegarder.", emptyProps: "Aucune proposition d'échange active.", incoming: "Reçue", outgoing: "Envoyée", yourAd: "Votre annonce", saveBtn: "Enregistrer le profil et les préférences", watchlistTitle: "Alertes Watchlist actives" },
-    it: { partner: "Partner", view: "Vedi", edit: "Modifica", del: "Elimina", accept: "Accetta", chat: "Messaggi", contract: "Accordo 1:1", sendMsg: "Invia", chatPlaceholder: "Scrivi un messaggio al partner...", chip1: "Proponi verifica tecnica", chip2: "Accetta scambio 1:1", chip3: "Quando possiamo incontrarci?", emptyFav: "Nessun preferito salvato. Clicca sull'icona del cuore su un annuncio per salvarlo qui.", emptyProps: "Nessuna proposta di scambio attiva.", incoming: "In entrata", outgoing: "In uscita", yourAd: "Tuo annuncio", saveBtn: "Salva profilo e preferenze", watchlistTitle: "Avvisi Watchlist attivi" },
-    es: { partner: "Socio", view: "Ver", edit: "Editar", del: "Eliminar", accept: "Aceptar", chat: "Mensajes", contract: "Acuerdo 1:1", sendMsg: "Enviar", chatPlaceholder: "Escribe un mensaje al socio...", chip1: "Proponer revisión técnica", chip2: "Aceptar intercambio 1:1", chip3: "¿Cuándo podemos vernos?", emptyFav: "Aún no tienes favoritos guardados. Haz clic en el icono de corazón en cualquier oferta.", emptyProps: "Aún no hay propuestas de intercambio activas.", incoming: "Recibida", outgoing: "Enviada", yourAd: "Tu anuncio", saveBtn: "Guardar perfil y preferencias", watchlistTitle: "Alertas Watchlist activas" },
-    ro: { partner: "Partener", view: "Vezi", edit: "Editează", del: "Șterge", accept: "Acceptă", chat: "Mesaje", contract: "Acord 1:1", sendMsg: "Trimite", chatPlaceholder: "Scrie un mesaj partenerului de schimb...", chip1: "Propun verificare tehnică", chip2: "Accept schimbul 1:1", chip3: "Când ne putem vedea?", emptyFav: "Nu ai încă favorite salvate. Apasă pe iconița inimă de pe orice anunț pentru a-l salva aici.", emptyProps: "Nu ai propuneri active. Deschide orice ofertă și apasă pe Propune schimb.", incoming: "Primită", outgoing: "Trimisă", yourAd: "Anunțul tău", saveBtn: "Salvează profilul și preferințele", watchlistTitle: "Alerte Watchlist active" },
-    ru: { partner: "Партнёр", view: "Открыть", edit: "Изменить", del: "Удалить", accept: "Принять", chat: "Сообщения", contract: "Договор 1:1", sendMsg: "Отправить", chatPlaceholder: "Напишите сообщение партнёру...", chip1: "Предложить проверку", chip2: "Принять обмен 1:1", chip3: "Когда можем встретиться?", emptyFav: "Пока нет сохранённых избранных. Нажмите на сердечко на любой карточке объявления.", emptyProps: "Пока нет активных предложений обмена.", incoming: "Входящее", outgoing: "Исходящее", yourAd: "Ваше объявление", saveBtn: "Сохранить профиль и настройки", watchlistTitle: "Активные уведомления Watchlist" }
+    en: { partner: "Partner", view: "View", edit: "Edit", del: "Delete", accept: "Accept Swap", chat: "Chat", contract: "1:1 Agreement", sendMsg: "Send", chatPlaceholder: "Write a message to your swap partner...", chip1: "Propose technical inspection", chip2: "Accept 1:1 key-for-key", chip3: "When can we meet?", emptyFav: "No saved favorites yet. Click the heart icon on any swap offer card to save it here.", emptyProps: "No active swap proposals yet. Open any listing and click Propose Swap.", incoming: "Incoming Proposal", outgoing: "Sent Proposal", yourAd: "Active · Live", saveBtn: "Save Profile & Preferences", watchlistTitle: "Active Watchlist Alerts", theyOffer: "THEY OFFER", youOffer: "YOU OFFER", forListing: "TARGET LISTING", kpi1: "My Active Listings", kpi2: "Portfolio Value", kpi3: "1:1 Swap Proposals", kpi4: "Saved Favorites", kpi5: "Account Plan" },
+    de: { partner: "Partner", view: "Ansehen", edit: "Bearbeiten", del: "Löschen", accept: "Annehmen", chat: "Chat", contract: "1:1-Vertrag", sendMsg: "Senden", chatPlaceholder: "Nachricht an Tauschpartner schreiben...", chip1: "Besichtigung vorschlagen", chip2: "1:1-Tausch annehmen", chip3: "Wann können wir uns treffen?", emptyFav: "Noch keine Favoriten gespeichert.", emptyProps: "Noch keine aktiven Tauschvorschläge.", incoming: "Eingehend", outgoing: "Gesendet", yourAd: "Aktiv · Live", saveBtn: "Profil & Einstellungen speichern", watchlistTitle: "Aktive Suchaufträge", theyOffer: "ANGEBOTEN", youOffer: "IHR ANGEBOT", forListing: "ZIEL-INSERAT", kpi1: "Meine Inserate", kpi2: "Gesamtwert", kpi3: "Tauschvorschläge", kpi4: "Favoriten", kpi5: "Konto-Plan" },
+    fr: { partner: "Partenaire", view: "Voir", edit: "Modifier", del: "Supprimer", accept: "Accepter", chat: "Chat", contract: "Accord 1:1", sendMsg: "Envoyer", chatPlaceholder: "Écrire un message au partenaire...", chip1: "Proposer une inspection", chip2: "Accepter l'échange 1:1", chip3: "Quand pouvons-nous nous voir ?", emptyFav: "Aucun favori enregistré.", emptyProps: "Aucune proposition d'échange active.", incoming: "Reçue", outgoing: "Envoyée", yourAd: "Actif · En ligne", saveBtn: "Enregistrer le profil", watchlistTitle: "Alertes Watchlist", theyOffer: "ON VOUS OFFRE", youOffer: "VOUS OFFREZ", forListing: "ANNONCE CIBLE", kpi1: "Mes annonces", kpi2: "Valeur totale", kpi3: "Propositions 1:1", kpi4: "Favoris", kpi5: "Abonnement" },
+    it: { partner: "Partner", view: "Vedi", edit: "Modifica", del: "Elimina", accept: "Accetta", chat: "Chat", contract: "Accordo 1:1", sendMsg: "Invia", chatPlaceholder: "Scrivi un messaggio al partner...", chip1: "Proponi verifica tecnica", chip2: "Accetta scambio 1:1", chip3: "Quando possiamo incontrarci?", emptyFav: "Nessun preferito salvato.", emptyProps: "Nessuna proposta di scambio attiva.", incoming: "Ricevuta", outgoing: "Inviata", yourAd: "Attivo · Online", saveBtn: "Salva profilo", watchlistTitle: "Avvisi Watchlist", theyOffer: "TI OFFRONO", youOffer: "TU OFFRI", forListing: "ANNUNCIO", kpi1: "I miei annunci", kpi2: "Valore totale", kpi3: "Proposte 1:1", kpi4: "Preferiti", kpi5: "Piano Account" },
+    es: { partner: "Socio", view: "Ver", edit: "Editar", del: "Eliminar", accept: "Aceptar", chat: "Chat", contract: "Acuerdo 1:1", sendMsg: "Enviar", chatPlaceholder: "Escribe un mensaje al socio...", chip1: "Proponer revisión técnica", chip2: "Aceptar intercambio 1:1", chip3: "¿Cuándo podemos vernos?", emptyFav: "Aún no tienes favoritos guardados.", emptyProps: "Aún no hay propuestas activas.", incoming: "Recibida", outgoing: "Enviada", yourAd: "Activo · En línea", saveBtn: "Guardar perfil", watchlistTitle: "Alertas Watchlist", theyOffer: "TE OFRECEN", youOffer: "TÚ OFRECES", forListing: "ANUNCIO OBJETIVO", kpi1: "Mis anuncios", kpi2: "Valor total", kpi3: "Propuestas 1:1", kpi4: "Favoritos", kpi5: "Plan de cuenta" },
+    ro: { partner: "Partener", view: "Vezi", edit: "Editează", del: "Șterge", accept: "Acceptă Schimbul", chat: "Mesaje", contract: "Acord 1:1", sendMsg: "Trimite", chatPlaceholder: "Scrie un mesaj partenerului de schimb...", chip1: "Propun verificare tehnică", chip2: "Accept schimbul 1:1", chip3: "Când ne putem vedea?", emptyFav: "Nu ai încă favorite salvate. Apasă pe iconița inimă de pe orice anunț pentru a-l salva aici.", emptyProps: "Nu ai propuneri active. Deschide orice ofertă și apasă pe Propune schimb.", incoming: "Propunere Primită", outgoing: "Propunere Trimisă", yourAd: "Activ · Publicat", saveBtn: "Salvează profilul și preferințele", watchlistTitle: "Alerte Watchlist active", theyOffer: "CE ÎȚI OFERĂ", youOffer: "CE OFERI TU", forListing: "PENTRU ANUNȚUL", kpi1: "Anunțurile Mele", kpi2: "Valoare Portofoliu", kpi3: "Propuneri Schimb", kpi4: "Favorite Salvate", kpi5: "Plan Cont" },
+    ru: { partner: "Партнёр", view: "Открыть", edit: "Изменить", del: "Удалить", accept: "Принять", chat: "Чат", contract: "Договор 1:1", sendMsg: "Отправить", chatPlaceholder: "Напишите сообщение партнёру...", chip1: "Предложить проверку", chip2: "Принять обмен 1:1", chip3: "Когда можем встретиться?", emptyFav: "Пока нет сохранённых избранных.", emptyProps: "Пока нет активных предложений обмена.", incoming: "Входящее", outgoing: "Отправленное", yourAd: "Активно", saveBtn: "Сохранить профиль", watchlistTitle: "Уведомления Watchlist", theyOffer: "ВАМ ПРЕДЛАГАЮТ", youOffer: "ВЫ ПРЕДЛАГАЕТЕ", forListing: "ДЛЯ ОБЪЯВЛЕНИЯ", kpi1: "Мои объявления", kpi2: "Стоимость активов", kpi3: "Предложения 1:1", kpi4: "Избранное", kpi5: "Тарифный план" }
   };
   const dl = dashLabelsMap[currentLang] || dashLabelsMap.en;
-
-  if (currentDashTab === "proposals") {
-    if (swapProposals.length === 0) {
-      container.innerHTML = `<p style="color:var(--muted);">${dl.emptyProps}</p>`;
-      return;
-    }
-    container.innerHTML = swapProposals.map(p => {
+  const totalPortfolioEur = myItems.reduce((acc, it) => acc + (Number(it.valueEur) || 0), 0);
+  const incCount = swapProposals.filter(p => p.direction === "Incoming").length;
+  const outCount = swapProposals.length - incCount;
+  const isProPlan = Boolean(currentUser && currentUser.plan === "pro");
+  const remSwaps = currentUser && typeof currentUser.freeSwaps === "number" ? currentUser.freeSwaps : 10;
+  const kpiRowHtml = `
+    <div class="hig-ws-kpi-grid">
+      <div class="hig-ws-kpi-card" onclick="switchDashboardTab('mylistings')">
+        <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi1}</span><span class="hig-ws-kpi-dot"></span></div>
+        <strong class="hig-ws-kpi-val">${myItems.length}</strong>
+        <div><span class="hig-sla-pill">${dl.yourAd}</span></div>
+      </div>
+      <div class="hig-ws-kpi-card" onclick="switchDashboardTab('mylistings')">
+        <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi2}</span><span class="hig-ws-kpi-dot"></span></div>
+        <strong class="hig-ws-kpi-val">${formatCurrency(totalPortfolioEur, currentCurrency)}</strong>
+        <div><span class="hig-sla-pill">0% Commission</span></div>
+      </div>
+      <div class="hig-ws-kpi-card" onclick="switchDashboardTab('proposals')">
+        <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi3}</span><span class="hig-ws-kpi-dot"></span></div>
+        <strong class="hig-ws-kpi-val">${swapProposals.length}</strong>
+        <div><span class="hig-sla-pill">${incCount} in · ${outCount} out</span></div>
+      </div>
+      <div class="hig-ws-kpi-card" onclick="switchDashboardTab('favorites')">
+        <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi4}</span><span class="hig-ws-kpi-dot"></span></div>
+        <strong class="hig-ws-kpi-val">${favOffers.length}</strong>
+        <div><span class="hig-sla-pill">1:1 Ready</span></div>
+      </div>
+      <div class="hig-ws-kpi-card" onclick="switchDashboardTab('profile')">
+        <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi5}</span><span class="hig-ws-kpi-dot"></span></div>
+        <strong class="hig-ws-kpi-val">${isProPlan ? "PRO ∞" : `${remSwaps}`}</strong>
+        <div><span class="hig-sla-pill">Verified ✓</span></div>
+      </div>
+    </div>
+  `;
+  if (currentDashTab === "mylistings") {
+    const emptyMyListingsMsg = {
+      ro: "Nu ai publicat încă niciun anunț propriu. Apasă pe butonul de mai jos pentru a publica primul tău anunț de schimb.",
+      en: "You haven't published any listings yet. Click the button below to post your first swap listing.",
+      de: "Sie haben noch keine eigenen Inserate veröffentlicht.",
+      fr: "Vous n'avez pas encore publié d'annonce.",
+      it: "Non hai ancora pubblicato alcun annuncio.",
+      es: "Aún no has publicado ningún anuncio.",
+      ru: "Вы ещё не опубликовали ни одного объявления."
+    }[currentLang] || "You haven't published any listings yet.";
+    container.innerHTML = `
+      ${kpiRowHtml}
+      <div class="hig-ws-panel">
+        <div class="hig-ws-panel-head">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <strong style="font-size:15.5px;font-weight:750;color:#0f172a;">${t("dashTabMyListings")}</strong>
+            <span class="hig-sla-pill">${myItems.length}</span>
+          </div>
+          <button type="button" class="hig-ws-emerald-btn" onclick="closeDashboardModal(); resetWizardDraft(); openWizardModal(1);">${t("navPostSwap")}</button>
+        </div>
+        ${myItems.length === 0 ? `<div style="padding:28px 20px;text-align:center;background:#f8fafc;border-radius:14px;border:1px solid #e6ebf1;"><p style="color:#64748b;margin:0;">${emptyMyListingsMsg}</p></div>` : myItems.map(item => {
+      const loc = getOfferLocalized(item);
+      return `
+            <div class="hig-my-listing-card">
+              <div class="hig-my-listing-main">
+                <img src="${item.image}" class="hig-my-listing-thumb" onclick="openOfferModal(${item.id}, 'details')" alt="" />
+                <div style="min-width:0;flex:1;">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">
+                    <span class="hig-sla-pill">● ${dl.yourAd}</span>
+                    <span style="background:#f1f5f9;color:#334155;font-size:11px;font-weight:650;padding:2px 9px;border-radius:999px;">${escapeHtml(getCategoryLabel(item.category))}</span>
+                    <span style="font-size:11.5px;color:#64748b;font-weight:600;font-variant-numeric:tabular-nums;">#${item.id}</span>
+                  </div>
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <strong style="font-size:16.5px;color:#0f172a;cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">${escapeHtml(loc.title)}</strong>
+                    <strong style="font-size:16.5px;color:#0d8a5e;font-variant-numeric:tabular-nums;">${formatOfferPrice(item, currentCurrency)}</strong>
+                  </div>
+                  <span style="display:block;font-size:12.5px;color:#475569;margin-top:3px;">${escapeHtml(item.specs || "")}</span>
+                  <span style="display:block;font-size:12.5px;color:#64748b;margin-top:4px;">${PREMIUM_ICONS.pin}${escapeHtml(item.city)}, ${escapeHtml(item.country)} · <strong style="color:#0f172a;">${t("wantBadge")}:</strong> ${escapeHtml(loc.want)}</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <button type="button" class="btn btn-login" style="height:34px;padding:0 14px;font-size:12px;" onclick="openOfferModal(${item.id}, 'details')">${escapeHtml(dl.view)}</button>
+                <button type="button" class="hig-ws-emerald-btn" onclick="openQuickEditListingSheet(${item.id})">${escapeHtml(dl.edit)}</button>
+                <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteListing(${item.id})" title="${escapeHtml(dl.del)}" aria-label="${escapeHtml(dl.del)}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                </button>
+              </div>
+            </div>
+          `;
+    }).join("")}
+      </div>
+    `;
+  } else if (currentDashTab === "proposals") {
+    const filteredProps = swapProposals.filter(p => {
+      if (currentProposalDirFilter === "incoming") return p.direction === "Incoming";
+      if (currentProposalDirFilter === "outgoing") return p.direction !== "Incoming";
+      return true;
+    });
+    container.innerHTML = `
+      ${kpiRowHtml}
+      <div class="hig-ws-panel">
+        <div class="hig-ws-panel-head">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <strong style="font-size:15.5px;font-weight:750;color:#0f172a;">${t("dashTabProposals")}</strong>
+            <span class="hig-sla-pill">${swapProposals.length}</span>
+          </div>
+          <div class="bo-segmented-control">
+            <button type="button" class="bo-seg-btn ${currentProposalDirFilter === "all" ? "active" : ""}" onclick="setProposalDirFilter('all')">All (${swapProposals.length})</button>
+            <button type="button" class="bo-seg-btn ${currentProposalDirFilter === "incoming" ? "active" : ""}" onclick="setProposalDirFilter('incoming')">${dl.incoming} (${incCount})</button>
+            <button type="button" class="bo-seg-btn ${currentProposalDirFilter === "outgoing" ? "active" : ""}" onclick="setProposalDirFilter('outgoing')">${dl.outgoing} (${outCount})</button>
+          </div>
+        </div>
+        ${filteredProps.length === 0 ? `<div style="padding:28px 20px;text-align:center;background:#f8fafc;border-radius:14px;border:1px solid #e6ebf1;"><p style="color:#64748b;margin:0;">${dl.emptyProps}</p></div>` : filteredProps.map(p => {
       const msgs = ensureProposalMessages(p);
       const isThreadOpen = activeProposalThreadId === p.id;
       const statusLabel = getProposalStatusLabel(p);
       const contact = getProposalPartnerContact(p);
       const cleanWaPhone = String(contact.phone || "").replace(/[^\d]/g, "");
-      const dirLabel = p.direction === "Incoming"
-        ? dl.incoming
-        : (p.direction === "Buy Offer" ? t("buyOfferBtn") : dl.outgoing);
-      const contactHandoffHtml = (contact.email || contact.phone) ? `
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;">
-          ${contact.email ? `<a href="mailto:${encodeURIComponent(contact.email)}?subject=${encodeURIComponent('ChangeIt4Me 1:1 Swap: ' + p.targetTitle)}" class="wiz-chip" style="text-decoration:none;font-size:11.5px;padding:3px 10px;">✉ ${escapeHtml(contact.email)}</a>` : ""}
-          ${contact.phone ? `<a href="tel:${encodeURIComponent(contact.phone)}" class="wiz-chip" style="text-decoration:none;font-size:11.5px;padding:3px 10px;">✆ ${escapeHtml(contact.phone)}</a>` : ""}
-          ${cleanWaPhone.length >= 8 ? `<a href="https://wa.me/${cleanWaPhone}" target="_blank" rel="noopener" class="wiz-chip" style="text-decoration:none;font-size:11.5px;padding:3px 10px;background:#ecfdf5;color:#065f46;border-color:#a7f3d0;">WhatsApp →</a>` : ""}
-        </div>
-      ` : "";
+      const isIncoming = p.direction === "Incoming";
+      const dirLabel = isIncoming ? dl.incoming : (p.direction === "Buy Offer" ? t("buyOfferBtn") : dl.outgoing);
+      const targetOff = p.offerId ? offers.find(o => o.id === Number(p.offerId)) : null;
+      const targetImg = p.targetImage || targetOff?.image || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80";
+      const offeredImg = p.offeredImage || "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80";
       return `
-        <div class="dash-list-item" style="flex-direction:column;align-items:stretch;gap:10px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:220px;">
-              <span style="font-size:11px;font-weight:800;text-transform:uppercase;padding:3px 10px;border-radius:999px;background:${p.direction === 'Incoming' ? 'var(--mint)' : '#0f172a'};color:${p.direction === 'Incoming' ? 'var(--forest)' : '#fff'};">
-                ${escapeHtml(dirLabel)}
-              </span>
-              <strong style="display:block;font-size:15.5px;margin-top:6px;cursor:pointer;color:#0f172a;" onclick="closeDashboardModal(); if(${Number(p.offerId) || 0}) openOfferModal(${Number(p.offerId)}, 'details');">${escapeHtml(p.offeredItem)} ⇄ ${escapeHtml(p.targetTitle)}</strong>
-              <span style="font-size:13px;color:var(--muted);display:block;">${dl.partner}: ${escapeHtml(p.partner)} · ${escapeHtml(p.cashBalance)}</span>
-              ${p.note ? `<span style="font-size:12.5px;color:#475569;display:block;margin-top:3px;">"${escapeHtml(p.note)}"</span>` : ""}
-              ${contactHandoffHtml}
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <span style="font-size:12px;font-weight:700;color:${p.declined ? '#be123c' : 'var(--forest)'};white-space:nowrap;">${p.declined ? '✕' : '✓'} ${escapeHtml(statusLabel)}</span>
-              ${p.direction === "Incoming" && !p.accepted ? `<button type="button" class="btn btn-mint" style="padding:6px 11px;font-size:12px;" onclick="acceptSwapProposal(${p.id})">${dl.accept}</button>` : ""}
-              <button type="button" class="btn ${isThreadOpen ? 'btn-dark' : 'btn-login'}" style="padding:6px 11px;font-size:12px;" onclick="toggleProposalThread(${p.id})">${dl.chat} (${msgs.length})</button>
-              <button type="button" class="btn btn-login" style="padding:6px 11px;font-size:12px;" onclick="openSwapAgreementModal(${p.id})">${dl.contract}</button>
-              ${p.offerId ? `<button type="button" class="btn btn-login" style="padding:6px 11px;font-size:12px;" onclick="closeDashboardModal(); openOfferModal(${p.offerId}, 'details')">${dl.view}</button>` : ""}
-              <button type="button" class="btn btn-login" style="padding:6px 10px;font-size:12px;color:#b91c1c;" onclick="requestDeleteProposal(${p.id})" title="${dl.del}">✕</button>
-            </div>
-          </div>
-
-          ${isThreadOpen ? `
-            <div style="margin-top:4px;padding:14px;background:#f5f7f7;border:1px solid rgba(15,23,42,0.08);border-radius:18px;">
-              <div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
-                ${msgs.map(m => `
-                  <div style="align-self:${m.sender === 'me' ? 'flex-end' : 'flex-start'};max-width:85%;padding:8px 12px;border-radius:14px;font-size:12.5px;background:${m.sender === 'me' ? '#0f172a' : '#fff'};color:${m.sender === 'me' ? '#fff' : '#0f172a'};border:1px solid rgba(15,23,42,0.08);">
-                    <strong style="font-size:10.5px;opacity:0.8;display:block;">${escapeHtml(m.author)} · ${escapeHtml(m.time)}</strong>
-                    <span>${escapeHtml(m.text)}</span>
-                  </div>
-                `).join("")}
-              </div>
-              <div class="wiz-chip-row" style="margin-bottom:8px;">
-                <button type="button" class="wiz-chip" onclick="sendQuickProposalChip(${p.id}, '${dl.chip1.replace(/'/g, "\\'")}')">+ ${dl.chip1}</button>
-                <button type="button" class="wiz-chip" onclick="sendQuickProposalChip(${p.id}, '${dl.chip2.replace(/'/g, "\\'")}')">+ ${dl.chip2}</button>
-                <button type="button" class="wiz-chip" onclick="sendQuickProposalChip(${p.id}, '${dl.chip3.replace(/'/g, "\\'")}')">+ ${dl.chip3}</button>
-              </div>
-              <form onsubmit="sendProposalMessage(event, ${p.id})" style="display:flex;gap:8px;">
-                <input type="text" id="propChatInput_${p.id}" class="input-light" placeholder="${dl.chatPlaceholder}" required style="flex:1;height:38px;font-size:13px;" />
-                <button type="submit" class="btn btn-dark" style="padding:0 16px;height:38px;font-size:12.5px;">${dl.sendMsg} →</button>
-              </form>
-            </div>
-          ` : ""}
-        </div>
-      `;
-    }).join("");
-  } else if (currentDashTab === "mylistings") {
-    const linkedToMe = currentUser ? getAccountLinkedOffers(currentUser) : [];
-    const userCreated = offers.filter(o => o.createdByUser || o.id > 100000);
-    const myItems = linkedToMe.length > 0 ? linkedToMe : (userCreated.length > 0 ? userCreated : offers.slice(0, 3));
-    container.innerHTML = `
-      ${myItems.map(item => {
-      const loc = getOfferLocalized(item);
-      const isCustom = Boolean(item.createdByUser || item.id > 100000);
-      return `
-          <div class="dash-list-item" style="gap:12px;flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:210px;">
-              <img src="${item.image}" style="width:64px;height:48px;object-fit:cover;border-radius:10px;flex-shrink:0;" alt="" />
-              <div>
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <strong>${loc.title}</strong>
-                  ${isCustom ? `<span style="background:var(--mint);color:var(--forest);font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;">${dl.yourAd}</span>` : ""}
+            <div class="hig-proposal-card">
+              <div class="hig-proposal-top">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:${isIncoming ? "#0d8a5e" : "#f1f5f9"};color:${isIncoming ? "#ffffff" : "#334155"};border:1px solid ${isIncoming ? "#0b7a53" : "#e2e8f0"};">
+                    ${escapeHtml(dirLabel)}
+                  </span>
+                  <span style="font-size:13px;font-weight:650;color:#0f172a;">${dl.partner}: ${escapeHtml(p.partner)}</span>
                 </div>
-                <span style="display:flex;align-items:center;font-size:12.5px;color:var(--muted);">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ~${formatOfferPrice(item, currentCurrency)}</span>
+                <span class="hig-sla-pill" style="${p.declined ? "background:#fff1f2;color:#be123c;border-color:#fecdd3;" : ""}">
+                  ${p.declined ? "✕" : "●"} ${escapeHtml(statusLabel)}
+                </span>
               </div>
+              <div class="hig-proposal-compare">
+                <div class="hig-proposal-side">
+                  <img src="${offeredImg}" alt="" />
+                  <div style="min-width:0;">
+                    <span style="display:block;font-size:10px;font-weight:750;color:#64748b;letter-spacing:0.03em;">${isIncoming ? dl.theyOffer : dl.youOffer}</span>
+                    <strong style="display:block;font-size:13.5px;color:#0f172a;line-height:1.3;">${escapeHtml(p.offeredItem)}</strong>
+                  </div>
+                </div>
+                <div class="hig-sla-pill" style="padding:5px 12px;font-size:11.5px;font-weight:750;">
+                  ⇄ ${escapeHtml(p.cashBalance)}
+                </div>
+                <div class="hig-proposal-side" style="cursor:pointer;" onclick="if(${Number(p.offerId) || 0}) openOfferModal(${Number(p.offerId)}, 'details');">
+                  <img src="${targetImg}" alt="" />
+                  <div style="min-width:0;">
+                    <span style="display:block;font-size:10px;font-weight:750;color:#64748b;letter-spacing:0.03em;">${dl.forListing}</span>
+                    <strong style="display:block;font-size:13.5px;color:#0f172a;line-height:1.3;text-decoration:underline;text-underline-offset:2px;">${escapeHtml(p.targetTitle)}</strong>
+                  </div>
+                </div>
+              </div>
+              ${p.note ? `<p style="margin:8px 0 0;font-size:12.5px;color:#475569;">"${escapeHtml(p.note)}"</p>` : ""}
+              <div class="hig-proposal-bottom">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  ${contact.email ? `<a href="mailto:${encodeURIComponent(contact.email)}?subject=${encodeURIComponent("ChangeIt4Me 1:1 Swap: " + p.targetTitle)}" class="hig-ws-outline-pill" style="text-decoration:none;height:30px;min-height:30px !important;font-size:11.5px;">✉ ${escapeHtml(contact.email)}</a>` : ""}
+                  ${contact.phone ? `<a href="tel:${encodeURIComponent(contact.phone)}" class="hig-ws-outline-pill" style="text-decoration:none;height:30px;min-height:30px !important;font-size:11.5px;">✆ ${escapeHtml(contact.phone)}</a>` : ""}
+                  ${cleanWaPhone.length >= 8 ? `<a href="https://wa.me/${cleanWaPhone}" target="_blank" rel="noopener" class="hig-sla-pill" style="text-decoration:none;padding:4px 11px;">WhatsApp →</a>` : ""}
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  ${isIncoming && !p.accepted ? `<button type="button" class="hig-ws-emerald-btn" onclick="acceptSwapProposal(${p.id})">✓ ${dl.accept}</button>` : ""}
+                  <button type="button" class="${isThreadOpen ? "hig-ws-emerald-btn" : "hig-ws-outline-pill"}" style="cursor:pointer;" onclick="toggleProposalThread(${p.id})">${dl.chat} (${msgs.length})</button>
+                  <button type="button" class="hig-ws-outline-pill" style="cursor:pointer;" onclick="openSwapAgreementModal(${p.id})">${dl.contract}</button>
+                  <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteProposal(${p.id})" title="${dl.del}" aria-label="${dl.del}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+              ${isThreadOpen ? `
+                <div style="margin-top:10px;padding:13px;background:#f8fafc;border:1px solid #e6ebf1;border-radius:14px;">
+                  <div style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+                    ${msgs.map(m => `
+                      <div style="align-self:${m.sender === "me" ? "flex-end" : "flex-start"};max-width:85%;padding:8px 12px;border-radius:14px;font-size:12.5px;background:${m.sender === "me" ? "#0d8a5e" : "#ffffff"};color:${m.sender === "me" ? "#ffffff" : "#0f172a"};border:1px solid ${m.sender === "me" ? "#0b7a53" : "#e2e8f0"};">
+                        <strong style="font-size:10.5px;opacity:0.85;display:block;">${escapeHtml(m.author)} · ${escapeHtml(m.time)}</strong>
+                        <span>${escapeHtml(m.text)}</span>
+                      </div>
+                    `).join("")}
+                  </div>
+                  <div class="wiz-chip-row" style="margin-bottom:8px;">
+                    <button type="button" class="hig-ws-outline-pill" style="height:28px;min-height:28px !important;font-size:11.5px;cursor:pointer;" onclick="sendQuickProposalChip(${p.id}, '${dl.chip1.replace(/'/g, "\'")}')">+ ${dl.chip1}</button>
+                    <button type="button" class="hig-ws-outline-pill" style="height:28px;min-height:28px !important;font-size:11.5px;cursor:pointer;" onclick="sendQuickProposalChip(${p.id}, '${dl.chip2.replace(/'/g, "\'")}')">+ ${dl.chip2}</button>
+                    <button type="button" class="hig-ws-outline-pill" style="height:28px;min-height:28px !important;font-size:11.5px;cursor:pointer;" onclick="sendQuickProposalChip(${p.id}, '${dl.chip3.replace(/'/g, "\'")}')">+ ${dl.chip3}</button>
+                  </div>
+                  <form onsubmit="sendProposalMessage(event, ${p.id})" style="display:flex;gap:8px;">
+                    <input type="text" id="propChatInput_${p.id}" class="input-light" placeholder="${dl.chatPlaceholder}" required style="flex:1;height:38px;font-size:13px;" />
+                    <button type="submit" class="hig-ws-emerald-btn" style="height:38px;min-height:38px !important;padding:0 16px;">${dl.sendMsg} →</button>
+                  </form>
+                </div>
+              ` : ""}
             </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <button type="button" class="bo-icon-btn" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'details')" title="${escapeHtml(dl.view)}" aria-label="${escapeHtml(dl.view)}">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
-              <button type="button" class="bo-icon-btn" onclick="openQuickEditListingSheet(${item.id})" title="${escapeHtml(dl.edit)}" aria-label="${escapeHtml(dl.edit)}">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-              </button>
-              <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteListing(${item.id})" title="${escapeHtml(dl.del)}" aria-label="${escapeHtml(dl.del)}">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-              </button>
-            </div>
-          </div>
-        `;
+          `;
     }).join("")}
-      <button type="button" class="btn btn-mint btn-block" style="margin-top:12px;" onclick="closeDashboardModal(); resetWizardDraft(); openWizardModal(1);">
-        ${t("navPostSwap")} →
-      </button>
+      </div>
     `;
   } else if (currentDashTab === "favorites") {
-    const favOffers = offers.filter(o => favoriteIds.includes(o.id));
-    if (favOffers.length === 0) {
-      container.innerHTML = `<p style="color:var(--muted);">${dl.emptyFav}</p>`;
-    } else {
-      container.innerHTML = favOffers.map(item => {
-        const loc = getOfferLocalized(item);
-        return `
-          <div class="dash-list-item" style="gap:12px;flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:210px;">
-              <img src="${item.image}" style="width:60px;height:44px;object-fit:cover;border-radius:10px;flex-shrink:0;" alt="" />
-              <div>
-                <strong>${loc.title}</strong>
-                <span style="display:flex;align-items:center;font-size:12.5px;color:var(--muted);">${PREMIUM_ICONS.pin}${item.city}, ${item.country} · ~${formatOfferPrice(item, currentCurrency)} · ${t("wantBadge")}: ${loc.want}</span>
+    container.innerHTML = `
+      ${kpiRowHtml}
+      <div class="hig-ws-panel">
+        <div class="hig-ws-panel-head">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <strong style="font-size:15.5px;font-weight:750;color:#0f172a;">${t("dashTabFavorites")}</strong>
+            <span class="hig-sla-pill">${favOffers.length}</span>
+          </div>
+        </div>
+        ${favOffers.length === 0 ? `<div style="padding:28px 20px;text-align:center;background:#f8fafc;border-radius:14px;border:1px solid #e6ebf1;"><p style="color:#64748b;margin:0;">${dl.emptyFav}</p></div>` : favOffers.map(item => {
+      const loc = getOfferLocalized(item);
+      return `
+            <div class="hig-my-listing-card">
+              <div class="hig-my-listing-main">
+                <img src="${item.image}" class="hig-my-listing-thumb" onclick="openOfferModal(${item.id}, 'details')" alt="" />
+                <div style="min-width:0;flex:1;">
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                    <strong style="font-size:16px;color:#0f172a;cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">${escapeHtml(loc.title)}</strong>
+                    <strong style="font-size:15.5px;color:#0d8a5e;font-variant-numeric:tabular-nums;">${formatOfferPrice(item, currentCurrency)}</strong>
+                  </div>
+                  <span style="display:block;font-size:12.5px;color:#64748b;margin-top:4px;">${PREMIUM_ICONS.pin}${escapeHtml(item.city)}, ${escapeHtml(item.country)} · <strong style="color:#0f172a;">${t("wantBadge")}:</strong> ${escapeHtml(loc.want)}</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <button type="button" class="hig-ws-emerald-btn" onclick="openOfferModal(${item.id}, 'propose')">
+                  ⇄ ${t("proposeSwapBtn")}
+                </button>
+                <button type="button" class="bo-icon-btn is-danger" onclick="toggleFavorite(${item.id}); renderDashboardContent();" title="${dl.del}" aria-label="${dl.del}">✕</button>
               </div>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <button type="button" class="btn btn-mint" style="padding:7px 13px;font-size:12.5px;" onclick="closeDashboardModal(); openOfferModal(${item.id}, 'propose')">
-                ⇄ ${t("proposeSwapBtn")}
-              </button>
-              <button type="button" class="btn btn-login" style="padding:7px 10px;font-size:12.5px;color:#b91c1c;" onclick="toggleFavorite(${item.id}); renderDashboardContent();" title="${dl.del}">✕</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
+          `;
+    }).join("")}
+      </div>
+    `;
   } else if (currentDashTab === "profile") {
     const u = currentUser || { name: "", email: "", phone: "", country: "Romania", prefLang: currentLang, prefCurrency: currentCurrency };
     const alertsHtml = watchlistAlerts.length > 0 ? `
       <div style="margin-top:16px;">
-        <strong style="display:block;font-size:14px;margin-bottom:8px;color:var(--forest);">${dl.watchlistTitle} (${watchlistAlerts.length})</strong>
+        <strong style="display:block;font-size:14px;margin-bottom:8px;color:#0f172a;">${dl.watchlistTitle} (${watchlistAlerts.length})</strong>
         ${watchlistAlerts.map(a => `
           <div class="dash-list-item" style="padding:10px 14px;">
             <div>
               <strong>${a.interest}</strong>
-              <span style="font-size:12px;color:var(--muted);display:block;">${a.country} · ${a.email}</span>
+              <span style="font-size:12px;color:#64748b;display:block;">${a.country} · ${a.email}</span>
             </div>
             <div style="display:flex;gap:6px;">
-              <button type="button" class="btn btn-mint" style="padding:5px 11px;font-size:12px;" onclick="closeDashboardModal(); executeQuickKeywordSearch('${a.interest.replace(/'/g, "\\'")}')">${dl.view}</button>
-              <button type="button" class="btn btn-login" style="padding:5px 9px;font-size:12px;color:#b91c1c;" onclick="requestDeleteWatchlistAlert(${a.id})">✕</button>
+              <button type="button" class="hig-ws-emerald-btn" onclick="closeDashboardModal(); executeQuickKeywordSearch('${a.interest.replace(/'/g, "\'")}')">${dl.view}</button>
+              <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteWatchlistAlert(${a.id})">✕</button>
             </div>
           </div>
         `).join("")}
       </div>
     ` : "";
-
     const subCopy = getSubscriptionUiCopy();
-    const isProPlan = Boolean(u.plan === "pro");
-    const remSwaps = typeof u.freeSwaps === "number" ? u.freeSwaps : 10;
     const maxSwaps = remSwaps > 10 ? remSwaps : 10;
     const subCardHtml = `
-      <div style="margin-bottom:16px;padding:16px 18px;background:#0f172a;color:#fff;border-radius:20px;border:1px solid rgba(255,255,255,0.1);">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-          <strong style="font-size:15px;color:#a9ffca;">${subCopy.dashCardTitle}</strong>
-          <span style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;">
+      <div class="hig-ws-panel" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+          <strong style="font-size:15px;color:#0f172a;">${subCopy.dashCardTitle}</strong>
+          <span class="hig-sla-pill">
             ${isProPlan ? subCopy.statusPro : `${subCopy.statusCredits} ${remSwaps} / ${maxSwaps}`}
           </span>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-          <button type="button" class="btn btn-mint" style="font-size:12px;padding:7px 13px;" onclick="openSubscriptionModal('pack15')">${subCopy.packBtn} (${formatCurrency(9, currentCurrency)})</button>
-          <button type="button" class="btn btn-login" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);font-size:12px;padding:7px 13px;" onclick="openSubscriptionModal('pro')">${subCopy.proBtn} (${formatCurrency(19, currentCurrency)}${subCopy.perMonth})</button>
-          <button type="button" class="btn btn-login" style="background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.16);font-size:11.5px;padding:6px 11px;" onclick="simulateZeroFreeSwaps()">${subCopy.dashSimulateZeroBtn}</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="hig-ws-emerald-btn" onclick="openSubscriptionModal('pack15')">${subCopy.packBtn} (${formatCurrency(9, currentCurrency)})</button>
+          <button type="button" class="hig-ws-outline-pill" style="cursor:pointer;" onclick="openSubscriptionModal('pro')">${subCopy.proBtn} (${formatCurrency(19, currentCurrency)}${subCopy.perMonth})</button>
+          <button type="button" class="hig-ws-outline-pill" style="cursor:pointer;color:#64748b;" onclick="simulateZeroFreeSwaps()">${subCopy.dashSimulateZeroBtn}</button>
         </div>
       </div>
     `;
-
     container.innerHTML = `
+      ${kpiRowHtml}
       ${subCardHtml}
-      <form onsubmit="saveDashboardProfile(event)" style="background:#f5f7f7;padding:20px;border-radius:20px;border:1px solid rgba(15,23,42,0.08);">
+      <form onsubmit="saveDashboardProfile(event)" class="hig-ws-panel">
         <div class="form-grid-2">
           <div class="field-group">
-            <label style="color:var(--ink);font-weight:700;">${t("formFullName")}</label>
-            <input type="text" name="name" class="input-light" required value="${escapeHtml(u.name || '')}" />
+            <label style="color:#0f172a;font-weight:700;">${t("formFullName")}</label>
+            <input type="text" name="name" class="input-light" required value="${escapeHtml(u.name || "")}" />
           </div>
           <div class="field-group">
-            <label style="color:var(--ink);font-weight:700;">${t("formEmail")}</label>
-            <input type="email" class="input-light" value="${escapeHtml(u.email || '')}" disabled />
+            <label style="color:#0f172a;font-weight:700;">${t("formEmail")}</label>
+            <input type="email" class="input-light" value="${escapeHtml(u.email || "")}" disabled />
           </div>
         </div>
         <div class="form-grid-2">
           <div class="field-group">
-            <label style="color:var(--ink);font-weight:700;">${t("formPhone")}</label>
-            <input type="tel" name="phone" class="input-light" value="${escapeHtml(u.phone || '')}" placeholder="+40 / +49 / +43..." />
+            <label style="color:#0f172a;font-weight:700;">${t("formPhone")}</label>
+            <input type="tel" name="phone" class="input-light" value="${escapeHtml(u.phone || "")}" placeholder="+40 / +49 / +43..." />
           </div>
           <div class="field-group">
-            <label style="color:var(--ink);font-weight:700;">${t("formCountry")}</label>
+            <label style="color:#0f172a;font-weight:700;">${t("formCountry")}</label>
             <select name="country" class="input-light">
-              ${Object.keys(COUNTRY_COORDS).map(cName => `<option value="${cName}" ${u.country === cName ? 'selected' : ''}>${getLocalizedCountryName(cName)}</option>`).join("")}
+              ${Object.keys(COUNTRY_COORDS).map(cName => `<option value="${cName}" ${u.country === cName ? "selected" : ""}>${getLocalizedCountryName(cName)}</option>`).join("")}
             </select>
           </div>
         </div>
         <div class="form-grid-2">
           <div class="field-group" style="margin-bottom:0;">
-            <label style="color:var(--ink);font-weight:700;">${t("formPrefLang")}</label>
+            <label style="color:#0f172a;font-weight:700;">${t("formPrefLang")}</label>
             <select name="prefLang" class="input-light">
-              ${(window.LANGUAGES || []).map(l => `<option value="${l.code}" ${currentLang === l.code ? 'selected' : ''}>${l.label || l.name}</option>`).join("")}
+              ${(window.LANGUAGES || []).map(l => `<option value="${l.code}" ${currentLang === l.code ? "selected" : ""}>${l.label || l.name}</option>`).join("")}
             </select>
           </div>
           <div class="field-group" style="margin-bottom:0;">
-            <label style="color:var(--ink);font-weight:700;">${t("formPrefCurrency")}</label>
+            <label style="color:#0f172a;font-weight:700;">${t("formPrefCurrency")}</label>
             <select name="prefCurrency" class="input-light">
-              ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${currentCurrency === c.code ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join("")}
+              ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${currentCurrency === c.code ? "selected" : ""}>${c.code} (${c.symbol})</option>`).join("")}
             </select>
           </div>
         </div>
-        <button type="submit" class="btn btn-dark btn-block" style="margin-top:16px;">
+        <button type="submit" class="hig-ws-emerald-btn" style="margin-top:16px;width:100%;height:42px !important;justify-content:center;font-size:13.5px;">
           ✓ ${dl.saveBtn}
         </button>
       </form>
       ${alertsHtml}
-      <div style="margin-top:16px;padding:16px 18px;background:#ffffff;border:1px solid rgba(15,23,42,0.08);border-radius:20px;">
+      <div class="hig-ws-panel" style="margin-top:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-          <strong style="font-size:14.5px;color:var(--forest);">${getGdprUiCopy().rightsTitle}</strong>
-          <span style="background:var(--mint-soft);color:var(--forest);padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;">EU Reg. 2016/679</span>
+          <strong style="font-size:14.5px;color:#0f172a;">${getGdprUiCopy().rightsTitle}</strong>
+          <span class="hig-sla-pill">EU Reg. 2016/679</span>
         </div>
-        <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted);line-height:1.45;">${getGdprUiCopy().rightsSub}</p>
+        <p style="margin:0 0 12px;font-size:12.5px;color:#64748b;line-height:1.45;">${getGdprUiCopy().rightsSub}</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="btn btn-login" style="font-size:12px;padding:7px 13px;" onclick="openGdprPreferencesModal()">${getGdprUiCopy().consentPrefsBtn}</button>
-          <button type="button" class="btn btn-mint" style="font-size:12px;padding:7px 13px;" onclick="exportUserGdprData()">↓ ${getGdprUiCopy().exportBtn}</button>
-          <button type="button" class="btn btn-login" style="font-size:12px;padding:7px 13px;color:#b91c1c;border-color:rgba(185,28,28,0.28);" onclick="requestDeleteGdprAccount()">✕ ${getGdprUiCopy().deleteAccBtn}</button>
+          <button type="button" class="hig-ws-outline-pill" style="cursor:pointer;" onclick="openGdprPreferencesModal()">${getGdprUiCopy().consentPrefsBtn}</button>
+          <button type="button" class="hig-ws-emerald-btn" onclick="exportUserGdprData()">↓ ${getGdprUiCopy().exportBtn}</button>
+          <button type="button" class="hig-ws-outline-pill" style="cursor:pointer;color:#e11d48;border-color:#fecdd3;" onclick="requestDeleteGdprAccount()">✕ ${getGdprUiCopy().deleteAccBtn}</button>
         </div>
       </div>
     `;
   }
 }
-
 // ============================================================================
 // GUIDES MODAL, WATCHLIST & CHAT ASSISTANT
 // ============================================================================
@@ -7291,7 +7176,6 @@ function openGuideModal(guideKey) {
     ru: "Официальное руководство ChangeIt4Me"
   };
   const content = document.getElementById("guideModalContent");
-
   content.innerHTML = `
     <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
     <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${badgeMap[currentLang] || badgeMap.en}</span>
@@ -7299,7 +7183,7 @@ function openGuideModal(guideKey) {
     <ul class="checks" style="margin-bottom:22px;">
       ${lines.map(line => `
         <li>
-          <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#a9ffca"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0c2c28" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="9" fill="#eaf7f1"/><path d="M5 9.2 7.6 12 13 6.5" stroke="#0d8a5e" stroke-width="1.7" stroke-linecap="round"/></svg>
           <span>${line}</span>
         </li>
       `).join("")}
@@ -7308,11 +7192,9 @@ function openGuideModal(guideKey) {
       ${t("postFreeAdBtn")} →
     </button>
   `;
-
   document.getElementById("guideModal").classList.add("open");
   document.body.classList.add("modal-open");
 }
-
 function closeGuideModal() {
   document.getElementById("guideModal").classList.remove("open");
   if (document.getElementById("adminModal")?.classList.contains("open")) {
@@ -7321,7 +7203,6 @@ function closeGuideModal() {
     document.body.classList.remove("modal-open");
   }
 }
-
 function handleWatchlistSubmit(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
@@ -7358,22 +7239,18 @@ function handleWatchlistSubmit(e) {
   showToast(msg);
   e.target.reset();
 }
-
 function toggleChatDock() {
   document.getElementById("chatDock").classList.toggle("is-open");
 }
-
 function handleChatSubmit(e) {
   e.preventDefault();
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
-
   const box = document.getElementById("chatMessages");
   box.innerHTML += `<div class="chat-bubble user">${escapeHtml(text)}</div>`;
   input.value = "";
   box.scrollTop = box.scrollHeight;
-
   setTimeout(() => {
     const directHits = offers.filter(o => matchesSmartSearchQuery(o, text));
     const aiSmart = buildAiSmartRecommendations(text, directHits, offers);
@@ -7392,7 +7269,6 @@ function handleChatSubmit(e) {
       ...directHits.slice(0, 2).map(item => ({ item, isAi: false, reason: "" })),
       ...aiItems.slice(0, 2).map(entry => ({ item: entry.item, isAi: true, reason: entry.badgeLabel }))
     ].slice(0, 3);
-
     if (combined.length > 0) {
       const linksHtml = combined.map(({ item, isAi, reason }) => {
         const loc = getOfferLocalized(item);
@@ -7420,7 +7296,6 @@ function handleChatSubmit(e) {
     box.scrollTop = box.scrollHeight;
   }, 300);
 }
-
 // ============================================================================
 // MOBILE MENU, SCROLL & TOAST HELPERS
 // ============================================================================
@@ -7430,23 +7305,19 @@ function closeMobileMenu() {
   document.getElementById("mobilePanel").classList.remove("open");
   document.getElementById("mobileMenuBtn").setAttribute("aria-expanded", "false");
 }
-
 function scrollToMobileHub() {
   closeAllModalsSilently();
   document.body.classList.add("mobile-started");
   window.scrollTo({ top: 0, behavior: "instant" });
   syncUrlWithRoute("/start");
 }
-
 function exitMobileStartScreen() {
   closeAllModalsSilently();
   document.body.classList.remove("mobile-started");
   window.scrollTo({ top: 0, behavior: "instant" });
   syncUrlWithRoute("/");
 }
-
 let scrollRevealObserver = null;
-
 function initScrollRevealAnimations() {
   if (!("IntersectionObserver" in window)) return;
   if (!scrollRevealObserver) {
@@ -7459,7 +7330,6 @@ function initScrollRevealAnimations() {
       });
     }, { threshold: 0.1, rootMargin: "0px 0px -30px 0px" });
   }
-
   document.querySelectorAll(".stat, .service, .swap-card, .step, .plan, .article").forEach((el, idx) => {
     if (!el.classList.contains("reveal-on-scroll")) {
       el.classList.add("reveal-on-scroll");
@@ -7468,7 +7338,6 @@ function initScrollRevealAnimations() {
     }
   });
 }
-
 function animateLiveMemberCount() {
   const el = document.getElementById("liveUserCount");
   if (!el) return;
@@ -7476,7 +7345,6 @@ function animateLiveMemberCount() {
   const start = 1390;
   const duration = 1200;
   const startTime = performance.now();
-
   const step = (now) => {
     const progress = Math.min((now - startTime) / duration, 1);
     const eased = 1 - Math.pow(1 - progress, 3);
@@ -7486,9 +7354,7 @@ function animateLiveMemberCount() {
   };
   requestAnimationFrame(step);
 }
-
 let lastUndoSnapshot = null;
-
 function showToast(message, undoOption = null) {
   const container = document.getElementById("toastContainer");
   if (!container) return;
@@ -7497,7 +7363,6 @@ function showToast(message, undoOption = null) {
   const span = document.createElement("span");
   span.textContent = message;
   el.appendChild(span);
-
   if (undoOption && typeof undoOption.onUndo === "function") {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -7509,19 +7374,16 @@ function showToast(message, undoOption = null) {
     };
     el.appendChild(btn);
   }
-
   container.appendChild(el);
   setTimeout(() => {
     el.remove();
   }, undoOption ? 6500 : 4200);
 }
-
 // ============================================================================
 // APPLE HIG UNIVERSAL SHEETS, QUICK-EDIT & DESTRUCTIVE CONFIRMATION SYSTEM
 // (sheets.md, alerts.md, buttons.md, entering-data.md, undo-and-redo.md)
 // ============================================================================
 let pendingAppleConfirmCallback = null;
-
 function closeAppleSheetModal() {
   const modal = document.getElementById("appleSheetModal");
   if (modal) modal.classList.remove("open");
@@ -7532,13 +7394,11 @@ function closeAppleSheetModal() {
     document.body.classList.remove("modal-open");
   }
 }
-
 function executeAppleConfirmSheetAction() {
   const fn = pendingAppleConfirmCallback;
   closeAppleSheetModal();
   if (typeof fn === "function") fn();
 }
-
 function openAppleDestructiveConfirmSheet({ title, subtitle, confirmLabel, cancelLabel, onConfirm }) {
   const modal = document.getElementById("appleSheetModal");
   const card = document.getElementById("appleSheetCard");
@@ -7551,7 +7411,6 @@ function openAppleDestructiveConfirmSheet({ title, subtitle, confirmLabel, cance
   pendingAppleConfirmCallback = onConfirm;
   const defCancel = cancelLabel || (currentLang === "ro" ? "Anulează" : "Cancel");
   const defConfirm = confirmLabel || (currentLang === "ro" ? "Șterge" : "Delete");
-
   content.innerHTML = `
     <div style="text-align:center;padding:4px 4px 8px;">
       <div style="width:44px;height:44px;border-radius:50%;background:#ffe4e6;color:#e11d48;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;margin-bottom:10px;">!</div>
@@ -7566,10 +7425,13 @@ function openAppleDestructiveConfirmSheet({ title, subtitle, confirmLabel, cance
   modal.classList.add("open");
   document.body.classList.add("modal-open");
 }
-
 function requestDeleteListing(offerId) {
   const item = offers.find(o => o.id === Number(offerId));
   if (!item) return;
+  if (!canCurrentUserManageListing(item)) {
+    showToast(currentLang === "ro" ? "! Doar proprietarul anunțului poate șterge acest anunț." : "! Only the listing owner can delete this listing.");
+    return;
+  }
   const loc = getOfferLocalized(item);
   const snapshot = { ...item };
   const isRo = currentLang === "ro";
@@ -7606,7 +7468,6 @@ function requestDeleteListing(offerId) {
     }
   });
 }
-
 function requestAdminDeleteAccount(emailKey) {
   const k = String(emailKey || "").toLowerCase();
   const acc = accountsDb[k];
@@ -7634,7 +7495,6 @@ function requestAdminDeleteAccount(emailKey) {
     }
   });
 }
-
 function requestDeleteProposal(propId) {
   const p = swapProposals.find(x => x.id === Number(propId));
   if (!p) return;
@@ -7652,7 +7512,8 @@ function requestDeleteProposal(propId) {
         label: isRo ? "↺ Anulează" : "↺ Undo",
         onUndo: () => {
           swapProposals.unshift(snapshot);
-          localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
+          swapProposals = normalizeSeedProposals(swapProposals);
+      localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
           updateFavCountUI();
           if (document.getElementById("dashboardModal")?.classList.contains("open")) renderDashboardContent();
           if (document.getElementById("adminModal")?.classList.contains("open")) renderAdminModalContent();
@@ -7662,7 +7523,6 @@ function requestDeleteProposal(propId) {
     }
   });
 }
-
 function requestDeleteWatchlistAlert(alertId) {
   const a = watchlistAlerts.find(x => x.id === Number(alertId));
   if (!a) return;
@@ -7687,7 +7547,6 @@ function requestDeleteWatchlistAlert(alertId) {
     }
   });
 }
-
 function requestDeleteGdprAccount() {
   const isRo = currentLang === "ro";
   openAppleDestructiveConfirmSheet({
@@ -7702,10 +7561,13 @@ function requestDeleteGdprAccount() {
     }
   });
 }
-
 function openQuickEditListingSheet(offerId) {
   const item = offers.find(o => o.id === Number(offerId));
   if (!item) return;
+  if (!canCurrentUserManageListing(item)) {
+    showToast(currentLang === "ro" ? "! Doar proprietarul anunțului poate edita acest anunț." : "! Only the listing owner can edit this listing.");
+    return;
+  }
   const loc = getOfferLocalized(item);
   const modal = document.getElementById("appleSheetModal");
   const card = document.getElementById("appleSheetCard");
@@ -7715,11 +7577,9 @@ function openQuickEditListingSheet(offerId) {
     return;
   }
   if (card) card.classList.remove("hig-alert-mode");
-
   const activeCurr = item.originalCurrency || currentCurrency || "EUR";
   const displayAmt = item.originalAmount || getOfferValueInCurrency(item, activeCurr);
   const cats = ["cars", "real-estate", "electronics", "home-garden", "auto-parts", "clothing"];
-
   content.innerHTML = `
     <form onsubmit="handleQuickEditListingSubmit(event, ${item.id})">
       <div class="hig-sheet-toolbar">
@@ -7727,13 +7587,11 @@ function openQuickEditListingSheet(offerId) {
         <h3 class="hig-sheet-title">Edit Listing #${item.id}</h3>
         <button type="submit" class="hig-btn-save">Save Changes</button>
       </div>
-
       <div style="display:grid;gap:12px;">
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Title (What You Have)</label>
           <input type="text" name="title" required value="${escapeHtml(item.title || loc.title || "")}" class="input-light" style="height:40px;font-size:13.5px;" />
         </div>
-
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
           <div>
             <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Category</label>
@@ -7752,7 +7610,6 @@ function openQuickEditListingSheet(offerId) {
             </select>
           </div>
         </div>
-
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
           <div>
             <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Deal Type</label>
@@ -7768,7 +7625,6 @@ function openQuickEditListingSheet(offerId) {
             <input type="text" name="want" required value="${escapeHtml(item.want || loc.want || "")}" class="input-light" style="height:40px;font-size:13.5px;" />
           </div>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">City</label>
@@ -7781,17 +7637,14 @@ function openQuickEditListingSheet(offerId) {
             </select>
           </div>
         </div>
-
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Specifications & Highlights</label>
           <input type="text" name="specs" value="${escapeHtml(item.specs || "")}" class="input-light" style="height:40px;font-size:13px;" />
         </div>
-
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Description</label>
           <textarea name="desc" rows="2" class="input-light" style="font-size:13px;">${escapeHtml(item.desc || loc.desc || "")}</textarea>
         </div>
-
         <div>
           <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Cover Photo (Upload or URL)</label>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -7803,7 +7656,6 @@ function openQuickEditListingSheet(offerId) {
             </label>
           </div>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Owner Name</label>
@@ -7815,7 +7667,6 @@ function openQuickEditListingSheet(offerId) {
           </div>
         </div>
       </div>
-
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(12,44,40,0.12);flex-wrap:wrap;">
         <button type="button" class="hig-btn-destructive-outline" onclick="closeAppleSheetModal(); requestDeleteListing(${item.id});">Delete Listing…</button>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -7824,11 +7675,9 @@ function openQuickEditListingSheet(offerId) {
       </div>
     </form>
   `;
-
   modal.classList.add("open");
   document.body.classList.add("modal-open");
 }
-
 function handleQuickEditPhotoUpload(e) {
   const file = e?.target?.files?.[0];
   if (!file) return;
@@ -7840,7 +7689,6 @@ function handleQuickEditPhotoUpload(e) {
     if (thumb) thumb.src = finalUrl;
   });
 }
-
 function exportFullBackofficeBackupJson() {
   const backup = {
     version: 1,
@@ -7865,7 +7713,6 @@ function exportFullBackofficeBackupJson() {
   } catch (err) { }
   showToast("✓ Full Database Backup (.json) downloaded!");
 }
-
 function importFullBackofficeBackupJson(e) {
   const file = e?.target?.files?.[0];
   if (!file) return;
@@ -7883,11 +7730,14 @@ function importFullBackofficeBackupJson(e) {
   };
   reader.readAsText(file);
 }
-
 function handleQuickEditListingSubmit(e, offerId) {
   e.preventDefault();
   const item = offers.find(o => o.id === Number(offerId));
   if (!item) return;
+  if (!canCurrentUserManageListing(item)) {
+    showToast(currentLang === "ro" ? "! Doar proprietarul anunțului poate edita acest anunț." : "! Only the listing owner can edit this listing.");
+    return;
+  }
   const fd = new FormData(e.target);
   const title = String(fd.get("title") || item.title).trim();
   const category = String(fd.get("category") || item.category);
@@ -7904,7 +7754,6 @@ function handleQuickEditListingSubmit(e, offerId) {
   const owner = String(fd.get("owner") || item.owner).trim();
   const ownerEmail = String(fd.get("ownerEmail") || item.ownerEmail || "").trim();
   const parsedLoc = parseSmartLocationString(`${city}, ${country}`);
-
   Object.assign(item, {
     title,
     category,
@@ -7926,7 +7775,6 @@ function handleQuickEditListingSubmit(e, offerId) {
     createdByUser: true,
     i18n: undefined
   });
-
   saveOffersToStorage();
   closeAppleSheetModal();
   renderOffers();
@@ -7942,7 +7790,6 @@ function handleQuickEditListingSubmit(e, offerId) {
   }
   showToast(getWizValidationCopy().savedToast);
 }
-
 function openAdminEditUserSheet(emailKey) {
   const k = String(emailKey || "").toLowerCase();
   const acc = accountsDb[k];
@@ -7952,7 +7799,6 @@ function openAdminEditUserSheet(emailKey) {
   const content = document.getElementById("appleSheetContent");
   if (!modal || !content) return;
   if (card) card.classList.remove("hig-alert-mode");
-
   content.innerHTML = `
     <form onsubmit="handleAdminEditUserSubmit(event, '${k.replace(/'/g, "\\'")}')">
       <div class="hig-sheet-toolbar">
@@ -7960,7 +7806,6 @@ function openAdminEditUserSheet(emailKey) {
         <h3 class="hig-sheet-title">Edit Account · ${escapeHtml(acc.name || k)}</h3>
         <button type="submit" class="hig-btn-save">Save Changes</button>
       </div>
-
       <div style="display:grid;gap:12px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
@@ -7972,7 +7817,6 @@ function openAdminEditUserSheet(emailKey) {
             <input type="email" value="${escapeHtml(acc.email || k)}" disabled class="input-light" style="height:40px;font-size:13.5px;opacity:0.75;" />
           </div>
         </div>
-
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
           <div>
             <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Phone Number</label>
@@ -7989,7 +7833,6 @@ function openAdminEditUserSheet(emailKey) {
             </select>
           </div>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Subscription Plan</label>
@@ -8005,7 +7848,6 @@ function openAdminEditUserSheet(emailKey) {
           </div>
         </div>
       </div>
-
       ${acc.role !== "superadmin" ? `
         <div style="display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(12,44,40,0.12);">
           <button type="button" class="hig-btn-destructive-outline" onclick="closeAppleSheetModal(); requestAdminDeleteAccount('${k.replace(/'/g, "\\'")}');">Delete Account…</button>
@@ -8013,11 +7855,9 @@ function openAdminEditUserSheet(emailKey) {
       ` : ""}
     </form>
   `;
-
   modal.classList.add("open");
   document.body.classList.add("modal-open");
 }
-
 function handleAdminEditUserSubmit(e, emailKey) {
   e.preventDefault();
   const k = String(emailKey || "").toLowerCase();
@@ -8031,7 +7871,6 @@ function handleAdminEditUserSubmit(e, emailKey) {
   acc.plan = String(fd.get("plan") || acc.plan || "starter");
   const enteredCredits = Number(fd.get("freeSwaps"));
   acc.freeSwaps = acc.plan === "pro" ? 999 : (Number.isFinite(enteredCredits) ? enteredCredits : 10);
-
   if (currentUser && String(currentUser.email || "").toLowerCase() === k) {
     Object.assign(currentUser, acc);
     localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
@@ -8044,14 +7883,12 @@ function handleAdminEditUserSubmit(e, emailKey) {
   }
   showToast(`✓ Saved changes for ${acc.name}`);
 }
-
 // ============================================================================
 // ENTERPRISE BACKOFFICE & CRM PORTAL (/admin)
 // SHA-256 Digest Verification (Zero Plaintext Admin Password in Client Code)
 // ============================================================================
 const BACKOFFICE_ADMIN_EMAIL = "jeka7ro@mail.com";
 const BACKOFFICE_ADMIN_PASS_HASH = "4106b4f2be492e957124b0687c3cb0781df5505e82f5946794d200201c3b63d4";
-
 let adminAuthenticated = (() => {
   try {
     return localStorage.getItem("ci4m_admin_session_v1") === BACKOFFICE_ADMIN_EMAIL;
@@ -8059,13 +7896,11 @@ let adminAuthenticated = (() => {
     return false;
   }
 })();
-
 let adminLoginErrorMsg = "";
 let currentAdminTab = "users";
 let adminListingFilterMode = "all";
 let adminUsersFilterMode = "all";
 let adminListingSearchQuery = "";
-
 const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
   accounts: [
     {
@@ -8205,6 +8040,41 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
     }
   ],
   listings: [
+    {
+      id: 950111,
+      createdByUser: true,
+      ownerEmail: "jeka7ro@gmail.com",
+      category: "cars",
+      country: "Romania",
+      city: "Bucharest",
+      lat: 44.4612,
+      lng: 26.0945,
+      valueEur: 185000,
+      originalAmount: 185000,
+      originalCurrency: "EUR",
+      dealType: "either",
+      owner: "Eugeniu Cazmal",
+      verified: true,
+      matchScore: 99,
+      image: "https://images.unsplash.com/photo-1520031441872-265e4ff70366?auto=format&fit=crop&w=1000&q=80",
+      images: [
+        "https://images.unsplash.com/photo-1520031441872-265e4ff70366?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80"
+      ],
+      specs: "2024 · 6,800 km · 4.0 V8 Biturbo 585 HP · AMG Night Package Magno · Carbon Interior",
+      title: "2024 Mercedes-AMG G 63 Magno · Performance Edition",
+      want: "Penthouse / Villa in Bucharest or Porsche 911 Turbo S",
+      desc: "Personal vehicle registered in Bucharest. First owner, full official warranty, open to 1:1 swap or direct sale.",
+      i18n: {
+        ro: { title: "2024 Mercedes-AMG G 63 Magno · Performance Edition", want: "Penthouse / Vilă în București sau Porsche 911 Turbo S", desc: "Autoturism personal înmatriculat în București. Primul proprietar, garanție oficială, deschis la schimb 1:1 sau vânzare." },
+        de: { title: "2024 Mercedes-AMG G 63 Magno · Performance Edition", want: "Penthouse / Villa in Bukarest oder Porsche 911 Turbo S", desc: "Privatfahrzeug aus erster Hand mit Werksgarantie, offen für 1:1-Tausch oder Direktverkauf." },
+        fr: { title: "2024 Mercedes-AMG G 63 Magno · Performance Edition", want: "Penthouse / Villa à Bucarest ou Porsche 911 Turbo S", desc: "Véhicule personnel première main sous garantie officielle, ouvert à l'échange 1:1." },
+        it: { title: "2024 Mercedes-AMG G 63 Magno · Performance Edition", want: "Attico / Villa a Bucarest o Porsche 911 Turbo S", desc: "Veicolo personale unico proprietario con garanzia ufficiale, disponibile per scambio 1:1." },
+        es: { title: "2024 Mercedes-AMG G 63 Magno · Performance Edition", want: "Ático / Villa en Bucarest o Porsche 911 Turbo S", desc: "Vehículo personal único propietario con garantía oficial, abierto a intercambio 1:1." },
+        ru: { title: "2024 Mercedes-AMG G 63 Magno · Performance Edition", want: "Пентхаус / Вилла в Бухаресте или Porsche 911 Turbo S", desc: "Личный автомобиль, первый владелец, официальная гарантия, обмен 1:1 или продажа." }
+      }
+    },
     {
       id: 950107,
       createdByUser: true,
@@ -8529,11 +8399,9 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
     }
   ]
 };
-
 function ensurePlatformAccountsAndTestRegistrations() {
   let dbChanged = false;
   let offersChanged = false;
-
   // 1. Ensure Super-Admin Account exists
   const adminKey = BACKOFFICE_ADMIN_EMAIL.toLowerCase();
   if (!accountsDb[adminKey]) {
@@ -8557,7 +8425,6 @@ function ensurePlatformAccountsAndTestRegistrations() {
     delete accountsDb[adminKey].password;
     dbChanged = true;
   }
-
   // 2. Ensure the 6 Test Registrations exist in accountsDb
   INITIAL_TEST_REGISTRATIONS_AND_OFFERS.accounts.forEach(acc => {
     const k = acc.email.toLowerCase();
@@ -8571,7 +8438,6 @@ function ensurePlatformAccountsAndTestRegistrations() {
       if (!accountsDb[k].id) accountsDb[k].id = acc.id;
     }
   });
-
   // 3. Ensure all 30 European Partner Accounts from INITIAL_OFFERS exist in accountsDb & link ownerEmail
   const phonePrefixByCountry = {
     "Romania": "+40 72",
@@ -8584,7 +8450,6 @@ function ensurePlatformAccountsAndTestRegistrations() {
     "United Kingdom": "+44 77",
     "Moldova": "+373 69"
   };
-
   (window.INITIAL_OFFERS || []).forEach((off, idx) => {
     const rawOwner = String(off.owner || `Member ${off.id}`).trim();
     const cleanSlug = normalizeSearchText(rawOwner).replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || `member.${off.id}`;
@@ -8628,7 +8493,6 @@ function ensurePlatformAccountsAndTestRegistrations() {
       dbChanged = true;
     }
   });
-
   // 4. Ensure the 6 Member Listings (#950101 - #950106) are present in offers (unless deleted or edited by user)
   [...INITIAL_TEST_REGISTRATIONS_AND_OFFERS.listings].reverse().forEach(tOff => {
     if (deletedOfferIds.includes(tOff.id)) return;
@@ -8641,14 +8505,11 @@ function ensurePlatformAccountsAndTestRegistrations() {
       offersChanged = true;
     }
   });
-
   if (dbChanged) saveAccountsDb();
   if (offersChanged) saveOffersToStorage();
 }
-
 // Run immediately so accountsDb and test offers are always populated
 ensurePlatformAccountsAndTestRegistrations();
-
 function updateAdminHeaderButtonsVisibility() {
   const show = Boolean(adminAuthenticated || (currentUser && String(currentUser.email || "").toLowerCase() === BACKOFFICE_ADMIN_EMAIL));
   const hBtn = document.getElementById("headerAdminBtn");
@@ -8658,7 +8519,6 @@ function updateAdminHeaderButtonsVisibility() {
   if (mBtn) mBtn.style.display = show ? "block" : "none";
   if (dBtn) dBtn.style.display = show ? "inline-flex" : "none";
 }
-
 // ============================================================================
 // CLOUD DATABASE & CROSS-DEVICE REAL-TIME SYNC ENGINE (/api/sync + Supabase)
 // ============================================================================
@@ -8677,7 +8537,6 @@ try {
     liveSyncChannel = new BroadcastChannel("ci4m_live_sync_v1");
   }
 } catch (e) { }
-
 function getSupabaseClientConfig() {
   try {
     const raw = localStorage.getItem("ci4m_supabase_cfg_v1");
@@ -8690,7 +8549,6 @@ function getSupabaseClientConfig() {
   } catch (e) { }
   return { url: "", key: "" };
 }
-
 function saveSupabaseClientConfig(e) {
   if (e) e.preventDefault();
   const url = String(document.getElementById("boSupabaseUrlInput")?.value || "").trim();
@@ -8706,7 +8564,6 @@ function saveSupabaseClientConfig(e) {
   } catch (err) { }
   pushCloudDatabaseSync({ forceSync: true }).then(() => pullCloudDatabaseSync(false));
 }
-
 function buildCloudSyncHeaders() {
   const headers = { "Content-Type": "application/json" };
   const sb = getSupabaseClientConfig();
@@ -8716,7 +8573,6 @@ function buildCloudSyncHeaders() {
   }
   return headers;
 }
-
 function scheduleCloudSyncPush(extraPayload = null) {
   if (!cloudSyncReady) return;
   try {
@@ -8729,7 +8585,6 @@ function scheduleCloudSyncPush(extraPayload = null) {
     pushCloudDatabaseSync(extraPayload);
   }, 180);
 }
-
 async function pushCloudDatabaseSync(extraPayload = null) {
   if (!cloudSyncReady || typeof fetch !== "function") return;
   const userCreatedOrEdited = offers.filter(o => o.createdByUser || o.id > 100000);
@@ -8763,11 +8618,9 @@ async function pushCloudDatabaseSync(extraPayload = null) {
     cloudSyncLastState.error = "Offline / Local fallback";
   }
 }
-
 function applyMergedCloudState(remote) {
   if (!remote || typeof remote !== "object") return false;
   let changed = false;
-
   if (Array.isArray(remote.deletedOfferIds)) {
     remote.deletedOfferIds.forEach(id => {
       const numId = Number(id);
@@ -8777,7 +8630,6 @@ function applyMergedCloudState(remote) {
       }
     });
   }
-
   if (remote.accounts && typeof remote.accounts === "object") {
     Object.entries(remote.accounts).forEach(([k, acc]) => {
       if (!acc || typeof acc !== "object") return;
@@ -8791,7 +8643,6 @@ function applyMergedCloudState(remote) {
       }
     });
   }
-
   if (remote.authGateways && typeof remote.authGateways === "object") {
     if (remote.authGateways.brevoApiKey) serverConfiguredGateways.brevo = true;
     if (remote.authGateways.resendApiKey) serverConfiguredGateways.resend = true;
@@ -8810,7 +8661,6 @@ function applyMergedCloudState(remote) {
       localStorage.setItem("ci4m_auth_gateways_v1", JSON.stringify(mergedGw));
     } catch (err) { }
   }
-
   if (Array.isArray(remote.userOffers)) {
     const delSet = new Set(deletedOfferIds.map(Number));
     remote.userOffers.forEach(rOff => {
@@ -8827,7 +8677,6 @@ function applyMergedCloudState(remote) {
       }
     });
   }
-
   if (Array.isArray(remote.proposals)) {
     remote.proposals.forEach(p => {
       if (!p || !p.id) return;
@@ -8842,7 +8691,6 @@ function applyMergedCloudState(remote) {
       }
     });
   }
-
   if (Array.isArray(remote.watchlist)) {
     const existingWlIds = new Set(watchlistAlerts.map(w => Number(w.id)));
     remote.watchlist.forEach(w => {
@@ -8852,13 +8700,13 @@ function applyMergedCloudState(remote) {
       }
     });
   }
-
   if (changed) {
     try {
       localStorage.setItem("ci4m_accounts_db", JSON.stringify(accountsDb));
       localStorage.setItem("ci4m_offers_v4", JSON.stringify(offers));
       localStorage.setItem("ci4m_user_offers_v1", JSON.stringify(offers.filter(o => o.createdByUser || o.id > 100000)));
       localStorage.setItem("ci4m_deleted_offers_v1", JSON.stringify(deletedOfferIds));
+      swapProposals = normalizeSeedProposals(swapProposals);
       localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
       localStorage.setItem("ci4m_watchlist_alerts", JSON.stringify(watchlistAlerts));
     } catch (e) { }
@@ -8871,7 +8719,6 @@ function applyMergedCloudState(remote) {
   }
   return changed;
 }
-
 async function pullCloudDatabaseSync(silent = true) {
   if (typeof fetch !== "function" || cloudSyncInFlight) return;
   cloudSyncInFlight = true;
@@ -8910,19 +8757,16 @@ async function pullCloudDatabaseSync(silent = true) {
     cloudSyncInFlight = false;
   }
 }
-
 function initCloudSyncEngine() {
   cloudSyncReady = true;
   pullCloudDatabaseSync(true).then(() => {
     pushCloudDatabaseSync();
   });
-
   if (liveSyncChannel) {
     liveSyncChannel.onmessage = () => {
       pullCloudDatabaseSync(true);
     };
   }
-
   window.addEventListener("storage", (ev) => {
     if (!ev || !ev.key) return;
     if (["ci4m_accounts_db", "ci4m_offers_v4", "ci4m_user_offers_v1", "ci4m_proposals"].includes(ev.key)) {
@@ -8943,14 +8787,12 @@ function initCloudSyncEngine() {
       }
     }
   });
-
   setInterval(() => {
     if (document.getElementById("adminModal")?.classList.contains("open")) {
       pullCloudDatabaseSync(true);
     }
   }, 10000);
 }
-
 function openAdminModal(tab = "users") {
   ensurePlatformAccountsAndTestRegistrations();
   currentAdminTab = tab || "users";
@@ -8962,13 +8804,11 @@ function openAdminModal(tab = "users") {
   syncUrlWithRoute("/admin");
   pullCloudDatabaseSync(true);
 }
-
 function closeAdminModal() {
   document.getElementById("adminModal")?.classList.remove("open");
   document.body.classList.remove("modal-open");
   syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
 }
-
 function handleAdminBackofficeLogin(e) {
   if (e) e.preventDefault();
   const emailIn = document.getElementById("adminLoginEmailInput");
@@ -8977,7 +8817,6 @@ function handleAdminBackofficeLogin(e) {
   const email = String(emailIn ? emailIn.value : "").trim().toLowerCase();
   const pass = String(passIn ? passIn.value : "").trim();
   const rememberMe = remIn ? Boolean(remIn.checked) : true;
-
   if ((email === BACKOFFICE_ADMIN_EMAIL || email === "jeka7ro@gmail.com") && verifyAdminPasswordSync(pass)) {
     adminAuthenticated = true;
     adminLoginErrorMsg = "";
@@ -9008,7 +8847,6 @@ function handleAdminBackofficeLogin(e) {
     renderAdminModalContent();
   }
 }
-
 function logoutAdminBackoffice() {
   adminAuthenticated = false;
   adminLoginErrorMsg = "";
@@ -9019,22 +8857,18 @@ function logoutAdminBackoffice() {
   renderAdminModalContent();
   showToast("✓ Signed out of Backoffice");
 }
-
 function switchAdminTab(tab) {
   currentAdminTab = tab;
   renderAdminModalContent();
 }
-
 function setAdminListingsFilter(mode) {
   adminListingFilterMode = mode;
   renderAdminModalContent();
 }
-
 function setAdminUsersFilter(mode) {
   adminUsersFilterMode = mode;
   renderAdminModalContent();
 }
-
 function onAdminSearchInput(val) {
   adminListingSearchQuery = String(val || "");
   renderAdminModalContent();
@@ -9045,7 +8879,6 @@ function onAdminSearchInput(val) {
     try { input.setSelectionRange(len, len); } catch (e) { }
   }
 }
-
 function publishAdminWizardDraftNow() {
   if (!wizData || !String(wizData.titleHave || "").trim()) return;
   const fallbackCoords = COUNTRY_COORDS[wizData.country] || { lat: 44.4268, lng: 26.1025 };
@@ -9085,7 +8918,6 @@ function publishAdminWizardDraftNow() {
   renderAdminModalContent();
   showToast(`✓ Published: ${newOffer.title}`);
 }
-
 function restoreDeletedOffersFromAdmin() {
   deletedOfferIds = [];
   localStorage.setItem("ci4m_deleted_offers_v1", "[]");
@@ -9103,7 +8935,6 @@ function restoreDeletedOffersFromAdmin() {
   renderAdminModalContent();
   showToast("✓ Restored archived listings");
 }
-
 function seedAdminTestRegistrationsAndOffers() {
   deletedOfferIds = deletedOfferIds.filter(id => id < 950100 || id > 950199);
   INITIAL_TEST_REGISTRATIONS_AND_OFFERS.accounts.forEach(acc => {
@@ -9111,7 +8942,6 @@ function seedAdminTestRegistrationsAndOffers() {
     accountsDb[k] = { ...(accountsDb[k] || {}), ...acc };
   });
   saveAccountsDb();
-
   [...INITIAL_TEST_REGISTRATIONS_AND_OFFERS.listings].reverse().forEach(tOff => {
     const existingIdx = offers.findIndex(o => o.id === tOff.id);
     if (existingIdx >= 0) {
@@ -9125,7 +8955,6 @@ function seedAdminTestRegistrationsAndOffers() {
   renderMapPinsAndPanel();
   renderAdminModalContent();
 }
-
 function handleAdminCreateQuickAccount(e) {
   if (e) e.preventDefault();
   const name = String(document.getElementById("boNewUserName")?.value || "").trim();
@@ -9134,7 +8963,6 @@ function handleAdminCreateQuickAccount(e) {
   const city = String(document.getElementById("boNewUserCity")?.value || "Bucharest").trim();
   const plan = String(document.getElementById("boNewUserPlan")?.value || "starter");
   if (!name || !email) return;
-
   const emailKey = email.toLowerCase();
   accountsDb[emailKey] = {
     id: `USR-${Math.floor(1000 + Math.random() * 8999)}`,
@@ -9155,7 +8983,6 @@ function handleAdminCreateQuickAccount(e) {
   renderAdminModalContent();
   showToast(`✓ User created: ${name} (${email})`);
 }
-
 function adminDeleteAccount(emailKey, silent = false) {
   const k = String(emailKey || "").toLowerCase();
   if (!k || k === BACKOFFICE_ADMIN_EMAIL) return;
@@ -9166,7 +8993,6 @@ function adminDeleteAccount(emailKey, silent = false) {
   renderAdminModalContent();
   if (!silent) showToast(`✓ Account removed: ${name}`);
 }
-
 function adminLoginAsUser(emailKey) {
   const acc = accountsDb[String(emailKey || "").toLowerCase()];
   if (!acc) return;
@@ -9174,7 +9000,6 @@ function adminLoginAsUser(emailKey) {
   renderAdminModalContent();
   showToast(`✓ Switched session to ${acc.name}`);
 }
-
 function adminGrantUserSwaps(emailKey, mode) {
   const key = String(emailKey || "").toLowerCase();
   const acc = accountsDb[key];
@@ -9196,32 +9021,28 @@ function adminGrantUserSwaps(emailKey, mode) {
   renderAdminModalContent();
   showToast(`✓ Updated account: ${acc.name}`);
 }
-
 function adminFilterOffersByUser(queryText) {
   adminListingSearchQuery = String(queryText || "");
   adminListingFilterMode = "all";
   currentAdminTab = "listings";
   renderAdminModalContent();
 }
-
 function getAccountLinkedOffers(acc) {
+  if (!acc) return [];
   const emailKey = String(acc.email || "").toLowerCase();
   const firstName = normalizeSearchText(String(acc.name || "").split(" ")[0]);
   return offers.filter(o => {
-    if (o.ownerEmail && String(o.ownerEmail).toLowerCase() === emailKey) return true;
+    if (o.ownerEmail && isSameUserEmailAlias(o.ownerEmail, emailKey)) return true;
     if (o.owner && normalizeSearchText(o.owner) === normalizeSearchText(acc.name || "")) return true;
     if (acc.isTestRegistration && firstName && normalizeSearchText(o.owner || "").includes(firstName)) return true;
     return false;
   });
 }
-
 function renderAdminModalContent() {
   const container = document.getElementById("adminBodyContent");
   if (!container) return;
   const prevBoScrollTop = container.querySelector(".bo-content-scroll")?.scrollTop || 0;
-
   ensurePlatformAccountsAndTestRegistrations();
-
   // ==========================================================================
   // 1. CLEAN ENTERPRISE BACKOFFICE LOGIN SCREEN
   // ==========================================================================
@@ -9240,7 +9061,6 @@ function renderAdminModalContent() {
         }
       }
     } catch (err) { }
-
     container.innerHTML = `
       <div class="bo-login-screen">
         <div class="bo-login-card">
@@ -9255,18 +9075,16 @@ function renderAdminModalContent() {
               </svg>
               <div>
                 <strong style="display:block;font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;">ChangeIt4Me</strong>
-                <span style="display:block;font-size:12px;font-weight:600;color:#a9ffca;letter-spacing:0.04em;text-transform:uppercase;margin-top:2px;">Backoffice</span>
+                <span style="display:block;font-size:12px;font-weight:600;color:#ffffff;letter-spacing:0.04em;text-transform:uppercase;margin-top:2px;">Backoffice</span>
               </div>
             </div>
             <h2 style="font-size:18px;font-weight:700;color:#d8ece8;margin:14px 0 0;">Sign in</h2>
           </div>
-
           ${adminLoginErrorMsg ? `
             <div style="margin-bottom:14px;padding:10px 13px;border-radius:10px;background:rgba(239,68,68,0.18);border:1px solid rgba(248,113,113,0.45);color:#fecaca;font-size:12.5px;font-weight:600;">
               ${adminLoginErrorMsg}
             </div>
           ` : ""}
-
           <form onsubmit="handleAdminBackofficeLogin(event)" autocomplete="on" style="display:grid;gap:14px;">
             <div>
               <label for="adminLoginEmailInput" style="display:block;font-size:12px;font-weight:700;color:#d1e7e3;margin-bottom:6px;">Email</label>
@@ -9274,7 +9092,6 @@ function renderAdminModalContent() {
                 value="${savedAdminCreds.email.replace(/"/g, '&quot;')}"
                 style="width:100%;height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
             </div>
-
             <div>
               <label for="adminLoginPassInput" style="display:block;font-size:12px;font-weight:700;color:#d1e7e3;margin-bottom:6px;">Password</label>
               <div style="position:relative;">
@@ -9282,23 +9099,20 @@ function renderAdminModalContent() {
                   value="${savedAdminCreds.pass.replace(/"/g, '&quot;')}"
                   style="width:100%;height:44px;padding:0 44px 0 18px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
                 <button type="button" onclick="togglePasswordVisibility('adminLoginPassInput', this)"
-                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#a9ffca;cursor:pointer;padding:4px;" aria-label="Show password">
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#ffffff;cursor:pointer;padding:4px;" aria-label="Show password">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </div>
             </div>
-
             <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;font-weight:600;color:#cfe3df;margin-top:2px;">
               <input type="checkbox" id="adminRememberMeCheck" ${savedAdminCreds.remember ? 'checked' : ''}
-                style="width:16px;height:16px;accent-color:#a9ffca;cursor:pointer;margin:0;" />
+                style="width:16px;height:16px;accent-color:#ffffff;cursor:pointer;margin:0;" />
               <span>Remember me</span>
             </label>
-
             <button type="submit" class="bo-btn bo-btn-mint" style="height:44px;font-size:14px;font-weight:800;border-radius:999px !important;margin-top:4px;">
               Sign in →
             </button>
           </form>
-
           <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(169,255,202,0.14);display:flex;justify-content:center;">
             <button type="button" class="bo-btn" style="background:transparent;border-color:rgba(255,255,255,0.2);color:#cfe3df;font-size:12px;" onclick="closeAdminModal()">
               ← Back to ChangeIt4Me
@@ -9309,7 +9123,6 @@ function renderAdminModalContent() {
     `;
     return;
   }
-
   // ==========================================================================
   // 2. AUTHENTICATED FULL-SCREEN BACKOFFICE WORKSPACE (100% CLEAN ENGLISH)
   // ==========================================================================
@@ -9318,7 +9131,6 @@ function renderAdminModalContent() {
     const k = currentUser.email.toLowerCase();
     allAccountsMap[k] = { ...(allAccountsMap[k] || {}), ...currentUser };
   }
-
   const accountsList = Object.values(allAccountsMap).sort((a, b) => {
     const aRecent = Boolean(a.isTestRegistration || (!a.isPartnerSeed && a.role !== "superadmin"));
     const bRecent = Boolean(b.isTestRegistration || (!b.isPartnerSeed && b.role !== "superadmin"));
@@ -9331,7 +9143,6 @@ function renderAdminModalContent() {
     if (b.role === "superadmin" && a.role !== "superadmin") return 1;
     return String(a.name || "").localeCompare(String(b.name || ""));
   });
-
   const recentAccountsCount = accountsList.filter(a => a.isTestRegistration || (!a.isPartnerSeed && a.role !== "superadmin")).length;
   const proAccountsCount = accountsList.filter(a => a.plan === "pro").length;
   const packAccountsCount = accountsList.filter(a => a.plan === "pack").length;
@@ -9341,7 +9152,6 @@ function renderAdminModalContent() {
   const totalGmvEur = offers.reduce((acc, o) => acc + (Number(o.valueEur) || 0), 0);
   const totalGmvFormatted = formatAmountInCurrentCurrency(convertFromEur(totalGmvEur, currentCurrency), currentCurrency);
   const hasWizDraft = Boolean(wizData && String(wizData.titleHave || "").trim());
-
   const tabTitles = {
     overview: "Overview",
     users: "Users & Accounts",
@@ -9351,9 +9161,7 @@ function renderAdminModalContent() {
     compliance: "GDPR & Compliance"
   };
   const activeTitle = tabTitles[currentAdminTab] || tabTitles.users;
-
   let mainModuleHtml = "";
-
   if (currentAdminTab === "users") {
     let filteredUsers = [...accountsList];
     if (adminUsersFilterMode === "test") {
@@ -9365,7 +9173,6 @@ function renderAdminModalContent() {
     } else if (adminUsersFilterMode === "starter") {
       filteredUsers = filteredUsers.filter(a => !a.plan || a.plan === "starter");
     }
-
     if (adminListingSearchQuery.trim()) {
       const qNorm = normalizeSearchText(adminListingSearchQuery);
       filteredUsers = filteredUsers.filter(a => {
@@ -9373,7 +9180,6 @@ function renderAdminModalContent() {
         return hay.includes(qNorm);
       });
     }
-
     mainModuleHtml = `
       <div class="bo-card" style="padding:16px 20px;">
         <form onsubmit="handleAdminCreateQuickAccount(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;align-items:end;">
@@ -9404,7 +9210,6 @@ function renderAdminModalContent() {
           <button type="submit" class="bo-btn bo-btn-primary" style="height:42px;font-size:13px;">+ Add User</button>
         </form>
       </div>
-
       <div class="bo-card bo-table-card">
         <div class="bo-card-toolbar">
           <div class="bo-segmented-control" role="tablist" aria-label="Filter users">
@@ -9426,7 +9231,6 @@ function renderAdminModalContent() {
           </div>
           <span style="font-size:12.5px;color:#64748b;font-weight:600;font-variant-numeric:tabular-nums;">${filteredUsers.length} users</span>
         </div>
-
         <div class="bo-table-wrap">
           <table class="bo-table">
             <thead>
@@ -9452,7 +9256,6 @@ function renderAdminModalContent() {
         : acc.plan === "pack"
           ? `<span class="bo-badge bo-badge-pack">Pack · ${acc.freeSwaps ?? 15} left</span>`
           : `<span class="bo-badge bo-badge-starter">Starter · ${acc.freeSwaps ?? 10}/10</span>`;
-
       return `
                   <tr>
                     <td>
@@ -9530,7 +9333,6 @@ function renderAdminModalContent() {
         </div>
       </div>
     ` : "";
-
     let listToShow = [...offers].sort((a, b) => {
       const aCustom = (a.createdByUser || a.id > 100000) ? 1 : 0;
       const bCustom = (b.createdByUser || b.id > 100000) ? 1 : 0;
@@ -9548,7 +9350,6 @@ function renderAdminModalContent() {
     if (adminListingSearchQuery.trim()) {
       listToShow = listToShow.filter(o => matchesSmartSearchQuery(o, adminListingSearchQuery));
     }
-
     mainModuleHtml = `
       ${draftBannerHtml}
       <div class="bo-card bo-table-card">
@@ -9575,7 +9376,6 @@ function renderAdminModalContent() {
             <button type="button" class="bo-btn bo-btn-primary" onclick="resetWizardDraft(); openWizardModal(1);">+ New Listing</button>
           </div>
         </div>
-
         <div class="bo-table-wrap">
           <table class="bo-table">
             <thead>
@@ -9662,7 +9462,6 @@ function renderAdminModalContent() {
       const sumEur = items.reduce((s, o) => s + (Number(o.valueEur) || 0), 0);
       return { cat, label: getCategoryLabel(cat), count: items.length, sumEur };
     });
-
     mainModuleHtml = `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px;">
         <div class="bo-card bo-table-card">
@@ -9702,7 +9501,6 @@ function renderAdminModalContent() {
             </table>
           </div>
         </div>
-
         <div class="bo-card bo-table-card">
           <div class="bo-card-toolbar">
             <strong style="font-size:15px;font-weight:700;color:#0f172a;">Recent Listings</strong>
@@ -9741,7 +9539,6 @@ function renderAdminModalContent() {
           </div>
         </div>
       </div>
-
       <div class="bo-card bo-table-card">
         <div class="bo-card-toolbar">
           <strong style="font-size:15px;font-weight:700;color:#0f172a;">Catalog Breakdown by Category (${offers.length} Listings · ${totalGmvFormatted})</strong>
@@ -9868,7 +9665,6 @@ function renderAdminModalContent() {
           <button type="submit" class="bo-btn bo-btn-primary" style="height:42px;">Save Stripe Config</button>
         </form>
       </div>
-
       <div class="bo-card bo-table-card">
         <div class="bo-card-toolbar">
           <strong style="font-size:15px;font-weight:700;color:#0f172a;">Subscriptions & Swap Credits</strong>
@@ -9911,37 +9707,34 @@ function renderAdminModalContent() {
     const sbCfg = getSupabaseClientConfig();
     const gwCfg = getAuthGatewaysConfig();
     mainModuleHtml = `
-      <div class="bo-card" style="background:linear-gradient(135deg,#071d1a 0%,#0f3530 100%);color:#ffffff;">
+      <div class="bo-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
           <div>
-            <span style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;">● CLOUD SYNC ENGINE (${cloudSyncLastState.backend.toUpperCase()})</span>
-            <h3 style="margin:6px 0 2px;font-size:16px;color:#ffffff;">Central Cloud Database & Cross-Device Sync (/api/sync)</h3>
-            <p style="margin:0;font-size:12px;color:#b8d8d2;">All accounts, listings, and 1:1 proposals registered on any phone or computer sync automatically to the central database.</p>
+            <span class="hig-sla-pill">● Cloud Sync Engine (${cloudSyncLastState.backend.toUpperCase()})</span>
+            <h3 style="margin:6px 0 2px;font-size:16px;font-weight:700;color:#0f172a;">Central Cloud Database & Cross-Device Sync (/api/sync)</h3>
+            <p style="margin:0;font-size:12.5px;color:#64748b;">All accounts, listings, and 1:1 proposals registered on any phone or computer sync automatically to the central database.</p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="bo-btn bo-btn-mint" onclick="pullCloudDatabaseSync(false)">↻ Sync Cloud Now</button>
-            <button type="button" class="bo-btn" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.25);" onclick="exportFullBackofficeBackupJson()">↓ Backup JSON</button>
-            <label class="bo-btn" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.25);cursor:pointer;margin:0;">
+            <button type="button" class="bo-btn bo-btn-primary" onclick="pullCloudDatabaseSync(false)">↻ Sync Cloud Now</button>
+            <button type="button" class="bo-btn bo-btn-secondary" onclick="exportFullBackofficeBackupJson()">↓ Backup JSON</button>
+            <label class="bo-btn bo-btn-secondary" style="cursor:pointer;margin:0;">
               ↑ Restore JSON
               <input type="file" accept=".json,application/json" style="display:none;" onchange="importFullBackofficeBackupJson(event)" />
             </label>
           </div>
         </div>
-        <form onsubmit="saveSupabaseClientConfig(event)" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px solid rgba(169,255,202,0.16);">
+        <form onsubmit="saveSupabaseClientConfig(event)" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
           <div>
-            <label style="display:block;font-size:11px;font-weight:700;color:#b8d8d2;margin-bottom:4px;">Optional Supabase URL (or leave blank for built-in /api/sync)</label>
-            <input type="url" id="boSupabaseUrlInput" placeholder="https://your-project.supabase.co" value="${sbCfg.url.replace(/"/g, '&quot;')}"
-              style="width:100%;height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.7);color:#fff;font-size:12.5px;" />
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">Optional Supabase URL (or leave blank for built-in /api/sync)</label>
+            <input type="url" id="boSupabaseUrlInput" placeholder="https://your-project.supabase.co" value="${sbCfg.url.replace(/"/g, '&quot;')}" class="input-light" style="font-size:13px;" />
           </div>
           <div>
-            <label style="display:block;font-size:11px;font-weight:700;color:#b8d8d2;margin-bottom:4px;">Optional Supabase Key (Anon / Service Key)</label>
-            <input type="password" id="boSupabaseKeyInput" placeholder="eyJhbGciOi..." value="${sbCfg.key.replace(/"/g, '&quot;')}"
-              style="width:100%;height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.7);color:#fff;font-size:12.5px;" />
+            <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">Optional Supabase Key (Anon / Service Key)</label>
+            <input type="password" id="boSupabaseKeyInput" placeholder="eyJhbGciOi..." value="${sbCfg.key.replace(/"/g, '&quot;')}" class="input-light" style="font-size:13px;" />
           </div>
-          <button type="submit" class="bo-btn bo-btn-mint" style="height:38px;">Save Cloud Config</button>
+          <button type="submit" class="bo-btn bo-btn-primary" style="height:42px;">Save Cloud Config</button>
         </form>
       </div>
-
       <div class="bo-card">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
           <div>
@@ -9951,7 +9744,6 @@ function renderAdminModalContent() {
           </div>
           <button type="button" class="bo-btn bo-btn-primary" onclick="testAuthGatewaysLive()">Test Email Delivery</button>
         </div>
-
         <form onsubmit="saveAuthGatewaysConfig(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end;">
           <div>
             <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">Brevo API Key (xkeysib-...)</label>
@@ -9968,7 +9760,6 @@ function renderAdminModalContent() {
           <button type="submit" class="bo-btn bo-btn-primary" style="height:42px;">Save Email Config</button>
         </form>
       </div>
-
       <div class="bo-card bo-table-card">
         <div class="bo-card-toolbar">
           <h3 style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">EU GDPR (Reg. 2016/679), ePrivacy & DSA Compliance</h3>
@@ -10001,51 +9792,47 @@ function renderAdminModalContent() {
       </div>
     `;
   }
-
   container.innerHTML = `
     <div class="bo-workspace">
-      <!-- LEFT SIDEBAR -->
+      <!-- LEFT WHITE SIDEBAR (Screen 2 Style) -->
       <aside class="bo-sidebar">
-        <div style="padding:20px 14px;">
-          <div class="logo" style="display:flex;align-items:center;gap:10px;padding:0 6px 16px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:14px;">
-            <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="flex-shrink:0;box-shadow:0 0 0 1px rgba(255,255,255,0.16);border-radius:50%;">
-              <circle cx="16" cy="16" r="16" fill="#0f2925"></circle>
-              <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
-              <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
-              <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-              <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-            <div style="min-width:0;">
-              <strong style="display:block;font-size:14.5px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ChangeIt4Me</strong>
-              <span style="display:block;font-size:11px;font-weight:500;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Backoffice</span>
+        <div style="padding:16px 12px;">
+          <div class="hig-ws-brand" onclick="closeAdminModal()" style="cursor:pointer;">
+            <span class="hig-ws-brand-icon">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+                <path d="M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+                <path d="M19.2 9.2 20.6 12.4 17.4 12M12.8 22.8 11.4 19.6 14.6 20" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <div>
+              <strong style="display:block;font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">ChangeIt4Me</strong>
+              <span style="display:block;font-size:11px;font-weight:600;color:#0d8a5e;">Backoffice Live</span>
             </div>
           </div>
-
-          <div style="display:grid;gap:3px;">
+          <div style="display:grid;gap:4px;">
             <button type="button" class="bo-nav-btn ${currentAdminTab === 'overview' ? 'active' : ''}" onclick="switchAdminTab('overview')">
-              <span>Overview</span>
+              <span class="hig-ws-nav-left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span>Overview</span></span>
             </button>
             <button type="button" class="bo-nav-btn ${currentAdminTab === 'users' ? 'active' : ''}" onclick="switchAdminTab('users')" id="adminTabUsersBtn">
-              <span>Users</span>
+              <span class="hig-ws-nav-left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Users (CRM)</span></span>
               <span class="bo-nav-badge">${accountsList.length}</span>
             </button>
             <button type="button" class="bo-nav-btn ${currentAdminTab === 'listings' ? 'active' : ''}" onclick="switchAdminTab('listings')" id="adminTabListingsBtn">
-              <span>Listings</span>
+              <span class="hig-ws-nav-left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>Catalog Listings</span></span>
               <span class="bo-nav-badge">${offers.length}</span>
             </button>
             <button type="button" class="bo-nav-btn ${currentAdminTab === 'proposals' ? 'active' : ''}" onclick="switchAdminTab('proposals')" id="adminTabProposalsBtn">
-              <span>Swap Proposals</span>
+              <span class="hig-ws-nav-left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5-5 5 5"/><path d="M17 14l-5 5-5-5"/></svg><span>Swap Proposals</span></span>
               <span class="bo-nav-badge">${swapProposals.length}</span>
             </button>
             <button type="button" class="bo-nav-btn ${currentAdminTab === 'billing' ? 'active' : ''}" onclick="switchAdminTab('billing')">
-              <span>Subscriptions</span>
+              <span class="hig-ws-nav-left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span>Subscriptions</span></span>
             </button>
             <button type="button" class="bo-nav-btn ${currentAdminTab === 'compliance' ? 'active' : ''}" onclick="switchAdminTab('compliance')">
-              <span>GDPR & Compliance</span>
+              <span class="hig-ws-nav-left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>GDPR & Settings</span></span>
             </button>
           </div>
         </div>
-
         <div class="bo-sidebar-footer">
           <button type="button" class="bo-btn bo-sidebar-action-primary" onclick="resetWizardDraft(); openWizardModal(1);">
             + New Listing
@@ -10060,61 +9847,55 @@ function renderAdminModalContent() {
           </div>
         </div>
       </aside>
-
       <!-- MAIN WORKSPACE -->
       <main class="bo-main">
         <header class="bo-topbar">
           <h1 style="font-size:18px;font-weight:700;letter-spacing:-0.02em;color:#0f172a;margin:0;">${activeTitle}</h1>
-
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <button type="button" class="bo-btn bo-sync-pill" onclick="pullCloudDatabaseSync(false)" title="Sync live accounts & listings from Cloud (/api/sync)">
               <span class="bo-sync-dot"></span>
               <span>Cloud Sync (${cloudSyncLastState.lastSyncAt})</span>
             </button>
-
             <input type="search" id="adminListingSearchInput" class="input-light bo-topbar-search"
               placeholder="Search user, email, ID, city..."
               value="${adminListingSearchQuery.replace(/"/g, '&quot;')}"
               oninput="onAdminSearchInput(this.value)" />
-
             <select class="input-light bo-topbar-select" onchange="setCurrency(this.value, true); renderAdminModalContent();" aria-label="Currency">
               ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${c.code === currentCurrency ? 'selected' : ''}>${c.code}</option>`).join("")}
             </select>
-
             <button type="button" class="bo-icon-btn" style="width:36px;height:36px;min-height:36px;" onclick="closeAdminModal()" title="Close Backoffice" aria-label="Close Backoffice">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
         </header>
-
         <div class="bo-content-scroll">
-          <div class="bo-kpi-grid">
-            <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminUsersFilter('all'); switchAdminTab('users');">
-              <span class="bo-kpi-label">Registered users</span>
-              <strong class="bo-kpi-value">${accountsList.length}</strong>
+          <div class="hig-ws-kpi-grid">
+            <div class="hig-ws-kpi-card" onclick="setAdminUsersFilter('all'); switchAdminTab('users');">
+              <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">Registered users</span><span class="hig-ws-kpi-dot"></span></div>
+              <strong class="hig-ws-kpi-val">${accountsList.length}</strong>
+              <div><span class="hig-sla-pill">+${recentAccountsCount} Recent</span></div>
             </div>
-
-            <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminListingsFilter('all'); switchAdminTab('listings');">
-              <span class="bo-kpi-label">Active listings</span>
-              <strong class="bo-kpi-value">${offers.length}</strong>
+            <div class="hig-ws-kpi-card" onclick="setAdminListingsFilter('all'); switchAdminTab('listings');">
+              <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">Active listings</span><span class="hig-ws-kpi-dot"></span></div>
+              <strong class="hig-ws-kpi-val">${offers.length}</strong>
+              <div><span class="hig-sla-pill">Live Catalog</span></div>
             </div>
-
-            <div class="bo-kpi-card" style="cursor:pointer;" onclick="setAdminListingsFilter('all'); switchAdminTab('listings');">
-              <span class="bo-kpi-label">Catalog volume</span>
-              <strong class="bo-kpi-value">${totalGmvFormatted}</strong>
+            <div class="hig-ws-kpi-card" onclick="setAdminListingsFilter('all'); switchAdminTab('listings');">
+              <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">Catalog volume</span><span class="hig-ws-kpi-dot"></span></div>
+              <strong class="hig-ws-kpi-val">${totalGmvFormatted}</strong>
+              <div><span class="hig-sla-pill">0% Commission</span></div>
             </div>
-
-            <div class="bo-kpi-card" style="cursor:pointer;" onclick="switchAdminTab('billing');">
-              <span class="bo-kpi-label">PRO & paid plans</span>
-              <strong class="bo-kpi-value">${proAccountsCount + packAccountsCount}</strong>
+            <div class="hig-ws-kpi-card" onclick="switchAdminTab('billing');">
+              <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">PRO & paid plans</span><span class="hig-ws-kpi-dot"></span></div>
+              <strong class="hig-ws-kpi-val">${proAccountsCount + packAccountsCount}</strong>
+              <div><span class="hig-sla-pill">Active Plans</span></div>
             </div>
-
-            <div class="bo-kpi-card" style="cursor:pointer;" onclick="switchAdminTab('proposals');">
-              <span class="bo-kpi-label">Swap proposals</span>
-              <strong class="bo-kpi-value">${swapProposals.length}</strong>
+            <div class="hig-ws-kpi-card" onclick="switchAdminTab('proposals');">
+              <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">Swap proposals</span><span class="hig-ws-kpi-dot"></span></div>
+              <strong class="hig-ws-kpi-val">${swapProposals.length}</strong>
+              <div><span class="hig-sla-pill">1:1 Direct</span></div>
             </div>
           </div>
-
           ${mainModuleHtml}
         </div>
       </main>
@@ -10125,7 +9906,6 @@ function renderAdminModalContent() {
     nextBoScrollEl.scrollTop = prevBoScrollTop;
   }
 }
-
 document.addEventListener("DOMContentLoaded", () => {
   ensurePlatformAccountsAndTestRegistrations();
   initCloudSyncEngine();
@@ -10140,19 +9920,16 @@ document.addEventListener("DOMContentLoaded", () => {
   syncLiveExchangeRates();
   initScrollRevealAnimations();
   animateLiveMemberCount();
-
   // Restore exact page / screen / wizard step & draft on Refresh
   const initialRoute = getRouteFromUrlOrStorage();
   if (initialRoute && initialRoute !== "/") {
     navigateToPageRoute(initialRoute, true);
   }
-
   // Handle browser Back / Forward buttons across all pages & Wizard steps
   window.addEventListener("popstate", (ev) => {
     const route = (ev.state && ev.state.route) ? ev.state.route : getRouteFromUrlOrStorage();
     navigateToPageRoute(route || "/", true);
   });
-
   // Intercept section anchor clicks so top header & menu links work from any modal/page and update the URL
   document.querySelectorAll('a[href^="#"]').forEach(link => {
     link.addEventListener("click", (e) => {
@@ -10174,13 +9951,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
-
   // Header scroll effect
   const header = document.getElementById("header");
   window.addEventListener("scroll", () => {
     header.classList.toggle("scrolled", window.scrollY > 8);
   }, { passive: true });
-
   // Story slider progress bar
   const slider = document.getElementById("storySlider");
   const progress = document.getElementById("sliderProgress");
@@ -10191,7 +9966,6 @@ document.addEventListener("DOMContentLoaded", () => {
       progress.style.width = `${30 + 70 * ratio}%`;
     }, { passive: true });
   }
-
   // Mobile menu toggle
   const mobileBtn = document.getElementById("mobileMenuBtn");
   const mobilePanel = document.getElementById("mobilePanel");
@@ -10201,11 +9975,24 @@ document.addEventListener("DOMContentLoaded", () => {
       mobileBtn.setAttribute("aria-expanded", String(open));
     });
   }
-
   // Apple HIG Hierarchical Escape (Esc) Dismissal (sheets.md & alerts.md › Provide alternative ways to cancel)
   document.addEventListener("keydown", (ev) => {
+    const lbOpen = document.getElementById("photoLightboxModal")?.classList.contains("open");
+    const offerOpen = document.getElementById("offerModal")?.classList.contains("open");
+    if ((ev.key === "ArrowRight" || ev.key === "ArrowLeft") && (lbOpen || offerOpen)) {
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag !== "INPUT" && activeTag !== "TEXTAREA" && activeTag !== "SELECT") {
+        ev.preventDefault();
+        const targetId = lbOpen ? lightboxOfferId : currentOpenOfferId;
+        if (targetId) selectOfferGalleryPhoto(targetId, currentGalleryIndex + (ev.key === "ArrowRight" ? 1 : -1));
+        return;
+      }
+    }
     if (ev.key !== "Escape") return;
-    if (document.getElementById("appleSheetModal")?.classList.contains("open")) {
+    if (lbOpen) {
+      ev.preventDefault();
+      closePhotoLightbox();
+    } else if (document.getElementById("appleSheetModal")?.classList.contains("open")) {
       ev.preventDefault();
       closeAppleSheetModal();
     } else if (document.getElementById("guideModal")?.classList.contains("open")) {

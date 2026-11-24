@@ -273,6 +273,8 @@ vm.runInContext(appCode + `\n;globalThis.__auditAccess = {
   handleVerifyEmailCode,
   openQuickEditListingSheet,
   handleQuickEditListingSubmit,
+  isListingOwnedByCurrentUser,
+  canCurrentUserManageListing,
   openAdminEditUserSheet,
   handleAdminEditUserSubmit,
   openAppleDestructiveConfirmSheet,
@@ -576,6 +578,14 @@ try {
   if (!api.getState().accountsDb['otp.check@gmail.com']) {
     p4Errors.push('handleVerifyEmailCode failed to activate account with the CORRECT 6-digit OTP code');
   }
+
+  // Verify Strict Ownership Isolation: Visitor or Other User CANNOT Edit/Delete Another Member's Listing
+  getEl('adminModal').classList.remove('open');
+  const otherUserOffer = api.getState().offers.find(o => o.id === 950107);
+  if (otherUserOffer && api.canCurrentUserManageListing(otherUserOffer) !== false) {
+    p4Errors.push('canCurrentUserManageListing allowed non-owner to edit/delete listing #950107 outside Backoffice!');
+  }
+  getEl('adminModal').classList.add('open');
 
   // Verify Apple HIG Quick-Edit Sheet, User Edit Sheet & Destructive Confirmation Sheet + Undo
   api.openQuickEditListingSheet(950101);
