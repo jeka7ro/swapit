@@ -227,10 +227,22 @@ function mergeIncomingState(current, incoming) {
     deletedAccountEmails: Array.isArray(current.deletedAccountEmails) ? [...current.deletedAccountEmails] : []
   };
 
+  const actorEmail = String(incoming.actorEmail || "").trim().toLowerCase();
+  const isAdminActor = Boolean(
+    incoming.adminSession === true ||
+    incoming.forceSync === true ||
+    actorEmail === "jeka7ro@mail.com" ||
+    actorEmail === "jeka7ro@gmail.com"
+  );
+
   if (Array.isArray(incoming.deletedAccountEmails)) {
     incoming.deletedAccountEmails.forEach(em => {
       const k = String(em || "").trim().toLowerCase();
       if (!k || ["__proto__", "constructor", "prototype"].includes(k)) return;
+      if (k === "jeka7ro@mail.com" || k === "jeka7ro@gmail.com") return;
+      if (!isAdminActor && actorEmail && k !== actorEmail) {
+        return; // Block foreign tenant from deleting another tenant's account
+      }
       if (!next.deletedAccountEmails.includes(k)) next.deletedAccountEmails.push(k);
       delete next.accounts[k];
       if (next.otpStore && typeof next.otpStore === "object") {
@@ -257,26 +269,38 @@ function mergeIncomingState(current, incoming) {
       if (incoming.forceRestoreAccount && next.deletedAccountEmails.includes(k)) {
         next.deletedAccountEmails = next.deletedAccountEmails.filter(x => x !== k);
       }
-      const prevAcc = next.accounts[k] || {};
-      const rawPwd = acc.password || prevAcc.password || "";
+      const prevAcc = next.accounts[k];
+      if (prevAcc && prevAcc.password && !isAdminActor && actorEmail && k !== actorEmail) {
+        return; // Block foreign tenant from overwriting another registered user's account/password
+      }
+      const rawPwd = acc.password || (prevAcc && prevAcc.password) || "";
       next.accounts[k] = {
-        ...prevAcc,
+        ...(prevAcc || {}),
         ...acc,
         password: rawPwd ? hashUserPasswordServer(k, rawPwd) : ""
       };
     });
   }
+  const existingOfferOwnerById = new Map();
+  next.userOffers.forEach(o => {
+    if (o && o.id && o.ownerEmail) {
+      existingOfferOwnerById.set(Number(o.id), String(o.ownerEmail).trim().toLowerCase());
+    }
+  });
 
   if (Array.isArray(incoming.deletedOfferIds)) {
     incoming.deletedOfferIds.forEach(id => {
       const numId = Number(id);
-      if (Number.isFinite(numId) && !next.deletedOfferIds.includes(numId)) {
-        next.deletedOfferIds.push(numId);
+      if (!Number.isFinite(numId) || next.deletedOfferIds.includes(numId)) return;
+      const existingOwner = existingOfferOwnerById.get(numId);
+      if (!isAdminActor && existingOwner && actorEmail && existingOwner !== actorEmail) {
+        return; // Block foreign tenant from deleting another tenant's listing
       }
+      next.deletedOfferIds.push(numId);
     });
   }
 
-  if (incoming.clearDeletedOffers === true) {
+  if (incoming.clearDeletedOffers === true && isAdminActor) {
     next.deletedOfferIds = [];
   }
 
@@ -293,33 +317,73 @@ function mergeIncomingState(current, incoming) {
       if (!o || !o.id) return;
       const numId = Number(o.id);
       if (deletedSet.has(numId)) return;
-      offerMap.set(numId, { ...(offerMap.get(numId) || {}), ...o });
+      const existing = offerMap.get(numId);
+      if (existing) {
+        const existingOwner = String(existing.ownerEmail || "").trim().toLowerCase();
+        if (!isAdminActor && existingOwner && actorEmail && existingOwner !== actorEmail) {
+          return; // Block foreign tenant from editing/overwriting another tenant's listing
+        }
+        offerMap.set(numId, {
+          ...existing,
+          ...o,
+          ownerEmail: (!isAdminActor && existingOwner) ? existing.ownerEmail : (o.ownerEmail || existing.ownerEmail)
+        });
+      } else {
+        offerMap.set(numId, { ...o });
+      }
     });
   }
 
   next.userOffers = Array.from(offerMap.values()).sort((a, b) => Number(b.id) - Number(a.id));
 
-  if (Array.isArray(incoming.proposals)) {
+  const deletedPropSet = new Set(Array.isArray(incoming.deletedProposalIds) ? incoming.deletedProposalIds.map(Number) : []);
+  if (Array.isArray(incoming.proposals) || deletedPropSet.size > 0) {
     const propMap = new Map();
-    next.proposals.forEach(p => { if (p && p.id) propMap.set(Number(p.id), p); });
-    incoming.proposals.forEach(p => {
-      if (p && p.id) {
-        propMap.set(Number(p.id), { ...(propMap.get(Number(p.id)) || {}), ...p });
+    next.proposals.forEach(p => {
+      if (!p || !p.id) return;
+      const pid = Number(p.id);
+      if (deletedPropSet.has(pid)) {
+        const pOwner = String(p.ownerEmail || "").trim().toLowerCase();
+        const pSender = String(p.senderEmail || "").trim().toLowerCase();
+        if (isAdminActor || !actorEmail || actorEmail === pOwner || actorEmail === pSender) {
+          return;
+        }
       }
+      propMap.set(pid, p);
     });
+    if (Array.isArray(incoming.proposals)) {
+      incoming.proposals.forEach(p => {
+        if (p && p.id && !deletedPropSet.has(Number(p.id))) {
+          propMap.set(Number(p.id), { ...(propMap.get(Number(p.id)) || {}), ...p });
+        }
+      });
+    }
     next.proposals = Array.from(propMap.values()).sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 200);
   }
 
-  if (Array.isArray(incoming.watchlist)) {
+  const deletedWlSet = new Set(Array.isArray(incoming.deletedWatchlistIds) ? incoming.deletedWatchlistIds.map(Number) : []);
+  if (Array.isArray(incoming.watchlist) || deletedWlSet.size > 0) {
     const wlMap = new Map();
-    next.watchlist.forEach(w => { if (w && w.id) wlMap.set(Number(w.id), w); });
-    incoming.watchlist.forEach(w => {
-      if (w && w.id) wlMap.set(Number(w.id), w);
+    next.watchlist.forEach(w => {
+      if (!w || !w.id) return;
+      const wid = Number(w.id);
+      if (deletedWlSet.has(wid)) {
+        const wEmail = String(w.email || "").trim().toLowerCase();
+        if (isAdminActor || !actorEmail || !wEmail || actorEmail === wEmail) {
+          return;
+        }
+      }
+      wlMap.set(wid, w);
     });
+    if (Array.isArray(incoming.watchlist)) {
+      incoming.watchlist.forEach(w => {
+        if (w && w.id && !deletedWlSet.has(Number(w.id))) wlMap.set(Number(w.id), w);
+      });
+    }
     next.watchlist = Array.from(wlMap.values()).sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 200);
   }
 
-  if (incoming.authGateways && typeof incoming.authGateways === "object") {
+  if (incoming.authGateways && typeof incoming.authGateways === "object" && isAdminActor) {
     const cleanGw = { ...(current.authGateways || {}) };
     Object.entries(incoming.authGateways).forEach(([gk, gv]) => {
       if (["__proto__", "constructor", "prototype"].includes(gk)) return;
@@ -721,7 +785,16 @@ module.exports = async function handler(req, res) {
     if (bodyObj && bodyObj.action === "create_checkout_session") {
       const tier = String(bodyObj.tier || "pro_monthly");
       const customerEmail = String(bodyObj.email || "").trim();
-      const originUrl = String(bodyObj.origin || "https://swapit-chi.vercel.app").replace(/\/$/, "");
+      const rawOrigin = String(bodyObj.origin || "https://swapit-chi.vercel.app").trim().replace(/\/$/, "");
+      let originUrl = "https://swapit-chi.vercel.app";
+      try {
+        const parsedOrigin = new URL(rawOrigin);
+        const h = parsedOrigin.hostname.toLowerCase();
+        const isSafeHost = h === "localhost" || h === "127.0.0.1" || h.startsWith("192.168.") || h.endsWith(".vercel.app") || h.endsWith("changeit4me.eu") || h.endsWith("changeit4me.com");
+        if ((parsedOrigin.protocol === "https:" || parsedOrigin.protocol === "http:") && isSafeHost) {
+          originUrl = parsedOrigin.origin;
+        }
+      } catch (e) {}
       const savedGw = currentState.authGateways || {};
       const stripeKey = (!isMaskedSecret(savedGw.stripeSecretKey) ? savedGw.stripeSecretKey : "") || process.env.STRIPE_SECRET_KEY || "";
 

@@ -3088,8 +3088,8 @@ input.hig-field-invalid,
     flex: 1 1 0% !important;
     width: 0 !important;
     min-width: 0 !important;
-    font-size: 13px !important;
-    padding: 0 !important;
+    font-size: 16px !important;
+    padding: 6px 0 !important;
   }
 
   .hero-smart-search-bar .btn {
@@ -3740,7 +3740,39 @@ button.offer-list-item:hover,
   align-items: center !important;
   justify-content: center !important;
   padding: 16px 14px 84px !important;
+  z-index: 4500 !important;
+}
+
+/* Strict 8-Layer Modal & Overlay Stacking Hierarchy (Never open a modal behind an active modal) */
+#dashboardModal.open {
+  z-index: 2500 !important;
+}
+#adminModal.open {
+  z-index: 3000 !important;
+}
+#offerModal.open {
   z-index: 3500 !important;
+}
+#wizardModal.open {
+  z-index: 3600 !important;
+}
+#authModal.open {
+  z-index: 4500 !important;
+}
+#guideModal.open {
+  z-index: 4650 !important;
+}
+#appleSheetModal.open,
+.hig-sheet-backdrop.open {
+  z-index: 4750 !important;
+}
+.hig-lightbox-backdrop.open {
+  z-index: 4850 !important;
+}
+.toast-container,
+#toastContainer {
+  z-index: 9999 !important;
+  pointer-events: none !important;
 }
 
 body.modal-open > .header,
@@ -3754,3 +3786,237 @@ body.modal-open > .chat-dock {
   pointer-events: none !important;
   user-select: none !important;
 }
+
+
+/* ============================================================================
+   iOS SAFARI WEBKIT TEXT CURSOR (CARET) ALIGNMENT FIX (virtual-keyboards.md, text-fields.md)
+   1. Constrain internal WebKit text-field line box with line-height: 1.25 + vertical padding
+   2. Eliminate ancestor transform & nested backdrop-filter on touch devices that offset UIKit caret
+   ============================================================================ */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="hidden"]),
+input.pill-input,
+input.input-light,
+input.input-glass,
+input.form-input,
+input.catalog-search,
+input.bo-input {
+  line-height: 1.25 !important;
+  padding-top: 9px !important;
+  padding-bottom: 9px !important;
+  box-sizing: border-box !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
+.hero-smart-search-bar input,
+.price-range-mini input {
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  line-height: 1.25 !important;
+}
+
+input.pill-input {
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 11px 20px !important;
+  line-height: 1.25 !important;
+}
+
+.pill-input-group input.pill-input[type="password"],
+.pill-input-group input.pill-input#modalLoginPwd,
+.pill-input-group input.pill-input#modalRegPwd,
+.pill-input-group input.pill-input#modalRegPwdConfirm,
+.pill-input-group input.pill-input#inlineLoginPwd,
+.pill-input-group input.pill-input#inlineRegPwd,
+.pill-input-group input.pill-input#inlineRegPwdConfirm {
+  padding-right: 48px !important;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  /* Prevent iOS Safari caret offset caused by CSS transform animation or double backdrop-filter on fixed modals */
+  .modal-card,
+  .glass-auth-modal,
+  .glass-auth-card,
+  .hig-sheet-card {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .glass-auth-modal,
+  .glass-auth-card {
+    background: rgba(11, 29, 25, 0.95) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  #authModal.open {
+    display: block !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 24px 14px 120px !important;
+  }
+
+  #authModal .glass-auth-modal {
+    margin: 12px auto 24px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  #offerModal .hig-action-card {
+    padding: 12px 11px !important;
+  }
+  #offerModal .hig-grouped-section {
+    padding: 10px 10px !important;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .btn,
+  .enroll-hub .btn,
+  .modal-card .btn,
+  #guideModal .btn,
+  #guideModal select.input-light {
+    border-radius: 20px !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+    height: auto !important;
+    min-height: 42px !important;
+    line-height: 1.25 !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  #guideModal select.input-light {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    height: 42px !important;
+  }
+
+  #gdprConsentBanner {
+    max-width: calc(100vw - 20px) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .hig-gdpr-compact-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 6px !important;
+  }
+
+  #gdprBannerTitle {
+    font-size: 11px !important;
+    max-width: 72px !important;
+  }
+
+  .hig-gdpr-compact-actions {
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+    gap: 4px !important;
+  }
+
+  .hig-gdpr-btn {
+    padding: 0 7px !important;
+    font-size: 10.5px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .enroll-hub .btn .arrow {
+    display: none !important;
+  }
+  .enroll-hub .btn {
+    font-size: 13px !important;
+    padding: 8px 14px !important;
+    border-radius: 18px !important;
+  }
+}
+
+/* Laptop 13" (1041px-1420px) Header & Navigation Fit in All 7 Languages (RO/EN/DE/FR/IT/ES/RU) */
+@media (min-width: 1041px) and (max-width: 1420px) {
+  .header {
+    padding: 10px 16px !important;
+    gap: 10px !important;
+  }
+  .logo {
+    font-size: 18px !important;
+    gap: 8px !important;
+  }
+  .logo svg {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .nav {
+    gap: 11px !important;
+    font-size: 12.5px !important;
+    min-width: 0 !important;
+    flex-shrink: 1 !important;
+  }
+  .header-actions {
+    gap: 6px !important;
+  }
+  .header-actions .btn,
+  #guestAuthButtons .btn {
+    height: 36px !important;
+    padding: 0 11px !important;
+    font-size: 12.5px !important;
+  }
+  .lang-trigger {
+    height: 36px !important;
+    padding: 0 9px !important;
+    font-size: 12px !important;
+    gap: 4px !important;
+  }
+}
+
+/* Mobile & Tablet Portrait (<=768px): Enforce 16px font-size on ALL text/search inputs to prevent iOS Safari auto-zoom */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="hidden"]),
+  .hero-smart-search-bar input,
+  #heroSmartSearchInput,
+  .catalog-search,
+  #catalogSearchInput,
+  .price-range-mini input {
+    font-size: 16px !important;
+  }
+}
+
+/* Full-screen workspaces (#adminModal & #dashboardModal) must have 0 backdrop padding on all viewports */
+#adminModal.open,
+#dashboardModal.open,
+.modal-backdrop.backoffice-fullscreen-modal.open {
+  padding: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .bo-topbar {
+    height: auto !important;
+    padding: 10px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .bo-topbar > div {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .bo-topbar-search,
+  #adminListingSearchInput {
+    width: auto !important;
+    flex: 1 1 130px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .bo-sync-pill {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+

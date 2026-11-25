@@ -48,8 +48,11 @@ let mapMarkers = [];
 let currentDashTab = "mylistings";
 let favoriteIds = (() => {
   try {
-    localStorage.removeItem("ci4m_favs"); localStorage.removeItem("ci4m_favs_v2");
-    if (!localStorage.getItem("ci4m_user")) return [];
+    localStorage.removeItem("ci4m_favs");
+    if (!localStorage.getItem("ci4m_user")) {
+      localStorage.removeItem("ci4m_favs_v2");
+      return [];
+    }
     const saved = localStorage.getItem("ci4m_favs_v2");
     return saved ? JSON.parse(saved) : [];
   } catch (e) {
@@ -109,6 +112,22 @@ let swapProposals = (() => {
 let deletedOfferIds = (() => {
   try {
     const saved = localStorage.getItem("ci4m_deleted_offers_v1");
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+})();
+let deletedProposalIds = (() => {
+  try {
+    const saved = localStorage.getItem("ci4m_deleted_proposals_v1");
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+})();
+let deletedWatchlistIds = (() => {
+  try {
+    const saved = localStorage.getItem("ci4m_deleted_watchlist_v1");
     return saved ? JSON.parse(saved) : [];
   } catch (e) {
     return [];
@@ -520,16 +539,15 @@ function saveGdprPreferences(e) {
 }
 function exportUserGdprData() {
   const emailKey = String(currentUser?.email || "").trim().toLowerCase();
-  const nameNorm = normalizeSearchText(currentUser?.name || "");
-  const userListings = offers.filter(o => {
-    if (!(o.createdByUser || o.id > 100000)) return false;
-    if (emailKey && o.ownerEmail) return String(o.ownerEmail).trim().toLowerCase() === emailKey;
-    if (nameNorm && o.owner) return normalizeSearchText(o.owner) === nameNorm;
-    return !emailKey;
-  });
+  const userListings = currentUser && typeof getAccountLinkedOffers === "function"
+    ? getAccountLinkedOffers(currentUser)
+    : offers.filter(o => emailKey && o.ownerEmail && String(o.ownerEmail).trim().toLowerCase() === emailKey);
+  const userProposals = currentUser && typeof isProposalOwnedByCurrentUser === "function"
+    ? swapProposals.filter(p => isProposalOwnedByCurrentUser(p))
+    : [];
   const userWatchlist = emailKey
     ? watchlistAlerts.filter(w => !w.email || String(w.email).trim().toLowerCase() === emailKey)
-    : watchlistAlerts;
+    : [];
   const payload = {
     platform: "ChangeIt4Me Global 1:1 Exchange",
     gdprArticle: "Article 15 (Right of Access) & Article 20 (Right to Data Portability)",
@@ -537,7 +555,7 @@ function exportUserGdprData() {
     userProfile: currentUser || null,
     gdprConsentPreferences: gdprConsent,
     myListings: userListings,
-    swapProposals,
+    swapProposals: userProposals,
     savedFavoriteOfferIds: favoriteIds,
     watchlistAlerts: userWatchlist
   };
@@ -583,13 +601,18 @@ function deleteUserGdprAccount() {
     ? watchlistAlerts.filter(w => String(w.email || "").trim().toLowerCase() !== emailKey)
     : [];
   saveWatchlistAlerts();
-  swapProposals = [];
+  swapProposals = emailKey
+    ? swapProposals.filter(p => !isSameUserEmailAlias(p.senderEmail, emailKey) && !isSameUserEmailAlias(p.ownerEmail, emailKey))
+    : [];
   favoriteIds = [];
+  wizStep = 1;
+  wizData = { ...DEFAULT_WIZ_DATA };
   localStorage.removeItem("ci4m_user");
   localStorage.removeItem("ci4m_saved_google_user_v1");
   localStorage.removeItem("ci4m_favs"); localStorage.removeItem("ci4m_favs_v2");
-  localStorage.removeItem("ci4m_proposals");
+  localStorage.setItem("ci4m_proposals", JSON.stringify(swapProposals));
   localStorage.removeItem("ci4m_wiz_draft_v1");
+  localStorage.removeItem("ci4m_wiz_draft_v2");
   if (typeof scheduleCloudSyncPush === "function" && (emailKey || removedOfferIds.length > 0)) {
     scheduleCloudSyncPush({
       deletedAccountEmails: emailKey ? [emailKey] : [],
@@ -1023,7 +1046,7 @@ function openSubscriptionModal(preselectedTier = "pro") {
         ${isPro ? `✓ ${s.statusPro}` : `${s.statusCredits} ${remSwaps} / ${maxSwaps}`}
       </span>
     </div>
-    <form onsubmit="activateSubscriptionPlan(event)" style="display:grid;gap:10px;">
+    <form onsubmit="activateSubscriptionPlan(event)" style="display:grid;grid-template-columns:minmax(0,1fr);gap:10px;max-width:100%;">
       <label data-tier-card="pack15" style="padding:13px 15px;background:${selPack ? '#f8fafc' : '#ffffff'};border:1.5px solid ${selPack ? '#0f172a' : 'rgba(15,23,42,0.1)'};border-radius:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;cursor:pointer;">
         <div style="display:flex;gap:10px;align-items:flex-start;">
           <input type="radio" name="subTier" value="pack15" ${selPack ? "checked" : ""} onchange="highlightSubscriptionTierCard(this.value)" style="width:18px;height:18px;margin-top:3px;accent-color:#0f172a;" />
@@ -1268,6 +1291,10 @@ function syncUrlWithRoute(routePath, replace = false) {
 }
 function getRouteFromUrlOrStorage() {
   const params = new URLSearchParams(window.location.search);
+  const offerParam = params.get("offer");
+  if (offerParam && /^\d+$/.test(offerParam.trim())) {
+    return "/offer/" + offerParam.trim();
+  }
   const pageParam = params.get("page");
   if (pageParam) {
     return "/" + pageParam.replace(/^\//, "");
@@ -1632,6 +1659,9 @@ function setCurrency(currCode, isManualUserAction = false) {
   if (document.getElementById("dashboardModal")?.classList.contains("open")) {
     renderDashboardContent();
   }
+  if (document.getElementById("adminModal")?.classList.contains("open")) {
+    renderAdminModalContent();
+  }
 }
 function onRegLangSelectChange(newLang, targetCurrencySelectId) {
   setLanguage(newLang, true);
@@ -1816,18 +1846,27 @@ function setLanguage(langCode, isManualUserAction = false) {
   if (document.getElementById("dashboardModal")?.classList.contains("open")) {
     renderDashboardContent();
   }
+  if (document.getElementById("adminModal")?.classList.contains("open")) {
+    renderAdminModalContent();
+  }
+  if (document.getElementById("authModal")?.classList.contains("open") && typeof switchAuthTab === "function") {
+    switchAuthTab(currentAuthMode || "register");
+    if (currentAuthMode === "verify" && typeof renderVerifySentHelper === "function") {
+      renderVerifySentHelper();
+    }
+  }
 }
 function updateFavCountUI() {
   if (!currentUser && Array.isArray(favoriteIds) && favoriteIds.length > 0) {
     favoriteIds = [];
   }
   if (typeof updateMobileBottomTabBarUI === 'function') updateMobileBottomTabBarUI();
-  const activeFavCount = currentUser && Array.isArray(favoriteIds) ? favoriteIds.length : 0;
+  const activeFavCount = currentUser && Array.isArray(favoriteIds) ? offers.filter(o => favoriteIds.includes(o.id)).length : 0;
   const pill = document.getElementById("favCountPill");
   if (pill) pill.textContent = String(activeFavCount);
   const propBadge = document.getElementById("headerProposalsBadge");
   if (propBadge) {
-    const activePropCount = currentUser && Array.isArray(swapProposals) ? swapProposals.length : 0;
+    const activePropCount = currentUser && Array.isArray(swapProposals) ? swapProposals.filter(p => isProposalOwnedByCurrentUser(p)).length : 0;
     propBadge.textContent = String(activePropCount);
     propBadge.style.display = activePropCount > 0 ? "inline-block" : "none";
   }
@@ -1850,9 +1889,11 @@ function updateFavCountUI() {
     userFilterLbl.textContent = lblMap[currentLang] || lblMap.en;
   }
 }
+let pendingFavoriteOfferId = null;
 function toggleFavorite(offerId, ev) {
   if (ev) ev.stopPropagation();
   if (!currentUser) {
+    pendingFavoriteOfferId = Number(offerId) || null;
     const needLoginFavMap = {
       ro: "Autentifică-te în contul tău pentru a salva anunțuri la Favorite.",
       en: "Please sign in to your account to save listings to Favorites.",
@@ -1883,6 +1924,13 @@ function toggleFavorite(offerId, ev) {
     showToast(favMsgMap[currentLang] || favMsgMap.en);
   }
   localStorage.setItem("ci4m_favs_v2", JSON.stringify(favoriteIds));
+  if (currentUser && currentUser.email) {
+    const fKey = String(currentUser.email).trim().toLowerCase();
+    if (accountsDb[fKey]) {
+      accountsDb[fKey].favoriteIds = [...favoriteIds];
+      saveAccountsDb();
+    }
+  }
   updateFavCountUI();
   renderOffers();
   if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId === offerId) {
@@ -1895,7 +1943,231 @@ function toggleFavorite(offerId, ev) {
     }
   }
 }
+
+function getFavPriceAlertCopy() {
+  const map = {
+    ro: {
+      toastDrop: (title, oldP, newP) => `♥ Preț redus la Favorite: „${title}” este acum ${newP} (era ${oldP})!`,
+      toastChange: (title, oldP, newP) => `♥ Preț actualizat la Favorite: „${title}” este acum ${newP} (era ${oldP})!`,
+      ownerNotifiedToast: (cnt) => `✓ Preț actualizat! ${cnt} utilizator(i) care au anunțul la Favorite au fost notificați.`,
+      badgeDrop: "↓ Preț redus",
+      badgeUpdated: "Preț actualizat",
+      wasWord: "era",
+      dashBannerTitle: "Notificări modificare preț la anunțurile tale Favorite",
+      dashItemAlert: (oldP, newP) => `Prețul s-a modificat: ${oldP} → ${newP}`,
+      dismissBtn: "Am văzut"
+    },
+    en: {
+      toastDrop: (title, oldP, newP) => `♥ Favorite Price Drop: "${title}" is now ${newP} (was ${oldP})!`,
+      toastChange: (title, oldP, newP) => `♥ Favorite Price Update: "${title}" is now ${newP} (was ${oldP})!`,
+      ownerNotifiedToast: (cnt) => `✓ Price updated! ${cnt} user(s) who saved this listing to Favorites have been notified.`,
+      badgeDrop: "↓ Price Drop",
+      badgeUpdated: "Price Updated",
+      wasWord: "was",
+      dashBannerTitle: "Price Change Notifications on Your Saved Favorites",
+      dashItemAlert: (oldP, newP) => `Price changed: ${oldP} → ${newP}`,
+      dismissBtn: "Dismiss"
+    },
+    de: {
+      toastDrop: (title, oldP, newP) => `♥ Preissenkung bei Favoriten: „${title}“ jetzt ${newP} (vorher ${oldP})!`,
+      toastChange: (title, oldP, newP) => `♥ Preisänderung bei Favoriten: „${title}“ jetzt ${newP} (vorher ${oldP})!`,
+      ownerNotifiedToast: (cnt) => `✓ Preis aktualisiert! ${cnt} Nutzer mit diesem Favoriten wurden benachrichtigt.`,
+      badgeDrop: "↓ Preissenkung",
+      badgeUpdated: "Preis geändert",
+      wasWord: "vorher",
+      dashBannerTitle: "Preisänderungen bei Ihren gespeicherten Favoriten",
+      dashItemAlert: (oldP, newP) => `Preis geändert: ${oldP} → ${newP}`,
+      dismissBtn: "OK"
+    },
+    fr: {
+      toastDrop: (title, oldP, newP) => `♥ Baisse de prix (Favoris) : « ${title} » est à ${newP} (au lieu de ${oldP}) !`,
+      toastChange: (title, oldP, newP) => `♥ Prix modifié (Favoris) : « ${title} » est à ${newP} (était ${oldP}) !`,
+      ownerNotifiedToast: (cnt) => `✓ Prix mis à jour ! ${cnt} membre(s) ayant ajouté l'annonce en favori ont été notifiés.`,
+      badgeDrop: "↓ Prix réduit",
+      badgeUpdated: "Prix mis à jour",
+      wasWord: "était",
+      dashBannerTitle: "Notifications de changement de prix sur vos Favoris",
+      dashItemAlert: (oldP, newP) => `Prix modifié : ${oldP} → ${newP}`,
+      dismissBtn: "Vu"
+    },
+    it: {
+      toastDrop: (title, oldP, newP) => `♥ Prezzo ribassato nei Preferiti: "${title}" ora a ${newP} (era ${oldP})!`,
+      toastChange: (title, oldP, newP) => `♥ Prezzo aggiornato nei Preferiti: "${title}" ora a ${newP} (era ${oldP})!`,
+      ownerNotifiedToast: (cnt) => `✓ Prezzo aggiornato! ${cnt} utenti che hanno l'annuncio nei Preferiti sono stati avvisati.`,
+      badgeDrop: "↓ Prezzo ridotto",
+      badgeUpdated: "Prezzo aggiornato",
+      wasWord: "era",
+      dashBannerTitle: "Notifiche di variazione prezzo sui tuoi Preferiti",
+      dashItemAlert: (oldP, newP) => `Prezzo modificato: ${oldP} → ${newP}`,
+      dismissBtn: "Visto"
+    },
+    es: {
+      toastDrop: (title, oldP, newP) => `♥ Bajada de precio en Favoritos: "${title}" ahora ${newP} (antes ${oldP})!`,
+      toastChange: (title, oldP, newP) => `♥ Precio actualizado en Favoritos: "${title}" ahora ${newP} (antes ${oldP})!`,
+      ownerNotifiedToast: (cnt) => `✓ ¡Precio actualizado! Se ha notificado a ${cnt} usuario(s) que tienen el anuncio en Favoritos.`,
+      badgeDrop: "↓ Precio rebajado",
+      badgeUpdated: "Precio actualizado",
+      wasWord: "antes",
+      dashBannerTitle: "Notificaciones de cambio de precio en tus Favoritos",
+      dashItemAlert: (oldP, newP) => `Precio modificado: ${oldP} → ${newP}`,
+      dismissBtn: "Visto"
+    },
+    ru: {
+      toastDrop: (title, oldP, newP) => `♥ Снижение цены в Избранном: «${title}» теперь ${newP} (было ${oldP})!`,
+      toastChange: (title, oldP, newP) => `♥ Изменение цены в Избранном: «${title}» теперь ${newP} (было ${oldP})!`,
+      ownerNotifiedToast: (cnt) => `✓ Цена обновлена! Уведомлено пользователей с этим объявлением в Избранном: ${cnt}.`,
+      badgeDrop: "↓ Цена снижена",
+      badgeUpdated: "Цена обновлена",
+      wasWord: "было",
+      dashBannerTitle: "Уведомления об изменении цен в Избранном",
+      dashItemAlert: (oldP, newP) => `Цена изменилась: ${oldP} → ${newP}`,
+      dismissBtn: "Ок"
+    }
+  };
+  return map[currentLang] || map.en;
+}
+function getOfferPreviousPriceFormatted(item, code = currentCurrency) {
+  if (!item || !item.previousValueEur || Math.round(Number(item.previousValueEur)) === Math.round(Number(item.valueEur))) {
+    return "";
+  }
+  const prevCurr = String(item.previousOriginalCurrency || "EUR").toUpperCase();
+  const prevAmt = item.previousOriginalAmount !== undefined && item.previousOriginalAmount !== ""
+    ? sanitizeNumericAmount(item.previousOriginalAmount, 0)
+    : sanitizeNumericAmount(item.previousValueEur, 0);
+  const valInTarget = prevCurr === String(code).toUpperCase()
+    ? Math.round(prevAmt)
+    : convertBetweenCurrencies(prevAmt, prevCurr, code);
+  return formatAmountInCurrentCurrency(valInTarget, code);
+}
+function recordListingPriceChangeAndNotifyFavorites(item, oldValueEur, oldOriginalAmount, oldOriginalCurrency, newValueEur, newOriginalAmount, newOriginalCurrency) {
+  if (!item) return 0;
+  const oldEurRound = Math.round(Number(oldValueEur) || 0);
+  const newEurRound = Math.round(Number(newValueEur) || 0);
+  if (oldEurRound <= 0 || newEurRound <= 0 || oldEurRound === newEurRound) return 0;
+
+  item.previousValueEur = oldEurRound;
+  item.previousOriginalAmount = oldOriginalAmount || oldEurRound;
+  item.previousOriginalCurrency = oldOriginalCurrency || "EUR";
+  item.priceChangedAt = new Date().toISOString();
+  item.priceChangeId = `pc_${item.id}_${newEurRound}_${Date.now()}`;
+  item.priceChangeDirection = newEurRound < oldEurRound ? "down" : "up";
+
+  const loc = getOfferLocalized(item);
+  const oldFormattedEur = formatAmountInCurrentCurrency(convertFromEur(oldEurRound, currentCurrency), currentCurrency);
+  const newFormattedEur = formatAmountInCurrentCurrency(convertFromEur(newEurRound, currentCurrency), currentCurrency);
+  const editorEmail = currentUser?.email ? String(currentUser.email).trim().toLowerCase() : "";
+
+  let notifiedUsersCount = 0;
+  Object.entries(accountsDb || {}).forEach(([emailKey, acc]) => {
+    if (!acc || typeof acc !== "object") return;
+    const favs = Array.isArray(acc.favoriteIds) ? acc.favoriteIds.map(Number) : [];
+    if (!favs.includes(Number(item.id))) return;
+    if (editorEmail && isSameUserEmailAlias(emailKey, editorEmail)) return;
+    notifiedUsersCount++;
+    acc.pendingPriceAlerts = Array.isArray(acc.pendingPriceAlerts) ? acc.pendingPriceAlerts : [];
+    acc.pendingPriceAlerts = acc.pendingPriceAlerts.filter(a => Number(a.offerId) !== Number(item.id));
+    acc.pendingPriceAlerts.unshift({
+      priceChangeId: item.priceChangeId,
+      offerId: Number(item.id),
+      title: loc.title || item.title || `#${item.id}`,
+      oldValueEur: oldEurRound,
+      newValueEur: newEurRound,
+      direction: item.priceChangeDirection,
+      changedAt: item.priceChangedAt
+    });
+    if (typeof dispatchPartnerNotificationToServer === "function" && acc.email) {
+      dispatchPartnerNotificationToServer({
+        toEmail: acc.email,
+        toPhone: acc.phone || "",
+        subject: `ChangeIt4Me · Favorite Price Update: ${loc.title || item.title} (${oldFormattedEur} -> ${newFormattedEur})`,
+        message: `Good news! A listing in your ChangeIt4Me Favorites ("${loc.title || item.title}" in ${item.city}, ${item.country}) changed its price from ${oldFormattedEur} to ${newFormattedEur}.`
+      });
+    }
+  });
+  if (notifiedUsersCount > 0) {
+    saveAccountsDb();
+  }
+  return notifiedUsersCount;
+}
+function getSeenPriceChangeIdsForCurrentUser() {
+  if (!currentUser || !currentUser.email) return [];
+  const k = `ci4m_seen_price_changes_${String(currentUser.email).trim().toLowerCase()}`;
+  try {
+    const raw = localStorage.getItem(k);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+function markPriceChangeSeenForCurrentUser(priceChangeId, offerId = null) {
+  if (!currentUser || !currentUser.email || !priceChangeId) return;
+  const emailKey = String(currentUser.email).trim().toLowerCase();
+  const k = `ci4m_seen_price_changes_${emailKey}`;
+  const seen = getSeenPriceChangeIdsForCurrentUser();
+  if (!seen.includes(priceChangeId)) {
+    seen.push(priceChangeId);
+    try { localStorage.setItem(k, JSON.stringify(seen.slice(-200))); } catch (e) {}
+  }
+  if (accountsDb[emailKey] && Array.isArray(accountsDb[emailKey].pendingPriceAlerts)) {
+    accountsDb[emailKey].pendingPriceAlerts = accountsDb[emailKey].pendingPriceAlerts.filter(
+      a => a.priceChangeId !== priceChangeId && (offerId === null || Number(a.offerId) !== Number(offerId))
+    );
+    saveAccountsDb();
+  }
+  if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+    renderDashboardContent();
+  }
+}
+function checkAndNotifyFavoritePriceChangesForCurrentUser(showLiveToast = true) {
+  if (!currentUser || !currentUser.email || !Array.isArray(favoriteIds) || favoriteIds.length === 0) return [];
+  const seen = getSeenPriceChangeIdsForCurrentUser();
+  const fc = getFavPriceAlertCopy();
+  const activeAlerts = [];
+  favoriteIds.forEach(favId => {
+    const item = offers.find(o => Number(o.id) === Number(favId));
+    if (!item || !item.previousValueEur || !item.priceChangeId) return;
+    if (Math.round(Number(item.previousValueEur)) === Math.round(Number(item.valueEur))) return;
+    if (isListingOwnedByCurrentUser(item)) return;
+    if (seen.includes(item.priceChangeId)) return;
+    const loc = getOfferLocalized(item);
+    const oldP = getOfferPreviousPriceFormatted(item, currentCurrency);
+    const newP = formatOfferPrice(item, currentCurrency);
+    const isDrop = Number(item.valueEur) < Number(item.previousValueEur);
+    activeAlerts.push({
+      item,
+      priceChangeId: item.priceChangeId,
+      title: loc.title,
+      oldP,
+      newP,
+      isDrop
+    });
+  });
+  if (showLiveToast && activeAlerts.length > 0) {
+    const first = activeAlerts[0];
+    const msg = first.isDrop
+      ? fc.toastDrop(first.title, first.oldP, first.newP)
+      : fc.toastChange(first.title, first.oldP, first.newP);
+    showToast(msg);
+    markPriceChangeSeenForCurrentUser(first.priceChangeId, first.item.id);
+  }
+  return activeAlerts;
+}
+
 function filterByCategory(catCode) {
+  if (catCode === "favs" && !currentUser) {
+    const needLoginFavMap = {
+      ro: "Autentifică-te în contul tău pentru a vedea și salva anunțuri la Favorite.",
+      en: "Please sign in to your account to view and save Favorite listings.",
+      de: "Bitte melden Sie sich an, um Ihre gespeicherten Favoriten zu sehen.",
+      fr: "Veuillez vous connecter pour voir vos annonces favorites.",
+      it: "Accedi al tuo account per vedere i tuoi annunci Preferiti.",
+      es: "Inicia sesión para ver tus anuncios Favoritos.",
+      ru: "Войдите в аккаунт, чтобы просматривать избранные объявления."
+    };
+    showToast(needLoginFavMap[currentLang] || needLoginFavMap.en);
+    openAuthModal("login");
+    return;
+  }
   document.body.classList.add("mobile-started");
   currentCategoryFilter = catCode;
   document.querySelectorAll("#categoryFilterPills .cat-pill").forEach(btn => {
@@ -2534,10 +2806,10 @@ function buildLiveSearchDropdownHtml(val) {
       : "";
     return `
       <button type="button" class="smart-dd-item" onclick="document.getElementById('heroSmartDropdown').style.display='none'; document.getElementById('mobileSmartDropdown').style.display='none'; openOfferModal(${item.id}, 'details');">
-        <img src="${item.image}" alt="" />
+        <img src="${escapeHtml(item.image)}" alt="" />
         <div class="smart-dd-info">
-          <strong>${loc.title}${badgeHtml}</strong>
-          <span>${getCategoryLabel(item.category)} · ${item.city}, ${item.country} · ${isWant ? `${t("wantBadge")}: ${loc.want}` : getDealTypeLabel(item.dealType)}</span>
+          <strong>${escapeHtml(loc.title)}${badgeHtml}</strong>
+          <span>${getCategoryLabel(item.category)} · ${escapeHtml(item.city)}, ${escapeHtml(item.country)} · ${isWant ? `${t("wantBadge")}: ${escapeHtml(loc.want)}` : getDealTypeLabel(item.dealType)}</span>
         </div>
         <span class="smart-dd-price">~${price}</span>
       </button>
@@ -2709,7 +2981,7 @@ function renderOffers() {
     const topGlassPillText = extraBadge ? `${catLabel} · ${extraBadge}` : `${catLabel} · ${dealLabel}`;
     return `
       <article class="swap-card">
-        <div class="swap-card-media" style="background-image:url('${item.image}');cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">
+        <div class="swap-card-media" style="background-image:url('${escapeJsStr(item.image)}');cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">
           <div class="swap-card-badges" onclick="event.stopPropagation()">
             <span class="swap-pill-cat">${topGlassPillText}</span>
             <button type="button" class="swap-fav-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite(${item.id}, event)" aria-label="Save favorite">
@@ -2719,18 +2991,18 @@ function renderOffers() {
         </div>
         <div class="swap-card-body">
           <div class="swap-card-meta-row">
-            <span class="swap-card-loc-owner">${item.city}, ${item.country} · ${item.owner}</span>
-            <strong class="swap-card-price-inline">${valFormatted}</strong>
+            <span class="swap-card-loc-owner">${escapeHtml(item.city)}, ${escapeHtml(item.country)} · ${escapeHtml(item.owner)}</span>
+            <strong class="swap-card-price-inline">${getOfferPreviousPriceFormatted(item, currentCurrency) ? `<del style="font-size:11.5px;color:#94a3b8;font-weight:500;margin-right:5px;">${getOfferPreviousPriceFormatted(item, currentCurrency)}</del>` : ""}${valFormatted}</strong>
           </div>
-          <h3 style="cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">${loc.title}</h3>
+          <h3 style="cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">${escapeHtml(loc.title)}</h3>
           <div class="swap-exchange-box">
             <div class="swap-row">
               <span class="swap-tag have">${t("haveBadge")}</span>
-              <span>${item.specs}</span>
+              <span>${escapeHtml(item.specs)}</span>
             </div>
             <div class="swap-row" style="${isWantHighlight ? 'background:rgba(16,185,129,0.08);border-radius:8px;padding:4px 6px;margin:-2px -6px;' : ''}">
               <span class="swap-tag want">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
-              <span class="swap-want-text">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ${valFormatted}` : loc.want}</span>
+              <span class="swap-want-text">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ${valFormatted}` : escapeHtml(loc.want)}</span>
             </div>
           </div>
           <div class="swap-card-footer">
@@ -2871,11 +3143,11 @@ function renderMapPinsAndPanel() {
       const loc = getOfferLocalized(item);
       return `
         <button type="button" class="offer-list-item" onclick="openOfferModal(${item.id}, 'details')">
-          <img src="${item.image}" class="offer-list-item-thumb" alt="" />
+          <img src="${escapeHtml(item.image)}" class="offer-list-item-thumb" alt="" />
           <div class="offer-list-item-body">
-            <strong>${loc.title}</strong>
-            <span>${getCategoryLabel(item.category)} · ${item.city} · ~${formatOfferPrice(item, currentCurrency)}</span>
-            <em>⇄ ${t("wantBadge")}: ${loc.want}</em>
+            <strong>${escapeHtml(loc.title)}</strong>
+            <span>${getCategoryLabel(item.category)} · ${escapeHtml(item.city)} · ~${formatOfferPrice(item, currentCurrency)}</span>
+            <em>⇄ ${t("wantBadge")}: ${escapeHtml(loc.want)}</em>
           </div>
         </button>
       `;
@@ -2982,10 +3254,25 @@ function renderUserHeaderState() {
   }
 }
 function handleUserLogout() {
+  if (currentUser && currentUser.email) {
+    const prevKey = String(currentUser.email).trim().toLowerCase();
+    if (accountsDb[prevKey]) {
+      accountsDb[prevKey].favoriteIds = Array.isArray(favoriteIds) ? [...favoriteIds] : [];
+      saveAccountsDb();
+    }
+  }
   currentUser = null;
   favoriteIds = [];
-  try { localStorage.removeItem('ci4m_favs'); localStorage.removeItem('ci4m_favs_v2'); } catch (e) {}
+  wizStep = 1;
+  wizData = { ...DEFAULT_WIZ_DATA };
+  try {
+    localStorage.removeItem('ci4m_favs');
+    localStorage.removeItem('ci4m_favs_v2');
+    localStorage.removeItem('ci4m_wiz_draft_v1');
+    localStorage.removeItem('ci4m_wiz_draft_v2');
+  } catch (e) {}
   localStorage.removeItem("ci4m_user");
+  updateFavCountUI();
   renderUserHeaderState();
   closeDashboardModal();
   const logoutMsgMap = {
@@ -3000,8 +3287,21 @@ function handleUserLogout() {
   showToast(logoutMsgMap[currentLang] || logoutMsgMap.en);
 }
 function activateUserAccount(userData) {
+  const prevEmailKey = currentUser && currentUser.email ? String(currentUser.email).trim().toLowerCase() : "";
   const emailKey = String(userData.email || "").trim().toLowerCase();
+  if (prevEmailKey && prevEmailKey !== emailKey) {
+    if (accountsDb[prevEmailKey]) {
+      accountsDb[prevEmailKey].favoriteIds = Array.isArray(favoriteIds) ? [...favoriteIds] : [];
+    }
+    wizStep = 1;
+    wizData = { ...DEFAULT_WIZ_DATA };
+    try { localStorage.removeItem("ci4m_wiz_draft_v1"); localStorage.removeItem("ci4m_wiz_draft_v2"); } catch (e) {}
+  }
   const existingAcc = emailKey && accountsDb[emailKey] ? accountsDb[emailKey] : null;
+  if (prevEmailKey !== emailKey) {
+    favoriteIds = Array.isArray(existingAcc?.favoriteIds) ? [...existingAcc.favoriteIds] : [];
+    try { localStorage.setItem("ci4m_favs_v2", JSON.stringify(favoriteIds)); } catch (e) {}
+  }
   currentUser = {
     name: userData.name || existingAcc?.name || "Alexandru",
     email: userData.email || existingAcc?.email || "",
@@ -3010,7 +3310,11 @@ function activateUserAccount(userData) {
     prefLang: userData.prefLang || existingAcc?.prefLang || currentLang,
     prefCurrency: userData.prefCurrency || existingAcc?.prefCurrency || currentCurrency,
     plan: userData.plan || existingAcc?.plan || "starter",
-    freeSwaps: typeof userData.freeSwaps === "number" ? userData.freeSwaps : (typeof existingAcc?.freeSwaps === "number" ? existingAcc.freeSwaps : 10)
+    freeSwaps: typeof userData.freeSwaps === "number" ? userData.freeSwaps : (typeof existingAcc?.freeSwaps === "number" ? existingAcc.freeSwaps : 10),
+    emailVerified: Boolean(userData.emailVerified ?? existingAcc?.emailVerified ?? true),
+    kycVerified: Boolean(userData.kycVerified ?? existingAcc?.kycVerified ?? true),
+    phoneVerified: Boolean(userData.phoneVerified ?? existingAcc?.phoneVerified ?? true),
+    registeredAt: userData.registeredAt || existingAcc?.registeredAt || new Date().toISOString().slice(0, 16).replace("T", " ")
   };
   if (emailKey) {
     const hashedPwd = userData.password ? hashUserPassword(emailKey, userData.password) : (existingAcc?.password || "");
@@ -3028,6 +3332,44 @@ function activateUserAccount(userData) {
   if (userData.prefCurrency) {
     setCurrency(userData.prefCurrency, true);
   }
+  if (pendingFavoriteOfferId !== null) {
+    const pFavId = Number(pendingFavoriteOfferId);
+    pendingFavoriteOfferId = null;
+    if (pFavId && !favoriteIds.includes(pFavId)) {
+      favoriteIds.push(pFavId);
+      try { localStorage.setItem("ci4m_favs_v2", JSON.stringify(favoriteIds)); } catch (e) {}
+      if (emailKey && accountsDb[emailKey]) {
+        accountsDb[emailKey].favoriteIds = [...favoriteIds];
+        saveAccountsDb();
+      }
+    }
+  }
+  updateFavCountUI();
+  renderOffers();
+  if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId) {
+    const prevOffered = document.getElementById("swapOfferedItemInput")?.value || "";
+    const prevCalcVal = document.getElementById("calcMyValueInput")?.value || "";
+    const prevBuyVal = document.getElementById("buyOfferAmountInput")?.value || "";
+    const isBuyActive = document.getElementById("offerActionBuyPanel")?.style.display === "block";
+    openOfferModal(currentOpenOfferId, isBuyActive ? "buy" : "details");
+    if (prevOffered && document.getElementById("swapOfferedItemInput")) {
+      document.getElementById("swapOfferedItemInput").value = prevOffered;
+    }
+    if (prevCalcVal && document.getElementById("calcMyValueInput")) {
+      document.getElementById("calcMyValueInput").value = prevCalcVal;
+      updateSwapValueCalculator(currentOpenOfferId);
+    }
+    if (prevBuyVal && document.getElementById("buyOfferAmountInput")) {
+      document.getElementById("buyOfferAmountInput").value = prevBuyVal;
+      onBuyOfferPriceChange(currentOpenOfferId);
+    }
+  }
+  if (document.getElementById("wizardModal")?.classList.contains("open")) {
+    wizData.owner = currentUser.name || wizData.owner;
+    wizData.email = currentUser.email || wizData.email;
+    wizData.phone = currentUser.phone || wizData.phone;
+    if (wizStep === 7) renderWizStep();
+  }
   renderUserHeaderState();
   const counterEl = document.getElementById("liveUserCount");
   if (counterEl) {
@@ -3036,6 +3378,7 @@ function activateUserAccount(userData) {
   const subCopy = getSubscriptionUiCopy();
   const creditLabel = currentUser.plan === "pro" ? subCopy.proBadgeText : `${currentUser.freeSwaps} ${subCopy.swapsWord}`;
   showToast(`✓ ${currentUser.name} — ${creditLabel}!`);
+  setTimeout(() => { if (typeof checkAndNotifyFavoritePriceChangesForCurrentUser === "function") checkAndNotifyFavoritePriceChangesForCurrentUser(true); }, 350);
 }
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
   "mailinator.com", "10minutemail.com", "tempmail.com", "temp-mail.org",
@@ -3068,16 +3411,36 @@ function isValidRealPhone(rawPhone) {
 }
 function validateLiveAuthField(inputEl) {
   if (!inputEl) return;
-  const val = String(inputEl.value || "").trim();
+  const rawVal = String(inputEl.value || "");
+  const val = rawVal.trim();
   if (!val) {
     inputEl.classList.remove("hig-field-valid", "hig-field-invalid");
     return;
   }
   const isEmail = inputEl.type === "email" || inputEl.name === "email";
   const isPhone = inputEl.type === "tel" || inputEl.name === "phone";
+  const isName = inputEl.name === "name";
+  const isPwd = inputEl.name === "password" || inputEl.name === "newPassword";
+  const isConfirmPwd = inputEl.name === "confirmPassword";
   let ok = true;
   if (isEmail) ok = isValidRealEmail(val);
   if (isPhone) ok = isValidRealPhone(val);
+  if (isName) ok = val.length >= 3 && !/^(test|fake|asdf|qwerty|1234)/i.test(val);
+  if (isPwd) {
+    ok = rawVal.length >= 6;
+    const form = inputEl.closest("form");
+    const confirmEl = form ? form.querySelector("input[name=\"confirmPassword\"]") : null;
+    if (confirmEl && confirmEl.value) {
+      const cOk = rawVal.length >= 6 && confirmEl.value === rawVal;
+      confirmEl.classList.toggle("hig-field-valid", cOk);
+      confirmEl.classList.toggle("hig-field-invalid", !cOk);
+    }
+  }
+  if (isConfirmPwd) {
+    const form = inputEl.closest("form");
+    const pwdVal = String(form?.querySelector("input[name=\"password\"]")?.value || "");
+    ok = rawVal.length >= 6 && rawVal === pwdVal;
+  }
   inputEl.classList.toggle("hig-field-valid", ok);
   inputEl.classList.toggle("hig-field-invalid", !ok);
 }
@@ -3241,6 +3604,7 @@ function getAuthMsg() {
   const map = {
     en: {
       pwdMismatch: "! Passwords do not match!",
+      pwdTooShort: "! Password must be at least 6 characters long.",
       wrongPwd: "! Incorrect password for this registered email.",
       codeAutoFill: "Email verification code:",
       clickToFill: "Click to auto-fill",
@@ -3255,6 +3619,7 @@ function getAuthMsg() {
     },
     de: {
       pwdMismatch: "! Passwörter stimmen nicht überein!",
+      pwdTooShort: "! Das Passwort muss mindestens 6 Zeichen lang sein.",
       wrongPwd: "! Falsches Passwort für diese E-Mail.",
       codeAutoFill: "E-Mail-Bestätigungscode:",
       clickToFill: "Klicken zum Einfügen",
@@ -3269,6 +3634,7 @@ function getAuthMsg() {
     },
     fr: {
       pwdMismatch: "! Les mots de passe ne correspondent pas !",
+      pwdTooShort: "! Le mot de passe doit contenir au moins 6 caractères.",
       wrongPwd: "! Mot de passe incorrect pour cet e-mail.",
       codeAutoFill: "Code de vérification e-mail :",
       clickToFill: "Cliquer pour remplir",
@@ -3283,6 +3649,7 @@ function getAuthMsg() {
     },
     it: {
       pwdMismatch: "! Le password non coincidono!",
+      pwdTooShort: "! La password deve contenere almeno 6 caratteri.",
       wrongPwd: "! Password errata per questa email.",
       codeAutoFill: "Codice di verifica email:",
       clickToFill: "Clicca per compilare",
@@ -3297,6 +3664,7 @@ function getAuthMsg() {
     },
     es: {
       pwdMismatch: "! ¡Las contraseñas no coinciden!",
+      pwdTooShort: "! La contraseña debe tener al menos 6 caracteres.",
       wrongPwd: "! Contraseña incorrecta para este correo.",
       codeAutoFill: "Código de verificación por correo:",
       clickToFill: "Clic para autocompletar",
@@ -3311,6 +3679,7 @@ function getAuthMsg() {
     },
     ro: {
       pwdMismatch: "! Parolele nu coincid!",
+      pwdTooShort: "! Parola trebuie să aibă cel puțin 6 caractere.",
       wrongPwd: "! Parolă incorectă pentru acest email înregistrat.",
       codeAutoFill: "Cod verificare Email:",
       clickToFill: "Click pentru completare",
@@ -3325,6 +3694,7 @@ function getAuthMsg() {
     },
     ru: {
       pwdMismatch: "! Пароли не совпадают!",
+      pwdTooShort: "! Пароль должен содержать минимум 6 символов.",
       wrongPwd: "! Неверный пароль для этого email.",
       codeAutoFill: "Код подтверждения Email:",
       clickToFill: "Нажмите для автозаполнения",
@@ -3361,7 +3731,11 @@ function handleInlineRegistration(e) {
     showToast(am.invalidPhone);
     return;
   }
-  if (!pass || pass.length < 6 || pass !== confirm) {
+  if (!pass || pass.length < 6) {
+    showToast(am.pwdTooShort || am.pwdMismatch);
+    return;
+  }
+  if (pass !== confirm) {
     showToast(am.pwdMismatch);
     return;
   }
@@ -3382,7 +3756,6 @@ function handleInlineRegistration(e) {
     emailVerified: true,
     phoneVerified: true
   });
-  e.target.reset();
 }
 function switchEnrollTab(tab) {
   const isAccount = tab === "account";
@@ -3520,8 +3893,43 @@ function fillQuickPostSample(cat) {
   if (photoIn) photoIn.value = s.img;
   onQuickPostPriceChange();
 }
+function requireAuthForPostingOrProposal(kind = "post", prefillEmail = "") {
+  const isBackofficeOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
+  if (currentUser || isBackofficeOpen) return true;
+  const msgMap = {
+    post: {
+      ro: "Autentifică-te sau creează un cont pentru a publica anunțul pe profilul tău și a primi propuneri 1:1.",
+      en: "Please sign in or create an account to publish your listing under your profile and receive 1:1 proposals.",
+      de: "Bitte melden Sie sich an oder erstellen Sie ein Konto, um Ihr Inserat zu veröffentlichen.",
+      fr: "Veuillez vous connecter ou créer un compte pour publier votre annonce et recevoir des propositions 1:1.",
+      it: "Accedi o crea un account per pubblicare il tuo annuncio e ricevere proposte 1:1.",
+      es: "Inicia sesión o crea una cuenta para publicar tu anuncio y recibir propuestas 1:1.",
+      ru: "Войдите или создайте аккаунт, чтобы опубликовать объявление и получать предложения 1:1."
+    },
+    proposal: {
+      ro: "Autentifică-te în contul tău pentru a trimite propunerea 1:1 și a deschide chatul direct cu proprietarul.",
+      en: "Please sign in to your account to send your 1:1 proposal and open direct chat with the owner.",
+      de: "Bitte melden Sie sich an, um Ihren 1:1-Vorschlag zu senden und direkt mit dem Eigentümer zu chatten.",
+      fr: "Veuillez vous connecter pour envoyer votre proposition 1:1 et discuter avec le propriétaire.",
+      it: "Accedi al tuo account per inviare la proposta 1:1 e chattare con il proprietario.",
+      es: "Inicia sesión para enviar tu propuesta 1:1 y chatear con el propietario.",
+      ru: "Войдите в аккаунт, чтобы отправить предложение 1:1 и открыть чат с владельцем."
+    }
+  };
+  const group = msgMap[kind] || msgMap.post;
+  showToast(group[currentLang] || group.en);
+  openAuthModal("login");
+  if (prefillEmail && isValidRealEmail(prefillEmail)) {
+    const loginEm = document.querySelector("#modalLoginForm input[name='email']");
+    const regEm = document.querySelector("#modalRegisterForm input[name='email']");
+    if (loginEm && !loginEm.value) loginEm.value = prefillEmail;
+    if (regEm && !regEm.value) regEm.value = prefillEmail;
+  }
+  return false;
+}
 function handleInlineQuickPost(e) {
   e.preventDefault();
+  if (!requireAuthForPostingOrProposal("post")) return;
   if (!canPerformSwapOrPost()) return;
   const fd = new FormData(e.target);
   const parsedLoc = parseSmartLocationString(fd.get("location"));
@@ -3598,14 +4006,24 @@ function openAuthModal(mode = "register") {
   switchAuthTab(mode);
   syncUrlWithRoute(mode === "login" ? "/login" : "/register");
 }
+function hasAnyOpenModalBackdrop() {
+  return Boolean(document.querySelector(".modal-backdrop.open"));
+}
 function closeAuthModal() {
   document.getElementById("authModal").classList.remove("open");
-  document.body.classList.remove("modal-open");
   if (verifyTimerInterval) {
     clearInterval(verifyTimerInterval);
     verifyTimerInterval = null;
   }
-  syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
+  if (hasAnyOpenModalBackdrop()) {
+    document.body.classList.add("modal-open");
+    if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId) {
+      syncUrlWithRoute(`/offer/${currentOpenOfferId}`);
+    }
+  } else {
+    document.body.classList.remove("modal-open");
+    syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
+  }
 }
 let lastOtpDeliveryMode = "sandbox";
 function switchAuthTab(mode) {
@@ -3752,10 +4170,30 @@ function renderVerifySentHelper() {
   if (!statusEl) return;
   const am = getAuthMsg();
   const targetEmail = escapeHtml(pendingRegistrationUser?.email || "email");
+  const liveHintMap = {
+    ro: "Introdu codul din 6 cifre primit în căsuța ta de email.",
+    en: "Enter the 6-digit code received in your email inbox.",
+    de: "Geben Sie den 6-stelligen Code aus Ihrem E-Mail-Postfach ein.",
+    fr: "Entrez le code à 6 chiffres reçu dans votre boîte e-mail.",
+    it: "Inserisci il codice a 6 cifre ricevuto nella tua casella email.",
+    es: "Introduce el código de 6 dígitos recibido en tu correo.",
+    ru: "Введите 6-значный код, полученный на ваш email."
+  };
+  const changeEmailMap = {
+    ro: "← Modifică adresa de email",
+    en: "← Change email address",
+    de: "← E-Mail-Adresse ändern",
+    fr: "← Modifier l'adresse e-mail",
+    it: "← Modifica indirizzo email",
+    es: "← Cambiar dirección de correo",
+    ru: "← Изменить адрес email"
+  };
+  const changeEmailBtnHtml = `<div style="margin-top:10px;"><button type="button" onclick="switchAuthTab('register')" style="background:transparent;border:none;color:rgba(236,255,245,0.85);font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:4px 8px;">${changeEmailMap[currentLang] || changeEmailMap.en}</button></div>`;
   if (lastOtpDeliveryMode === "live") {
     statusEl.innerHTML = `
       <span style="display:block;margin-bottom:4px;">✓ ${t("authCodeSentMsg")} (<strong>${targetEmail}</strong>)</span>
-      <span style="font-size:11.5px;color:rgba(236,255,245,0.75);">Enter the 6-digit code received in your email inbox.</span>
+      <span style="font-size:11.5px;color:rgba(236,255,245,0.75);">${liveHintMap[currentLang] || liveHintMap.en}</span>
+      ${changeEmailBtnHtml}
     `;
   } else {
     statusEl.innerHTML = `
@@ -3763,6 +4201,7 @@ function renderVerifySentHelper() {
       <button type="button" onclick="autoFillVerificationCode()" style="background:rgba(169,255,202,0.22);border:1px solid #a9ffca;color:#ffffff;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;">
         ${am.codeAutoFill} ${escapeHtml(generatedVerifyCode)} · ${am.clickToFill}
       </button>
+      ${changeEmailBtnHtml}
     `;
   }
 }
@@ -3869,11 +4308,23 @@ function handleVerifyEmailCode(e) {
       }));
     } catch (err) { }
   }
+  if (typeof fetch === "function" && verifiedPayload.email) {
+    fetch("/api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "verify_otp", email: verifiedPayload.email, code: entered })
+    }).catch(() => {});
+  }
   generatedVerifyCode = "";
   verifyCodeExpiresAt = 0;
   verifyFailedAttempts = 0;
   activateUserAccount(verifiedPayload);
   pendingRegistrationUser = null;
+  document.getElementById("modalRegisterForm")?.reset();
+  document.querySelector("#enrollAccountPanel form")?.reset();
+  document.querySelectorAll("#modalRegisterForm .pill-input, #enrollAccountPanel .pill-input").forEach(el => {
+    el.classList.remove("hig-field-valid", "hig-field-invalid");
+  });
   closeAuthModal();
 }
 function togglePasswordVisibility(inputId, btnEl) {
@@ -3925,7 +4376,7 @@ function handleResetPasswordSubmit(e) {
     return;
   }
   if (newPassword.length < 6) {
-    showToast(am.pwdMismatch);
+    showToast(am.pwdTooShort || am.pwdMismatch);
     return;
   }
   const emailKey = email.toLowerCase();
@@ -3969,7 +4420,11 @@ function handleModalRegister(e) {
     showToast(am.invalidPhone);
     return;
   }
-  if (!pass || pass.length < 6 || pass !== confirm) {
+  if (!pass || pass.length < 6) {
+    showToast(am.pwdTooShort || am.pwdMismatch);
+    return;
+  }
+  if (pass !== confirm) {
     showToast(am.pwdMismatch);
     return;
   }
@@ -3992,7 +4447,6 @@ function handleModalRegister(e) {
     emailVerified: true,
     phoneVerified: true
   });
-  e.target.reset();
 }
 function handleModalLogin(e) {
   e.preventDefault();
@@ -4037,7 +4491,7 @@ function handleModalLogin(e) {
       closeAuthModal();
       return;
     }
-    if (typeof fetch === "function" && !(savedAcc.isPlatformSeed || savedAcc.isPartnerSeed)) {
+    if (typeof fetch === "function") {
       fetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -4056,9 +4510,8 @@ function handleModalLogin(e) {
         .catch(() => showToast(am.wrongPwd));
       return;
     }
-    activateUserAccount(savedAcc);
-    e.target.reset();
-    closeAuthModal();
+    showToast(am.wrongPwd);
+    return;
   } else {
     showToast(am.unregisteredLogin);
     document.getElementById("authModal")?.classList.add("open");
@@ -4084,18 +4537,13 @@ function renderSocialAccountChooserList(isApple = false) {
     if (savedRaw) {
       const parsed = JSON.parse(savedRaw);
       if (parsed && parsed.email) {
-        pushCandidate(parsed.name || parsed.email.split("@")[0], parsed.email, "Connected");
+        pushCandidate(parsed.name || parsed.email.split("@")[0], parsed.email, "Verified on this device");
       }
     }
   } catch (err) { }
-  pushCandidate("Eugeniu Cazmal", "jeka7ro@gmail.com", isApple ? "Apple ID" : "Google");
-  Object.values(accountsDb).forEach(acc => {
-    if (!acc || !acc.email) return;
-    const em = String(acc.email).toLowerCase();
-    if (em.endsWith("@gmail.com") || em.endsWith("@icloud.com")) {
-      pushCandidate(acc.name || em.split("@")[0], em, acc.plan === "pro" ? "PRO ∞" : "");
-    }
-  });
+  if (currentUser && currentUser.email) {
+    pushCandidate(currentUser.name || currentUser.email.split("@")[0], currentUser.email, "Active Session");
+  }
   const providerIcon = isApple
     ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>`
     : `<svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>`;
@@ -4123,11 +4571,7 @@ function signInWithSocialAccountInstant(email, name) {
   const emailKey = String(email || "").trim().toLowerCase();
   if (!emailKey) return;
   const existing = accountsDb[emailKey];
-  const isSuper = emailKey === "jeka7ro@gmail.com" || emailKey === BACKOFFICE_ADMIN_EMAIL;
-  if (isSuper) {
-    adminAuthenticated = true;
-    try { localStorage.setItem("ci4m_admin_session_v1", BACKOFFICE_ADMIN_EMAIL); } catch (err) { }
-  }
+  const isSuper = false;
   const finalName = existing?.name || name || emailKey.split("@")[0];
   try {
     localStorage.setItem("ci4m_saved_google_user_v1", JSON.stringify({
@@ -4199,9 +4643,19 @@ function handleGoogleFormSubmit(e) {
     showToast(am.invalidGmail);
     return;
   }
+  let isVerifiedOnThisDevice = false;
+  try {
+    const savedRaw = localStorage.getItem("ci4m_saved_google_user_v1");
+    if (savedRaw) {
+      const parsed = JSON.parse(savedRaw);
+      if (parsed && String(parsed.email || "").trim().toLowerCase() === email) {
+        isVerifiedOnThisDevice = true;
+      }
+    }
+  } catch (err) { }
   const existing = accountsDb[email];
-  if (existing || email === "jeka7ro@gmail.com" || email === BACKOFFICE_ADMIN_EMAIL) {
-    const derivedName = existing?.name || email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  if (isVerifiedOnThisDevice && existing) {
+    const derivedName = existing.name || email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
     signInWithSocialAccountInstant(email, derivedName);
     e.target.reset();
     return;
@@ -4251,6 +4705,12 @@ function closeWizardModal() {
     document.body.classList.add("modal-open");
     renderAdminModalContent();
     syncUrlWithRoute("/admin");
+  } else if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+    document.body.classList.add("modal-open");
+    renderDashboardContent();
+    syncUrlWithRoute("/dashboard");
+  } else if (hasAnyOpenModalBackdrop()) {
+    document.body.classList.add("modal-open");
   } else {
     document.body.classList.remove("modal-open");
     syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
@@ -4506,18 +4966,65 @@ function isListingOwnedByCurrentUser(item) {
   if (!item || !currentUser) return false;
   const uEmail = String(currentUser.email || "").trim().toLowerCase();
   const oEmail = String(item.ownerEmail || "").trim().toLowerCase();
-  if (uEmail && oEmail) {
-    return isSameUserEmailAlias(uEmail, oEmail);
-  }
-  const uName = String(currentUser.name || "").trim().toLowerCase();
-  const oName = String(item.owner || "").trim().toLowerCase();
-  return Boolean(uName && oName && uName === oName);
+  if (!uEmail || !oEmail) return false;
+  return isSameUserEmailAlias(uEmail, oEmail);
 }
 function canCurrentUserManageListing(item) {
   if (!item) return false;
   const isBackofficeOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
   if (isBackofficeOpen) return true;
   return isListingOwnedByCurrentUser(item);
+}
+function isProposalOwnedByCurrentUser(p) {
+  if (!p) return false;
+  if (!currentUser) return true;
+  const uEmail = String(currentUser.email || "").trim().toLowerCase();
+  if (!uEmail) return false;
+  const sEmail = String(p.senderEmail || "").trim().toLowerCase();
+  const oEmail = String(p.ownerEmail || "").trim().toLowerCase();
+  if (sEmail && isSameUserEmailAlias(sEmail, uEmail)) return true;
+  if (oEmail && isSameUserEmailAlias(oEmail, uEmail)) return true;
+  if (p.offerId) {
+    const targetOff = offers.find(o => Number(o.id) === Number(p.offerId));
+    if (targetOff && isListingOwnedByCurrentUser(targetOff)) return true;
+  }
+  if (!oEmail && (Number(p.id) === 901 || Number(p.id) === 902)) return true;
+  if (!sEmail && !oEmail) return true;
+  return false;
+}
+function canCurrentUserAccessProposal(p) {
+  if (!p) return false;
+  const isBackofficeOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
+  if (isBackofficeOpen) return true;
+  return isProposalOwnedByCurrentUser(p);
+}
+function isProposalIncomingForCurrentUser(p) {
+  if (!p) return false;
+  if (currentUser && currentUser.email) {
+    const uEmail = String(currentUser.email).trim().toLowerCase();
+    const sEmail = String(p.senderEmail || "").trim().toLowerCase();
+    const oEmail = String(p.ownerEmail || "").trim().toLowerCase();
+    if (oEmail && isSameUserEmailAlias(oEmail, uEmail) && (!sEmail || !isSameUserEmailAlias(sEmail, uEmail))) {
+      return true;
+    }
+    if (p.offerId) {
+      const targetOff = offers.find(o => Number(o.id) === Number(p.offerId));
+      if (targetOff && isListingOwnedByCurrentUser(targetOff) && (!sEmail || !isSameUserEmailAlias(sEmail, uEmail))) {
+        return true;
+      }
+    }
+    if (sEmail && isSameUserEmailAlias(sEmail, uEmail)) {
+      return false;
+    }
+  }
+  return p.direction === "Incoming";
+}
+function getProposalPartnerDisplayForCurrentUser(p) {
+  if (!p) return "Partner";
+  if (isProposalIncomingForCurrentUser(p) && p.senderName) {
+    return p.senderContact ? `${p.senderName} (${p.senderContact})` : p.senderName;
+  }
+  return p.partner || p.senderName || "Partner";
 }
 function editListingInWizard(offerId) {
   const item = offers.find(o => o.id === offerId);
@@ -5244,12 +5751,12 @@ function renderWizStep() {
       </div>
       <div class="field-group" style="position:relative;">
         <label style="color:var(--ink);">${t("quickTitleHave")}</label>
-        <input type="text" id="wizTitleHave" class="input-light" placeholder="${ui.titlePlaceholder}" value="${wizData.titleHave}" autocomplete="off" oninput="onWizTitleHaveInput(this.value)" />
+        <input type="text" id="wizTitleHave" class="input-light" placeholder="${ui.titlePlaceholder}" value="${escapeHtml(wizData.titleHave)}" autocomplete="off" oninput="onWizTitleHaveInput(this.value)" />
         <div id="wizTitleSuggestions" class="wiz-autocomplete-list" style="display:none;"></div>
       </div>
       <div class="field-group">
         <label style="color:var(--ink);">${ui.specsLabel}</label>
-        <input type="text" id="wizSpecsPreview" class="input-light" placeholder="${ui.specsPlaceholder}" value="${wizData.specs || ''}" onfocus="const s=document.getElementById('wizTitleSuggestions');if(s)s.style.display='none';" oninput="wizData.specs = this.value" />
+        <input type="text" id="wizSpecsPreview" class="input-light" placeholder="${ui.specsPlaceholder}" value="${escapeHtml(wizData.specs || '')}" onfocus="const s=document.getElementById('wizTitleSuggestions');if(s)s.style.display='none';" oninput="wizData.specs = this.value" />
       </div>
       <div class="field-group">
         <label id="wizValueCurrencyLabel" style="color:var(--ink);">${valLabel}</label>
@@ -5321,7 +5828,7 @@ function renderWizStep() {
       <h3 style="margin:0 0 14px;font-size:24px;">4. ${t("wizStep4")}</h3>
       <div class="field-group">
         <label style="color:var(--ink);">${ui.specsLabel}</label>
-        <input type="text" id="wizSpecs" class="input-light" value="${wizData.specs}" oninput="wizData.specs = this.value" />
+        <input type="text" id="wizSpecs" class="input-light" value="${escapeHtml(wizData.specs)}" oninput="wizData.specs = this.value" />
         <div class="wiz-chip-row" style="margin-top:8px;">
           ${specChips.map(chip => `
             <button type="button" class="wiz-chip" onclick="document.getElementById('wizSpecs').value += (document.getElementById('wizSpecs').value ? ' · ' : '') + '${chip.replace(/'/g, "\\'")}'; wizData.specs = document.getElementById('wizSpecs').value; persistWizardDraft();">+ ${chip}</button>
@@ -5333,7 +5840,7 @@ function renderWizStep() {
           <label style="color:var(--ink);margin:0;">${t("quickDescription")}</label>
           <button type="button" class="wiz-chip wiz-chip-tpl" onclick="generateSmartWizDesc()">${vc.autoDescBtn}</button>
         </div>
-        <textarea id="wizDesc" class="input-light" rows="3" oninput="wizData.desc = this.value">${wizData.desc}</textarea>
+        <textarea id="wizDesc" class="input-light" rows="3" oninput="wizData.desc = this.value">${escapeHtml(wizData.desc)}</textarea>
       </div>
     `;
   } else if (wizStep === 5) {
@@ -5352,7 +5859,7 @@ function renderWizStep() {
       </div>
       <div class="field-group">
         <label style="color:var(--ink);">${isSaleOnly ? `${t("dealSaleOnly")}` : t("quickTitleWant")}</label>
-        <input type="text" id="wizTitleWant" class="input-light" value="${wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : '')}" placeholder="${ui.titlePlaceholder}" oninput="wizData.titleWant = this.value" />
+        <input type="text" id="wizTitleWant" class="input-light" value="${escapeHtml(wizData.titleWant || (isSaleOnly ? t('dealSaleOnly') : ''))}" placeholder="${ui.titlePlaceholder}" oninput="wizData.titleWant = this.value" />
         <div class="wiz-chip-row" style="margin-top:8px;">
           <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='iPhone 16 Pro Max / iPad Pro M4 / MacBook Pro'; wizData.titleWant=document.getElementById('wizTitleWant').value; persistWizardDraft();">iPhone / iPad / MacBook</button>
           <button type="button" class="wiz-chip" onclick="document.getElementById('wizTitleWant').value='SUV 2020+ (BMW X5, Mercedes GLE, Audi Q7)'; wizData.titleWant=document.getElementById('wizTitleWant').value; persistWizardDraft();">${t("qtagCar")}</button>
@@ -5414,7 +5921,7 @@ function renderWizStep() {
       <div class="form-grid-2">
         <div class="field-group">
           <label style="color:var(--ink);">${t("formEmail")}</label>
-          <input type="email" id="wizEmail" class="input-light" value="${escapeHtml(wizData.email || (currentUser ? currentUser.email : ''))}" oninput="wizData.email = this.value" />
+          <input type="email" id="wizEmail" class="input-light" value="${escapeHtml((currentUser && !adminAuthenticated) ? currentUser.email : (wizData.email || (currentUser ? currentUser.email : '')))}" ${(currentUser && !adminAuthenticated) ? "readonly style=\"background:#f1f5f9;color:#475569;cursor:not-allowed;\"" : ""} oninput="wizData.email = this.value" />
         </div>
         <div class="field-group">
           <label style="color:var(--ink);">${t("formPhone")}</label>
@@ -5462,7 +5969,18 @@ function publishWizardOffer() {
     }
   }
   const isEditing = Boolean(wizData.editingOfferId);
+  const existingEditItem = isEditing ? offers.find(o => o.id === wizData.editingOfferId) : null;
+  if (isEditing && existingEditItem && !canCurrentUserManageListing(existingEditItem)) {
+    showToast(currentLang === "ro" ? "! Doar proprietarul anunțului poate edita acest anunț." : "! Only the listing owner can edit this listing.");
+    wizData.editingOfferId = null;
+    return;
+  }
+  if (!requireAuthForPostingOrProposal("post", wizData.email)) return;
   if (!isEditing && !canPerformSwapOrPost()) return;
+  const isBackofficeOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
+  const lockedOwnerEmail = (!isBackofficeOpen && currentUser?.email)
+    ? String(currentUser.email).trim().toLowerCase()
+    : (isEditing && existingEditItem?.ownerEmail ? existingEditItem.ownerEmail : (wizData.email || currentUser?.email || ""));
   const fallbackCoords = COUNTRY_COORDS[wizData.country] || { lat: 48.13, lng: 11.58 };
   const finalLat = wizData.lat || fallbackCoords.lat;
   const finalLng = wizData.lng || fallbackCoords.lng;
@@ -5472,7 +5990,7 @@ function publishWizardOffer() {
   const offerPayload = {
     id: isEditing ? wizData.editingOfferId : Date.now(),
     createdByUser: true,
-    ownerEmail: wizData.email || currentUser?.email || "",
+    ownerEmail: lockedOwnerEmail,
     category: wizData.category,
     country: wizData.country,
     city: wizData.city || "Bucharest",
@@ -5492,10 +6010,16 @@ function publishWizardOffer() {
     want: wizData.titleWant || (wizData.dealType === "sale" ? t("dealSaleOnly") : "Direct 1:1 Swap"),
     desc: wizData.desc || `${wizData.titleHave} (${wizData.specs || "Verified"}).`
   };
+  let wizNotifiedFavCount = 0;
   if (isEditing) {
     const idx = offers.findIndex(o => o.id === wizData.editingOfferId);
     if (idx >= 0) {
-      offers[idx] = { ...offers[idx], ...offerPayload, i18n: undefined };
+      const prevOff = offers[idx];
+      const mergedOff = { ...prevOff, ...offerPayload, i18n: undefined };
+      wizNotifiedFavCount = recordListingPriceChangeAndNotifyFavorites(
+        mergedOff, prevOff.valueEur, prevOff.originalAmount, prevOff.originalCurrency, exactEur, chosenAmt, chosenCurr
+      );
+      offers[idx] = mergedOff;
     } else {
       offers.unshift(offerPayload);
     }
@@ -5521,7 +6045,7 @@ function publishWizardOffer() {
     syncUrlWithRoute("/offers");
     document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
   }
-  showToast(isEditing ? getWizValidationCopy().savedToast : `✓ ${offerPayload.title} — Live!`);
+  showToast(isEditing ? (wizNotifiedFavCount > 0 ? getFavPriceAlertCopy().ownerNotifiedToast(wizNotifiedFavCount) : getWizValidationCopy().savedToast) : `✓ ${offerPayload.title} — Live!`);
 }
 let currentGalleryIndex = 0;
 let selectedMySwapOfferId = null;
@@ -5969,7 +6493,7 @@ function getProposalStatusLabel(p) {
 function getProposalPartnerContact(p) {
   if (!p) return { email: "", phone: "" };
   const targetOffer = p.offerId ? offers.find(o => o.id === Number(p.offerId)) : null;
-  const isIncoming = p.direction === "Incoming";
+  const isIncoming = isProposalIncomingForCurrentUser(p);
   const emailCandidates = isIncoming
     ? [p.senderEmail, String(p.partner || "").includes("@") ? String(p.partner).trim() : "", p.ownerEmail]
     : [p.ownerEmail, targetOffer?.ownerEmail, p.senderEmail, String(p.partner || "").includes("@") ? String(p.partner).trim() : ""];
@@ -5991,10 +6515,16 @@ function getProposalPartnerContact(p) {
 }
 function submitDirectBuyOffer(e, offerId) {
   e.preventDefault();
+  const rawContact = e?.target ? String(new FormData(e.target).get("senderContact") || "").trim() : "";
+  if (!requireAuthForPostingOrProposal("proposal", rawContact.includes("@") ? rawContact : "")) return;
   if (!canPerformSwapOrPost()) return;
   const ptc = getProposalToastCopy();
   const fd = new FormData(e.target);
   const item = offers.find(o => o.id === offerId);
+  if (item && isListingOwnedByCurrentUser(item)) {
+    showToast(currentLang === "ro" ? "! Nu poți trimite o ofertă către propriul tău anunț." : "! You cannot send an offer to your own listing.");
+    return;
+  }
   const loc = item ? getOfferLocalized(item) : { title: "Listing" };
   const amount = sanitizeNumericAmount(fd.get("buyAmount"), 0);
   const curr = String(fd.get("buyCurrency") || currentCurrency).toUpperCase();
@@ -6034,8 +6564,11 @@ function submitDirectBuyOffer(e, offerId) {
   showToast(`${ptc.buySentPrefix} (${formattedOffer}) ${ptc.buySentTo} ${item ? item.owner : "Seller"}!`);
 }
 function openOfferModal(offerId, mode = "details") {
-  const item = offers.find(o => o.id === offerId);
-  if (!item) return;
+  const item = offers.find(o => o.id === Number(offerId));
+  if (!item) {
+    showToast(currentLang === "ro" ? "! Acest anunț nu mai este activ în catalog." : "! This listing is no longer active in the catalog.");
+    return;
+  }
   currentOpenOfferId = offerId;
   currentGalleryIndex = 0;
   selectedMySwapOfferId = null;
@@ -6215,20 +6748,29 @@ function openOfferModal(offerId, mode = "details") {
             `).join("")}
           </div>
         ` : ""}
-        <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em;color:#0f172a;margin:0 0 8px;line-height:1.28;">${loc.title}</h2>
-        <p style="color:#475569;margin:0 0 14px;font-size:13.5px;line-height:1.48;">${loc.desc || item.specs}</p>
+        <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em;color:#0f172a;margin:0 0 8px;line-height:1.28;">${escapeHtml(loc.title)}</h2>
+        <p style="color:#475569;margin:0 0 14px;font-size:13.5px;line-height:1.48;">${escapeHtml(loc.desc || item.specs)}</p>
         <div class="swap-exchange-box" style="margin-bottom:0;">
           <div class="swap-row">
             <span class="swap-tag have">${t("haveBadge")}</span>
-            <span><strong>${loc.title}</strong> (${item.specs})</span>
+            <span><strong>${escapeHtml(loc.title)}</strong> (${escapeHtml(item.specs)})</span>
           </div>
           <div class="swap-row">
             <span class="swap-tag want">${item.dealType === "sale" ? t("saleBadge") : t("wantBadge")}</span>
-            <span style="font-weight:600;color:#0f172a;">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ${valFormatted}` : loc.want}</span>
+            <span style="font-weight:600;color:#0f172a;">${item.dealType === "sale" ? `${t("dealSaleOnly")} · ${valFormatted}` : escapeHtml(loc.want)}</span>
           </div>
         </div>
       </div>
       <div>
+        ${isCustomOwner ? `
+          <div style="margin-bottom:12px;padding:12px 14px;border-radius:16px;background:#ecfdf5;border:1px solid #a7f3d0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:12.5px;font-weight:750;color:#065f46;">● ${{ro:"Acesta este anunțul tău activ",en:"This is your active listing",de:"Dies ist Ihr aktives Inserat",fr:"Ceci est votre annonce active",it:"Questo è il tuo annuncio attivo",es:"Este es tu anuncio activo",ru:"Это ваше активное объявление"}[currentLang] || "This is your active listing"}</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button type="button" class="hig-ws-emerald-btn" style="height:32px;min-height:32px !important;padding:0 12px;font-size:12px;" onclick="openQuickEditListingSheet(${item.id})">✎ ${escapeHtml(ptc.editBtn)}</button>
+              <button type="button" class="hig-ws-outline-pill" style="height:32px;min-height:32px !important;padding:0 12px;font-size:12px;cursor:pointer;background:#ffffff;" onclick="closeOfferModal(); openDashboardModal('proposals');">⇄ ${escapeHtml(t("dashTabProposals"))}</button>
+            </div>
+          </div>
+        ` : ""}
         <!-- ACTION MODE SWITCHER: SWAP vs BUY / CASH OFFER -->
         <div class="catalog-pills" style="margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;width:100%;gap:4px;">
           <button type="button" id="offerTabSwapBtn" class="cat-pill ${!startInBuyMode ? 'active' : ''}" style="justify-content:center;text-align:center;width:100%;" onclick="switchOfferActionTab('swap')">
@@ -6246,7 +6788,7 @@ function openOfferModal(offerId, mode = "details") {
                 <strong class="hig-action-title">${t("proposeSwapBtn")}</strong>
                 <span class="hig-action-sub">${mUi.zeroFeeDirect}</span>
               </div>
-              <span class="hig-price-badge">${valFormatted}</span>
+              <span class="hig-price-badge">${getOfferPreviousPriceFormatted(item, currentCurrency) ? `<del style="opacity:0.75;font-weight:500;font-size:11.5px;margin-right:5px;">${getOfferPreviousPriceFormatted(item, currentCurrency)}</del>` : ""}${valFormatted}</span>
             </div>
             <div class="hig-grouped-section">
               <div class="field-group" style="margin-bottom:10px;">
@@ -6255,7 +6797,7 @@ function openOfferModal(offerId, mode = "details") {
                   <option value="">${ptc.pickMyAdDefault}</option>
                   ${userPickableAds.map(ad => {
     const adLoc = getOfferLocalized(ad);
-    return `<option value="${ad.id}">${adLoc.title} (~${formatOfferPrice(ad, currentCurrency)})</option>`;
+    return `<option value="${ad.id}">${escapeHtml(adLoc.title)} (~${formatOfferPrice(ad, currentCurrency)})</option>`;
   }).join("")}
                 </select>
               </div>
@@ -6266,9 +6808,9 @@ function openOfferModal(offerId, mode = "details") {
                 </div>
                 <div>
                   <label class="hig-field-label">${yourValLabel}</label>
-                  <div style="display:grid;grid-template-columns:minmax(0, 1fr) 88px;gap:8px;align-items:center;">
-                    <input type="text" inputmode="decimal" id="calcMyValueInput" class="input-light" style="padding:0 14px !important;font-weight:700;font-variant-numeric:tabular-nums;min-width:0;width:100%;" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
-                    <select id="calcMyCurrencySelect" class="input-light" style="padding:0 26px 0 10px !important;font-size:13px;font-weight:700;width:88px;" onchange="updateSwapValueCalculator(${item.id})">
+                  <div style="display:grid;grid-template-columns:minmax(0, 1fr) 76px;gap:6px;align-items:center;">
+                    <input type="text" inputmode="decimal" id="calcMyValueInput" class="input-light" style="padding:8px 14px !important;font-weight:700;font-variant-numeric:tabular-nums;min-width:0;width:100%;" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
+                    <select id="calcMyCurrencySelect" class="input-light" style="padding:0 22px 0 9px !important;font-size:12.5px;font-weight:700;width:76px;" onchange="updateSwapValueCalculator(${item.id})">
                       ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code}</option>`).join("")}
                     </select>
                   </div>
@@ -6375,6 +6917,12 @@ function closeOfferModal() {
     document.body.classList.add("modal-open");
     renderAdminModalContent();
     syncUrlWithRoute("/admin");
+  } else if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+    document.body.classList.add("modal-open");
+    renderDashboardContent();
+    syncUrlWithRoute("/dashboard");
+  } else if (hasAnyOpenModalBackdrop()) {
+    document.body.classList.add("modal-open");
   } else {
     document.body.classList.remove("modal-open");
     syncUrlWithRoute(document.body.classList.contains("mobile-started") ? "/start" : "/");
@@ -6405,10 +6953,16 @@ function consumeFreeSwapIfLogged() {
 const consumeFreeSwapCredit = consumeFreeSwapIfLogged;
 function submitDirectSwapProposal(e, offerId) {
   e.preventDefault();
+  const rawContact = e?.target ? String(new FormData(e.target).get("senderContact") || "").trim() : "";
+  if (!requireAuthForPostingOrProposal("proposal", rawContact.includes("@") ? rawContact : "")) return;
   if (!canPerformSwapOrPost()) return;
   const ptc = getProposalToastCopy();
   const fd = new FormData(e.target);
   const item = offers.find(o => o.id === offerId);
+  if (item && isListingOwnedByCurrentUser(item)) {
+    showToast(currentLang === "ro" ? "! Nu poți trimite o propunere de schimb către propriul tău anunț." : "! You cannot send a swap proposal to your own listing.");
+    return;
+  }
   const loc = item ? getOfferLocalized(item) : { title: "Swap Offer" };
   const bannerEl = document.getElementById("calcResultBanner");
   const calcBanner = String(bannerEl?.innerText || bannerEl?.textContent || "").replace(/\n/g, " ").trim() || "1:1 Key-for-Key";
@@ -6448,7 +7002,11 @@ function submitDirectSwapProposal(e, offerId) {
 }
 function acceptSwapProposal(propId) {
   const p = swapProposals.find(x => x.id === propId);
-  if (!p) return;
+  const isBackofficeOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
+  if (!p || !canCurrentUserAccessProposal(p) || (!isBackofficeOpen && !isProposalIncomingForCurrentUser(p))) {
+    showToast(currentLang === "ro" ? "! Doar destinatarul propunerii poate accepta schimbul." : "! Only the proposal recipient can accept this swap.");
+    return;
+  }
   const ptc = getProposalToastCopy();
   p.statusKey = "accepted";
   p.status = ptc.statusAccepted;
@@ -6460,7 +7018,8 @@ function acceptSwapProposal(propId) {
 }
 function declineSwapProposal(propId) {
   const p = swapProposals.find(x => x.id === propId);
-  if (!p) return;
+  const isBackofficeOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
+  if (!p || !canCurrentUserAccessProposal(p) || (!isBackofficeOpen && !isProposalIncomingForCurrentUser(p))) return;
   p.statusKey = "declined";
   p.accepted = false;
   p.declined = true;
@@ -6470,7 +7029,7 @@ function declineSwapProposal(propId) {
 }
 function counterSwapProposal(propId, customCounterText = "") {
   const p = swapProposals.find(x => x.id === propId);
-  if (!p) return;
+  if (!p || !canCurrentUserAccessProposal(p)) return;
   p.statusKey = "counter";
   p.status = getProposalStatusLabel(p);
   activeProposalThreadId = propId;
@@ -6482,8 +7041,18 @@ function counterSwapProposal(propId, customCounterText = "") {
   }
 }
 function deleteSwapProposal(propId) {
+  const targetP = swapProposals.find(x => x.id === propId);
+  if (targetP && !canCurrentUserAccessProposal(targetP)) return;
+  const numId = Number(propId);
+  if (Number.isFinite(numId) && !deletedProposalIds.includes(numId)) {
+    deletedProposalIds.push(numId);
+    try { localStorage.setItem("ci4m_deleted_proposals_v1", JSON.stringify(deletedProposalIds)); } catch (e) {}
+  }
   swapProposals = swapProposals.filter(x => x.id !== propId);
   saveSwapProposals();
+  if (typeof scheduleCloudSyncPush === "function") {
+    scheduleCloudSyncPush({ deletedProposalIds });
+  }
   updateFavCountUI();
   renderDashboardContent();
 }
@@ -6516,8 +7085,24 @@ function saveDashboardProfile(e) {
   e.preventDefault();
   if (!currentUser) return;
   const fd = new FormData(e.target);
-  currentUser.name = String(fd.get("name") || currentUser.name).trim();
-  currentUser.phone = String(fd.get("phone") || "").trim();
+  const am = getAuthMsg();
+  const nextName = String(fd.get("name") || currentUser.name).trim();
+  if (nextName.length < 3 || /^(test|fake|asdf|qwerty|1234)/i.test(nextName)) {
+    showToast(am.invalidName);
+    return;
+  }
+  const nextPhone = String(fd.get("phone") || "").trim();
+  if (nextPhone && !isValidRealPhone(nextPhone)) {
+    showToast(am.invalidPhone);
+    return;
+  }
+  const newPass = String(fd.get("newPassword") || "");
+  if (newPass && newPass.length < 6) {
+    showToast(am.pwdTooShort || am.pwdMismatch);
+    return;
+  }
+  currentUser.name = nextName;
+  currentUser.phone = nextPhone;
   currentUser.country = String(fd.get("country") || currentUser.country).trim();
   const nextLang = String(fd.get("prefLang") || currentLang);
   const nextCurr = String(fd.get("prefCurrency") || currentCurrency);
@@ -6526,11 +7111,24 @@ function saveDashboardProfile(e) {
   localStorage.setItem("ci4m_user", JSON.stringify(currentUser));
   const emailKey = String(currentUser.email || "").trim().toLowerCase();
   if (emailKey) {
+    const existingAcc = accountsDb[emailKey] || {};
     accountsDb[emailKey] = {
-      ...(accountsDb[emailKey] || {}),
-      ...currentUser
+      ...existingAcc,
+      ...currentUser,
+      password: newPass ? hashUserPassword(emailKey, newPass) : (existingAcc.password || "")
     };
     saveAccountsDb();
+    let updatedAnyListing = false;
+    offers.forEach(o => {
+      if (isListingOwnedByCurrentUser(o) && o.owner !== nextName) {
+        o.owner = nextName;
+        updatedAnyListing = true;
+      }
+    });
+    if (updatedAnyListing) {
+      saveOffersToStorage();
+      renderOffers();
+    }
   }
   if (nextLang !== currentLang) setLanguage(nextLang);
   if (nextCurr !== currentCurrency) setCurrency(nextCurr);
@@ -6577,11 +7175,12 @@ function sendQuickProposalChip(propId, text) {
 }
 function appendProposalMessage(propId, text) {
   const p = swapProposals.find(x => x.id === propId);
-  if (!p) return;
+  if (!p || !canCurrentUserAccessProposal(p)) return;
   ensureProposalMessages(p);
   const nowStr = new Date().toTimeString().slice(0, 5);
   p.messages.push({
     sender: "me",
+    senderEmail: currentUser ? String(currentUser.email || "").trim().toLowerCase() : "",
     author: currentUser ? currentUser.name.split(" ")[0] : "Tu",
     text,
     time: nowStr
@@ -6596,7 +7195,9 @@ function appendProposalMessage(propId, text) {
   });
   activeProposalThreadId = propId;
   renderDashboardContent();
-  setTimeout(() => {
+  const isDemoSeedProp = Number(p.id) === 901 || Number(p.id) === 902;
+  const alreadyAutoReplied = Array.isArray(p.messages) && p.messages.some(m => m.isAutoDemoReply);
+  if (isDemoSeedProp && !alreadyAutoReplied) setTimeout(() => {
     const autoReplyMap = {
       ro: "Perfect, sunt de acord! Putem face verificarea și semna Acordul de Schimb 1:1 direct fără comision.",
       en: "Sounds great, I agree! We can do the inspection and sign the 1:1 Swap Agreement with 0% commission.",
@@ -6608,6 +7209,7 @@ function appendProposalMessage(propId, text) {
     };
     p.messages.push({
       sender: "partner",
+      isAutoDemoReply: true,
       author: p.partner.split("(")[0].trim(),
       text: autoReplyMap[currentLang] || autoReplyMap.en,
       time: new Date().toTimeString().slice(0, 5)
@@ -6620,7 +7222,7 @@ function appendProposalMessage(propId, text) {
 }
 function openSwapAgreementModal(propId) {
   const p = swapProposals.find(x => x.id === propId);
-  if (!p) return;
+  if (!p || !canCurrentUserAccessProposal(p)) return;
   const content = document.getElementById("guideModalContent");
   if (!content) return;
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -6771,8 +7373,18 @@ function openSwapAgreementModal(propId) {
 }
 const openPrintableSwapAgreement = openSwapAgreementModal;
 function deleteWatchlistAlert(alertId) {
+  const targetA = watchlistAlerts.find(a => a.id === alertId);
+  if (targetA && targetA.email && currentUser?.email && !adminAuthenticated && !isSameUserEmailAlias(targetA.email, currentUser.email)) return;
+  const numId = Number(alertId);
+  if (Number.isFinite(numId) && !deletedWatchlistIds.includes(numId)) {
+    deletedWatchlistIds.push(numId);
+    try { localStorage.setItem("ci4m_deleted_watchlist_v1", JSON.stringify(deletedWatchlistIds)); } catch (e) {}
+  }
   watchlistAlerts = watchlistAlerts.filter(a => a.id !== alertId);
   saveWatchlistAlerts();
+  if (typeof scheduleCloudSyncPush === "function") {
+    scheduleCloudSyncPush({ deletedWatchlistIds });
+  }
   renderDashboardContent();
 }
 let currentProposalDirFilter = "all";
@@ -6787,12 +7399,13 @@ function renderDashboardContent() {
   const myItems = (currentUser && typeof getAccountLinkedOffers === "function")
     ? getAccountLinkedOffers(currentUser)
     : [];
+  const myProposals = swapProposals.filter(p => isProposalOwnedByCurrentUser(p));
   const favOffers = offers.filter(o => favoriteIds.includes(o.id));
   const cMy = document.getElementById("dashCountMyListings");
   const cPr = document.getElementById("dashCountProposals");
   const cFv = document.getElementById("dashCountFavorites");
   if (cMy) cMy.textContent = String(myItems.length);
-  if (cPr) cPr.textContent = String(swapProposals.length);
+  if (cPr) cPr.textContent = String(myProposals.length);
   if (cFv) cFv.textContent = String(favOffers.length);
   if (currentUser) {
     const initials = (currentUser.name || "U").split(" ").filter(Boolean).map(p => p[0]).join("").slice(0, 2).toUpperCase();
@@ -6814,10 +7427,20 @@ function renderDashboardContent() {
   };
   const dl = dashLabelsMap[currentLang] || dashLabelsMap.en;
   const totalPortfolioEur = myItems.reduce((acc, it) => acc + (Number(it.valueEur) || 0), 0);
-  const incCount = swapProposals.filter(p => p.direction === "Incoming").length;
-  const outCount = swapProposals.length - incCount;
+  const incCount = myProposals.filter(p => isProposalIncomingForCurrentUser(p)).length;
+  const outCount = myProposals.length - incCount;
   const isProPlan = Boolean(currentUser && currentUser.plan === "pro");
   const remSwaps = currentUser && typeof currentUser.freeSwaps === "number" ? currentUser.freeSwaps : 10;
+  const kpiSubMap = {
+    ro: { zeroFee: "0% Comision", inOut: `${incCount} primite · ${outCount} trimise`, ready: "Schimb 1:1", ver: "Verificat ✓", allWord: "Toate" },
+    en: { zeroFee: "0% Commission", inOut: `${incCount} in · ${outCount} out`, ready: "1:1 Ready", ver: "Verified ✓", allWord: "All" },
+    de: { zeroFee: "0% Provision", inOut: `${incCount} eing. · ${outCount} ges.`, ready: "1:1 Bereit", ver: "Verifiziert ✓", allWord: "Alle" },
+    fr: { zeroFee: "0% Commission", inOut: `${incCount} reçues · ${outCount} env.`, ready: "Échange 1:1", ver: "Vérifié ✓", allWord: "Toutes" },
+    it: { zeroFee: "0% Commissione", inOut: `${incCount} ric. · ${outCount} inv.`, ready: "Scambio 1:1", ver: "Verificato ✓", allWord: "Tutte" },
+    es: { zeroFee: "0% Comisión", inOut: `${incCount} rec. · ${outCount} env.`, ready: "Cambio 1:1", ver: "Verificado ✓", allWord: "Todas" },
+    ru: { zeroFee: "0% комиссия", inOut: `${incCount} вх. · ${outCount} исх.`, ready: "Обмен 1:1", ver: "Проверен ✓", allWord: "Все" }
+  };
+  const ks = kpiSubMap[currentLang] || kpiSubMap.en;
   const kpiRowHtml = `
     <div class="hig-ws-kpi-grid">
       <div class="hig-ws-kpi-card" onclick="switchDashboardTab('mylistings')">
@@ -6828,22 +7451,22 @@ function renderDashboardContent() {
       <div class="hig-ws-kpi-card" onclick="switchDashboardTab('mylistings')">
         <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi2}</span><span class="hig-ws-kpi-dot"></span></div>
         <strong class="hig-ws-kpi-val">${formatCurrency(totalPortfolioEur, currentCurrency)}</strong>
-        <div><span class="hig-sla-pill">0% Commission</span></div>
+        <div><span class="hig-sla-pill">${ks.zeroFee}</span></div>
       </div>
       <div class="hig-ws-kpi-card" onclick="switchDashboardTab('proposals')">
         <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi3}</span><span class="hig-ws-kpi-dot"></span></div>
-        <strong class="hig-ws-kpi-val">${swapProposals.length}</strong>
-        <div><span class="hig-sla-pill">${incCount} in · ${outCount} out</span></div>
+        <strong class="hig-ws-kpi-val">${myProposals.length}</strong>
+        <div><span class="hig-sla-pill">${ks.inOut}</span></div>
       </div>
       <div class="hig-ws-kpi-card" onclick="switchDashboardTab('favorites')">
         <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi4}</span><span class="hig-ws-kpi-dot"></span></div>
         <strong class="hig-ws-kpi-val">${favOffers.length}</strong>
-        <div><span class="hig-sla-pill">1:1 Ready</span></div>
+        <div><span class="hig-sla-pill">${ks.ready}</span></div>
       </div>
       <div class="hig-ws-kpi-card" onclick="switchDashboardTab('profile')">
         <div class="hig-ws-kpi-top"><span class="hig-ws-kpi-label">${dl.kpi5}</span><span class="hig-ws-kpi-dot"></span></div>
         <strong class="hig-ws-kpi-val">${isProPlan ? "PRO ∞" : `${remSwaps}`}</strong>
-        <div><span class="hig-sla-pill">Verified ✓</span></div>
+        <div><span class="hig-sla-pill">${ks.ver}</span></div>
       </div>
     </div>
   `;
@@ -6900,9 +7523,10 @@ function renderDashboardContent() {
       </div>
     `;
   } else if (currentDashTab === "proposals") {
-    const filteredProps = swapProposals.filter(p => {
-      if (currentProposalDirFilter === "incoming") return p.direction === "Incoming";
-      if (currentProposalDirFilter === "outgoing") return p.direction !== "Incoming";
+    const filteredProps = myProposals.filter(p => {
+      const inc = isProposalIncomingForCurrentUser(p);
+      if (currentProposalDirFilter === "incoming") return inc;
+      if (currentProposalDirFilter === "outgoing") return !inc;
       return true;
     });
     container.innerHTML = `
@@ -6911,10 +7535,10 @@ function renderDashboardContent() {
         <div class="hig-ws-panel-head">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <strong style="font-size:15.5px;font-weight:750;color:#0f172a;">${t("dashTabProposals")}</strong>
-            <span class="hig-sla-pill">${swapProposals.length}</span>
+            <span class="hig-sla-pill">${myProposals.length}</span>
           </div>
           <div class="bo-segmented-control">
-            <button type="button" class="bo-seg-btn ${currentProposalDirFilter === "all" ? "active" : ""}" onclick="setProposalDirFilter('all')">All (${swapProposals.length})</button>
+            <button type="button" class="bo-seg-btn ${currentProposalDirFilter === "all" ? "active" : ""}" onclick="setProposalDirFilter('all')">${ks.allWord} (${myProposals.length})</button>
             <button type="button" class="bo-seg-btn ${currentProposalDirFilter === "incoming" ? "active" : ""}" onclick="setProposalDirFilter('incoming')">${dl.incoming} (${incCount})</button>
             <button type="button" class="bo-seg-btn ${currentProposalDirFilter === "outgoing" ? "active" : ""}" onclick="setProposalDirFilter('outgoing')">${dl.outgoing} (${outCount})</button>
           </div>
@@ -6925,7 +7549,8 @@ function renderDashboardContent() {
       const statusLabel = getProposalStatusLabel(p);
       const contact = getProposalPartnerContact(p);
       const cleanWaPhone = String(contact.phone || "").replace(/[^\d]/g, "");
-      const isIncoming = p.direction === "Incoming";
+      const isIncoming = isProposalIncomingForCurrentUser(p);
+      const partnerDisplay = getProposalPartnerDisplayForCurrentUser(p);
       const dirLabel = isIncoming ? dl.incoming : (p.direction === "Buy Offer" ? t("buyOfferBtn") : dl.outgoing);
       const targetOff = p.offerId ? offers.find(o => o.id === Number(p.offerId)) : null;
       const targetImg = p.targetImage || targetOff?.image || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80";
@@ -6937,7 +7562,7 @@ function renderDashboardContent() {
                   <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:${isIncoming ? "#0d8a5e" : "#f1f5f9"};color:${isIncoming ? "#ffffff" : "#334155"};border:1px solid ${isIncoming ? "#0b7a53" : "#e2e8f0"};">
                     ${escapeHtml(dirLabel)}
                   </span>
-                  <span style="font-size:13px;font-weight:650;color:#0f172a;">${dl.partner}: ${escapeHtml(p.partner)}</span>
+                  <span style="font-size:13px;font-weight:650;color:#0f172a;">${dl.partner}: ${escapeHtml(partnerDisplay)}</span>
                 </div>
                 <span class="hig-sla-pill" style="${p.declined ? "background:#fff1f2;color:#be123c;border-color:#fecdd3;" : ""}">
                   ${p.declined ? "✕" : "●"} ${escapeHtml(statusLabel)}
@@ -6981,12 +7606,17 @@ function renderDashboardContent() {
               ${isThreadOpen ? `
                 <div style="margin-top:10px;padding:13px;background:#f8fafc;border:1px solid #e6ebf1;border-radius:14px;">
                   <div style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
-                    ${msgs.map(m => `
-                      <div style="align-self:${m.sender === "me" ? "flex-end" : "flex-start"};max-width:85%;padding:8px 12px;border-radius:14px;font-size:12.5px;background:${m.sender === "me" ? "#0d8a5e" : "#ffffff"};color:${m.sender === "me" ? "#ffffff" : "#0f172a"};border:1px solid ${m.sender === "me" ? "#0b7a53" : "#e2e8f0"};">
+                    ${msgs.map(m => {
+                      const isMine = (m.senderEmail && currentUser?.email)
+                        ? isSameUserEmailAlias(m.senderEmail, currentUser.email)
+                        : (m.sender === "me" && !m.senderEmail);
+                      return `
+                      <div style="align-self:${isMine ? "flex-end" : "flex-start"};max-width:85%;padding:8px 12px;border-radius:14px;font-size:12.5px;background:${isMine ? "#0d8a5e" : "#ffffff"};color:${isMine ? "#ffffff" : "#0f172a"};border:1px solid ${isMine ? "#0b7a53" : "#e2e8f0"};">
                         <strong style="font-size:10.5px;opacity:0.85;display:block;">${escapeHtml(m.author)} · ${escapeHtml(m.time)}</strong>
                         <span>${escapeHtml(m.text)}</span>
                       </div>
-                    `).join("")}
+                    `;
+                    }).join("")}
                   </div>
                   <div class="wiz-chip-row" style="margin-bottom:8px;">
                     <button type="button" class="hig-ws-outline-pill" style="height:28px;min-height:28px !important;font-size:11.5px;cursor:pointer;" onclick="sendQuickProposalChip(${p.id}, '${dl.chip1.replace(/'/g, "\'")}')">+ ${dl.chip1}</button>
@@ -7005,6 +7635,7 @@ function renderDashboardContent() {
       </div>
     `;
   } else if (currentDashTab === "favorites") {
+    const fc = getFavPriceAlertCopy();
     container.innerHTML = `
       ${kpiRowHtml}
       <div class="hig-ws-panel">
@@ -7016,16 +7647,25 @@ function renderDashboardContent() {
         </div>
         ${favOffers.length === 0 ? `<div style="padding:28px 20px;text-align:center;background:#f8fafc;border-radius:14px;border:1px solid #e6ebf1;"><p style="color:#64748b;margin:0;">${dl.emptyFav}</p></div>` : favOffers.map(item => {
       const loc = getOfferLocalized(item);
+      const prevPriceFormatted = getOfferPreviousPriceFormatted(item, currentCurrency);
+      const currPriceFormatted = formatOfferPrice(item, currentCurrency);
+      const isPriceDrop = prevPriceFormatted && Number(item.valueEur) < Number(item.previousValueEur);
+      const priceAlertBanner = prevPriceFormatted ? `
+        <div style="margin-top:6px;padding:6px 10px;border-radius:10px;background:${isPriceDrop ? '#ecfdf5' : '#fefce8'};border:1px solid ${isPriceDrop ? '#a7f3d0' : '#fde68a'};color:${isPriceDrop ? '#065f46' : '#92400e'};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span>● ${isPriceDrop ? fc.badgeDrop : fc.badgeUpdated}: <del style="opacity:0.75;font-weight:500;">${prevPriceFormatted}</del> → <strong>${currPriceFormatted}</strong></span>
+        </div>
+      ` : "";
       return `
             <div class="hig-my-listing-card">
               <div class="hig-my-listing-main">
-                <img src="${item.image}" class="hig-my-listing-thumb" onclick="openOfferModal(${item.id}, 'details')" alt="" />
+                <img src="${escapeHtml(item.image)}" class="hig-my-listing-thumb" onclick="openOfferModal(${item.id}, 'details')" alt="" />
                 <div style="min-width:0;flex:1;">
                   <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
                     <strong style="font-size:16px;color:#0f172a;cursor:pointer;" onclick="openOfferModal(${item.id}, 'details')">${escapeHtml(loc.title)}</strong>
-                    <strong style="font-size:15.5px;color:#0d8a5e;font-variant-numeric:tabular-nums;">${formatOfferPrice(item, currentCurrency)}</strong>
+                    <strong style="font-size:15.5px;color:#0d8a5e;font-variant-numeric:tabular-nums;">${prevPriceFormatted ? `<del style="font-size:12px;color:#94a3b8;font-weight:500;margin-right:6px;">${prevPriceFormatted}</del>` : ""}${currPriceFormatted}</strong>
                   </div>
                   <span style="display:block;font-size:12.5px;color:#64748b;margin-top:4px;">${PREMIUM_ICONS.pin}${escapeHtml(item.city)}, ${escapeHtml(item.country)} · <strong style="color:#0f172a;">${t("wantBadge")}:</strong> ${escapeHtml(loc.want)}</span>
+                  ${priceAlertBanner}
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:6px;">
@@ -7041,17 +7681,18 @@ function renderDashboardContent() {
     `;
   } else if (currentDashTab === "profile") {
     const u = currentUser || { name: "", email: "", phone: "", country: "Romania", prefLang: currentLang, prefCurrency: currentCurrency };
-    const alertsHtml = watchlistAlerts.length > 0 ? `
+    const myWatchlist = watchlistAlerts.filter(a => !a.email || !u.email || isSameUserEmailAlias(a.email, u.email));
+    const alertsHtml = myWatchlist.length > 0 ? `
       <div style="margin-top:16px;">
-        <strong style="display:block;font-size:14px;margin-bottom:8px;color:#0f172a;">${dl.watchlistTitle} (${watchlistAlerts.length})</strong>
-        ${watchlistAlerts.map(a => `
+        <strong style="display:block;font-size:14px;margin-bottom:8px;color:#0f172a;">${dl.watchlistTitle} (${myWatchlist.length})</strong>
+        ${myWatchlist.map(a => `
           <div class="dash-list-item" style="padding:10px 14px;">
             <div>
-              <strong>${a.interest}</strong>
-              <span style="font-size:12px;color:#64748b;display:block;">${a.country} · ${a.email}</span>
+              <strong>${escapeHtml(a.interest)}</strong>
+              <span style="font-size:12px;color:#64748b;display:block;">${escapeHtml(a.country)} · ${escapeHtml(a.email)}</span>
             </div>
             <div style="display:flex;gap:6px;">
-              <button type="button" class="hig-ws-emerald-btn" onclick="closeDashboardModal(); executeQuickKeywordSearch('${a.interest.replace(/'/g, "\'")}')">${dl.view}</button>
+              <button type="button" class="hig-ws-emerald-btn" onclick="closeDashboardModal(); executeQuickKeywordSearch('${escapeJsStr(a.interest)}')">${dl.view}</button>
               <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteWatchlistAlert(${a.id})">✕</button>
             </div>
           </div>
@@ -7102,18 +7743,22 @@ function renderDashboardContent() {
           </div>
         </div>
         <div class="form-grid-2">
-          <div class="field-group" style="margin-bottom:0;">
+          <div class="field-group">
             <label style="color:#0f172a;font-weight:700;">${t("formPrefLang")}</label>
             <select name="prefLang" class="input-light">
               ${(window.LANGUAGES || []).map(l => `<option value="${l.code}" ${currentLang === l.code ? "selected" : ""}>${l.label || l.name}</option>`).join("")}
             </select>
           </div>
-          <div class="field-group" style="margin-bottom:0;">
+          <div class="field-group">
             <label style="color:#0f172a;font-weight:700;">${t("formPrefCurrency")}</label>
             <select name="prefCurrency" class="input-light">
               ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${currentCurrency === c.code ? "selected" : ""}>${c.code} (${c.symbol})</option>`).join("")}
             </select>
           </div>
+        </div>
+        <div class="field-group" style="margin-bottom:0;">
+          <label style="color:#0f172a;font-weight:700;">${t("formPassword")} (${{ro:"opțional — lasă gol pentru a păstra parola actuală",en:"optional — leave blank to keep current password",de:"optional — leer lassen, um aktuelles Passwort zu behalten",fr:"optionnel — laisser vide pour conserver le mot de passe actuel",it:"opzionale — lascia vuoto per mantenere la password attuale",es:"opcional — dejar vacío para mantener la contraseña actual",ru:"необязательно — оставьте пустым, чтобы сохранить текущий пароль"}[currentLang] || "optional"})</label>
+          <input type="password" name="newPassword" class="input-light" minlength="6" placeholder="••••••••" autocomplete="new-password" />
         </div>
         <button type="submit" class="hig-ws-emerald-btn" style="margin-top:16px;width:100%;height:42px !important;justify-content:center;font-size:13.5px;">
           ✓ ${dl.saveBtn}
@@ -7173,7 +7818,7 @@ function openGuideModal(guideKey) {
 }
 function closeGuideModal() {
   document.getElementById("guideModal").classList.remove("open");
-  if (document.getElementById("adminModal")?.classList.contains("open")) {
+  if (hasAnyOpenModalBackdrop()) {
     document.body.classList.add("modal-open");
   } else {
     document.body.classList.remove("modal-open");
@@ -7250,8 +7895,8 @@ function handleChatSubmit(e) {
         const loc = getOfferLocalized(item);
         return `
           <div style="margin-top:6px;padding:7px 9px;background:#fff;border:1px solid rgba(12,44,40,0.12);border-radius:10px;cursor:pointer;" onclick="toggleChatDock(); openOfferModal(${item.id}, 'details')">
-            <div style="font-weight:700;font-size:12.5px;color:var(--forest);">${loc.title}</div>
-            <div style="font-size:11.5px;color:var(--muted);">${item.city} · ~${formatOfferPrice(item, currentCurrency)} ${isAi ? `· <span style="color:#0a5c46;font-weight:700;">${reason || cr.aiTag}</span>` : ""}</div>
+            <div style="font-weight:700;font-size:12.5px;color:var(--forest);">${escapeHtml(loc.title)}</div>
+            <div style="font-size:11.5px;color:var(--muted);">${escapeHtml(item.city)} · ~${formatOfferPrice(item, currentCurrency)} ${isAi ? `· <span style="color:#0a5c46;font-weight:700;">${escapeHtml(reason || cr.aiTag)}</span>` : ""}</div>
           </div>
         `;
       }).join("");
@@ -7438,6 +8083,7 @@ function requestDeleteListing(offerId) {
   });
 }
 function requestAdminDeleteAccount(emailKey) {
+  if (!adminAuthenticated) return;
   const k = String(emailKey || "").toLowerCase();
   const acc = accountsDb[k];
   if (!acc || k === BACKOFFICE_ADMIN_EMAIL) return;
@@ -7466,7 +8112,7 @@ function requestAdminDeleteAccount(emailKey) {
 }
 function requestDeleteProposal(propId) {
   const p = swapProposals.find(x => x.id === Number(propId));
-  if (!p) return;
+  if (!p || !canCurrentUserAccessProposal(p)) return;
   const snapshot = { ...p };
   const isRo = currentLang === "ro";
   openAppleDestructiveConfirmSheet({
@@ -7549,31 +8195,43 @@ function openQuickEditListingSheet(offerId) {
   const activeCurr = item.originalCurrency || currentCurrency || "EUR";
   const displayAmt = item.originalAmount || getOfferValueInCurrency(item, activeCurr);
   const cats = ["cars", "real-estate", "electronics", "home-garden", "auto-parts", "clothing"];
+  const isBoOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
+  const qeLang = isBoOpen ? "en" : currentLang;
+  const qeCopyMap = {
+    ro: { cancel: "Anulează", editTitle: `Editează Anunțul #${item.id}`, save: "Salvează", titleHave: "Titlu (Ce oferi)", cat: "Categorie", val: "Valoare Estimată", curr: "Monedă", deal: "Tip Tranzacție", want: "Ce dorești la schimb", city: "Oraș", country: "Țară", specs: "Specificații & Detalii cheie", desc: "Descriere", photo: "Fotografie principală (Încarcă sau URL)", upload: "Încarcă…", ownerName: "Nume Proprietar", ownerEmail: "Email Proprietar", delBtn: "Șterge Anunțul…", wizBtn: "Deschide în 7-Step Wizard…" },
+    en: { cancel: "Cancel", editTitle: `Edit Listing #${item.id}`, save: "Save Changes", titleHave: "Title (What You Have)", cat: "Category", val: "Estimated Value", curr: "Currency", deal: "Deal Type", want: "What You Want in Return", city: "City", country: "Country", specs: "Specifications & Highlights", desc: "Description", photo: "Cover Photo (Upload or URL)", upload: "Upload…", ownerName: "Owner Name", ownerEmail: "Owner Email", delBtn: "Delete Listing…", wizBtn: "7-Step Wizard…" },
+    de: { cancel: "Abbrechen", editTitle: `Inserat #${item.id} bearbeiten`, save: "Speichern", titleHave: "Titel (Was Sie bieten)", cat: "Kategorie", val: "Geschätzter Wert", curr: "Währung", deal: "Tauschart", want: "Was Sie im Tausch suchen", city: "Stadt", country: "Land", specs: "Technische Daten & Merkmale", desc: "Beschreibung", photo: "Titelbild (Hochladen oder URL)", upload: "Hochladen…", ownerName: "Name des Eigentümers", ownerEmail: "E-Mail des Eigentümers", delBtn: "Inserat löschen…", wizBtn: "7-Schritte-Assistent…" },
+    fr: { cancel: "Annuler", editTitle: `Modifier l'annonce #${item.id}`, save: "Enregistrer", titleHave: "Titre (Ce que vous offrez)", cat: "Catégorie", val: "Valeur estimée", curr: "Devise", deal: "Type d'échange", want: "Ce que vous souhaitez en échange", city: "Ville", country: "Pays", specs: "Caractéristiques & points forts", desc: "Description", photo: "Photo principale (Téléverser ou URL)", upload: "Téléverser…", ownerName: "Nom du propriétaire", ownerEmail: "E-mail du propriétaire", delBtn: "Supprimer l'annonce…", wizBtn: "Assistant 7 étapes…" },
+    it: { cancel: "Annulla", editTitle: `Modifica annuncio #${item.id}`, save: "Salva modifiche", titleHave: "Titolo (Cosa offri)", cat: "Categoria", val: "Valore stimato", curr: "Valuta", deal: "Tipo di scambio", want: "Cosa cerchi in cambio", city: "Città", country: "Paese", specs: "Specifiche e dettagli principali", desc: "Descrizione", photo: "Foto principale (Carica o URL)", upload: "Carica…", ownerName: "Nome proprietario", ownerEmail: "Email proprietario", delBtn: "Elimina annuncio…", wizBtn: "Procedura in 7 passi…" },
+    es: { cancel: "Cancelar", editTitle: `Editar anuncio #${item.id}`, save: "Guardar cambios", titleHave: "Título (Lo que ofreces)", cat: "Categoría", val: "Valor estimado", curr: "Moneda", deal: "Tipo de trato", want: "Lo que buscas a cambio", city: "Ciudad", country: "País", specs: "Especificaciones y detalles", desc: "Descripción", photo: "Foto principal (Subir o URL)", upload: "Subir…", ownerName: "Nombre del propietario", ownerEmail: "Correo del propietario", delBtn: "Eliminar anuncio…", wizBtn: "Asistente de 7 pasos…" },
+    ru: { cancel: "Отмена", editTitle: `Изменить объявление #${item.id}`, save: "Сохранить", titleHave: "Название (Что вы предлагаете)", cat: "Категория", val: "Оценочная стоимость", curr: "Валюта", deal: "Тип сделки", want: "Что вы ищете взамен", city: "Город", country: "Страна", specs: "Характеристики и детали", desc: "Описание", photo: "Главное фото (Загрузить или URL)", upload: "Загрузить…", ownerName: "Имя владельца", ownerEmail: "Email владельца", delBtn: "Удалить объявление…", wizBtn: "Мастер из 7 шагов…" }
+  };
+  const qc = qeCopyMap[qeLang] || qeCopyMap.en;
   content.innerHTML = `
     <form onsubmit="handleQuickEditListingSubmit(event, ${item.id})">
       <div class="hig-sheet-toolbar">
-        <button type="button" class="hig-btn-cancel" onclick="closeAppleSheetModal()">Cancel</button>
-        <h3 class="hig-sheet-title">Edit Listing #${item.id}</h3>
-        <button type="submit" class="hig-btn-save">Save Changes</button>
+        <button type="button" class="hig-btn-cancel" onclick="closeAppleSheetModal()">${qc.cancel}</button>
+        <h3 class="hig-sheet-title">${qc.editTitle}</h3>
+        <button type="submit" class="hig-btn-save">${qc.save}</button>
       </div>
       <div style="display:grid;gap:12px;">
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Title (What You Have)</label>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.titleHave}</label>
           <input type="text" name="title" required value="${escapeHtml(item.title || loc.title || "")}" class="input-light" style="height:40px;font-size:13.5px;" />
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Category</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.cat}</label>
             <select name="category" class="input-light" style="height:40px;font-size:13px;">
               ${cats.map(cat => `<option value="${cat}" ${item.category === cat ? 'selected' : ''}>${getCategoryLabel(cat)}</option>`).join("")}
             </select>
           </div>
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Estimated Value</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.val}</label>
             <input type="text" inputmode="decimal" name="amount" required value="${displayAmt}" class="input-light" style="height:40px;font-size:13.5px;" />
           </div>
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Currency</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.curr}</label>
             <select name="currency" class="input-light" style="height:40px;font-size:13px;">
               ${(window.CURRENCIES || []).map(c => `<option value="${c.code}" ${c.code === activeCurr ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join("")}
             </select>
@@ -7581,7 +8239,7 @@ function openQuickEditListingSheet(offerId) {
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Deal Type</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.deal}</label>
             <select name="dealType" class="input-light" style="height:40px;font-size:13px;">
               <option value="1to1" ${item.dealType === '1to1' ? 'selected' : ''}>${t("deal1to1")}</option>
               <option value="cash" ${item.dealType === 'cash' ? 'selected' : ''}>${t("dealCashAdd")}</option>
@@ -7590,56 +8248,56 @@ function openQuickEditListingSheet(offerId) {
             </select>
           </div>
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">What You Want in Return</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.want}</label>
             <input type="text" name="want" required value="${escapeHtml(item.want || loc.want || "")}" class="input-light" style="height:40px;font-size:13.5px;" />
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">City</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.city}</label>
             <input type="text" name="city" required value="${escapeHtml(item.city || "Bucharest")}" class="input-light" style="height:40px;font-size:13.5px;" />
           </div>
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Country</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.country}</label>
             <select name="country" class="input-light" style="height:40px;font-size:13px;">
               ${Object.keys(COUNTRY_COORDS).map(cnt => `<option value="${cnt}" ${item.country === cnt ? 'selected' : ''}>${getLocalizedCountryName(cnt)}</option>`).join("")}
             </select>
           </div>
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Specifications & Highlights</label>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.specs}</label>
           <input type="text" name="specs" value="${escapeHtml(item.specs || "")}" class="input-light" style="height:40px;font-size:13px;" />
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Description</label>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.desc}</label>
           <textarea name="desc" rows="2" class="input-light" style="font-size:13px;">${escapeHtml(item.desc || loc.desc || "")}</textarea>
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Cover Photo (Upload or URL)</label>
+          <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.photo}</label>
           <div style="display:flex;gap:8px;align-items:center;">
             <img id="quickEditPhotoThumb" src="${escapeHtml(item.image || "")}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;border:1px solid #cbd5e1;flex-shrink:0;" alt="" />
             <input type="text" id="quickEditPhotoInput" name="image" value="${escapeHtml(item.image || "")}" class="input-light" style="height:40px;font-size:12.5px;flex:1;" oninput="const th=document.getElementById('quickEditPhotoThumb');if(th&&this.value)th.src=this.value;" />
             <label class="hig-btn-cancel" style="height:40px;display:inline-flex;align-items:center;padding:0 14px;font-size:12px;white-space:nowrap;cursor:pointer;margin:0;">
-              Upload…
+              ${qc.upload}
               <input type="file" accept="image/*" style="display:none;" onchange="handleQuickEditPhotoUpload(event)" />
             </label>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Owner Name</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.ownerName}</label>
             <input type="text" name="owner" value="${escapeHtml(item.owner || "")}" class="input-light" style="height:40px;font-size:13px;" />
           </div>
           <div>
-            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">Owner Email</label>
-            <input type="email" name="ownerEmail" value="${escapeHtml(item.ownerEmail || "")}" class="input-light" style="height:40px;font-size:13px;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:4px;">${qc.ownerEmail}</label>
+            <input type="email" name="ownerEmail" value="${escapeHtml(item.ownerEmail || currentUser?.email || "")}" ${isBoOpen ? "" : "readonly disabled"} class="input-light" style="height:40px;font-size:13px;${isBoOpen ? "" : "opacity:0.72;cursor:not-allowed;"}" />
           </div>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(12,44,40,0.12);flex-wrap:wrap;">
-        <button type="button" class="hig-btn-destructive-outline" onclick="closeAppleSheetModal(); requestDeleteListing(${item.id});">Delete Listing…</button>
+        <button type="button" class="hig-btn-destructive-outline" onclick="closeAppleSheetModal(); requestDeleteListing(${item.id});">${qc.delBtn}</button>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="hig-btn-cancel" onclick="closeAppleSheetModal(); editListingInWizard(${item.id});">7-Step Wizard…</button>
+          <button type="button" class="hig-btn-cancel" onclick="closeAppleSheetModal(); editListingInWizard(${item.id});">${qc.wizBtn}</button>
         </div>
       </div>
     </form>
@@ -7659,6 +8317,7 @@ function handleQuickEditPhotoUpload(e) {
   });
 }
 function exportFullBackofficeBackupJson() {
+  if (!adminAuthenticated) return;
   const backup = {
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -7683,6 +8342,7 @@ function exportFullBackofficeBackupJson() {
   showToast("✓ Full Database Backup (.json) downloaded!");
 }
 function importFullBackofficeBackupJson(e) {
+  if (!adminAuthenticated) return;
   const file = e?.target?.files?.[0];
   if (!file) return;
   const reader = new FileReader();
@@ -7720,8 +8380,14 @@ function handleQuickEditListingSubmit(e, offerId) {
   const specs = String(fd.get("specs") || item.specs).trim();
   const desc = String(fd.get("desc") || item.desc).trim();
   const imgUrl = String(fd.get("image") || item.image).trim();
+  const isBackofficeOpen = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
   const owner = String(fd.get("owner") || item.owner).trim();
-  const ownerEmail = String(fd.get("ownerEmail") || item.ownerEmail || "").trim();
+  const ownerEmail = isBackofficeOpen
+    ? String(fd.get("ownerEmail") || item.ownerEmail || "").trim()
+    : String(item.ownerEmail || currentUser?.email || "").trim();
+  const prevValueEur = item.valueEur;
+  const prevOrigAmt = item.originalAmount;
+  const prevOrigCurr = item.originalCurrency;
   const parsedLoc = parseSmartLocationString(`${city}, ${country}`);
   Object.assign(item, {
     title,
@@ -7744,6 +8410,9 @@ function handleQuickEditListingSubmit(e, offerId) {
     createdByUser: true,
     i18n: undefined
   });
+  const notifiedFavCount = recordListingPriceChangeAndNotifyFavorites(
+    item, prevValueEur, prevOrigAmt, prevOrigCurr, valueEur, rawAmt, curr
+  );
   saveOffersToStorage();
   closeAppleSheetModal();
   renderOffers();
@@ -7757,9 +8426,10 @@ function handleQuickEditListingSubmit(e, offerId) {
   if (document.getElementById("adminModal")?.classList.contains("open")) {
     renderAdminModalContent();
   }
-  showToast(getWizValidationCopy().savedToast);
+  showToast(notifiedFavCount > 0 ? getFavPriceAlertCopy().ownerNotifiedToast(notifiedFavCount) : getWizValidationCopy().savedToast);
 }
 function openAdminEditUserSheet(emailKey) {
+  if (!adminAuthenticated) return;
   const k = String(emailKey || "").toLowerCase();
   const acc = accountsDb[k];
   if (!acc) return;
@@ -7828,6 +8498,7 @@ function openAdminEditUserSheet(emailKey) {
   document.body.classList.add("modal-open");
 }
 function handleAdminEditUserSubmit(e, emailKey) {
+  if (!adminAuthenticated) return;
   e.preventDefault();
   const k = String(emailKey || "").toLowerCase();
   const acc = accountsDb[k];
@@ -8548,6 +9219,8 @@ async function pushCloudDatabaseSync(extraPayload = null) {
   if (!cloudSyncReady || typeof fetch !== "function") return;
   const userCreatedOrEdited = offers.filter(o => o.createdByUser || o.id > 100000);
   const payload = {
+    actorEmail: currentUser ? String(currentUser.email || "").trim().toLowerCase() : "",
+    adminSession: Boolean(adminAuthenticated),
     accounts: accountsDb,
     userOffers: userCreatedOrEdited,
     proposals: swapProposals,
@@ -8637,9 +9310,11 @@ function applyMergedCloudState(remote) {
     });
   }
   if (Array.isArray(remote.proposals)) {
+    const delPropSet = new Set(deletedProposalIds.map(Number));
     remote.proposals.forEach(p => {
       if (!p || !p.id) return;
       const pid = Number(p.id);
+      if (delPropSet.has(pid)) return;
       const idx = swapProposals.findIndex(x => Number(x.id) === pid);
       if (idx === -1) {
         swapProposals.unshift(p);
@@ -8651,9 +9326,10 @@ function applyMergedCloudState(remote) {
     });
   }
   if (Array.isArray(remote.watchlist)) {
+    const delWlSet = new Set(deletedWatchlistIds.map(Number));
     const existingWlIds = new Set(watchlistAlerts.map(w => Number(w.id)));
     remote.watchlist.forEach(w => {
-      if (w && w.id && !existingWlIds.has(Number(w.id))) {
+      if (w && w.id && !delWlSet.has(Number(w.id)) && !existingWlIds.has(Number(w.id))) {
         watchlistAlerts.unshift(w);
         changed = true;
       }
@@ -8671,6 +9347,7 @@ function applyMergedCloudState(remote) {
     } catch (e) { }
     renderOffers();
     renderMapPinsAndPanel();
+    if (typeof checkAndNotifyFavoritePriceChangesForCurrentUser === "function") checkAndNotifyFavoritePriceChangesForCurrentUser(true);
     if (document.getElementById("adminModal")?.classList.contains("open")) {
       const searchFocused = document.activeElement && document.activeElement.id === "adminListingSearchInput";
       if (!searchFocused) renderAdminModalContent();
@@ -8878,6 +9555,7 @@ function publishAdminWizardDraftNow() {
   showToast(`✓ Published: ${newOffer.title}`);
 }
 function restoreDeletedOffersFromAdmin() {
+  if (!adminAuthenticated) return;
   deletedOfferIds = [];
   localStorage.setItem("ci4m_deleted_offers_v1", "[]");
   ensurePlatformAccountsAndTestRegistrations();
@@ -8915,6 +9593,7 @@ function seedAdminTestRegistrationsAndOffers() {
   renderAdminModalContent();
 }
 function handleAdminCreateQuickAccount(e) {
+  if (!adminAuthenticated) return;
   if (e) e.preventDefault();
   const name = String(document.getElementById("boNewUserName")?.value || "").trim();
   const email = String(document.getElementById("boNewUserEmail")?.value || "").trim();
@@ -8943,6 +9622,7 @@ function handleAdminCreateQuickAccount(e) {
   showToast(`✓ User created: ${name} (${email})`);
 }
 function adminDeleteAccount(emailKey, silent = false) {
+  if (!adminAuthenticated) return;
   const k = String(emailKey || "").toLowerCase();
   if (!k || k === BACKOFFICE_ADMIN_EMAIL) return;
   const name = accountsDb[k]?.name || k;
@@ -8953,6 +9633,7 @@ function adminDeleteAccount(emailKey, silent = false) {
   if (!silent) showToast(`✓ Account removed: ${name}`);
 }
 function adminLoginAsUser(emailKey) {
+  if (!adminAuthenticated) return;
   const acc = accountsDb[String(emailKey || "").toLowerCase()];
   if (!acc) return;
   activateUserAccount(acc);
@@ -8960,6 +9641,7 @@ function adminLoginAsUser(emailKey) {
   showToast(`✓ Switched session to ${acc.name}`);
 }
 function adminGrantUserSwaps(emailKey, mode) {
+  if (!adminAuthenticated) return;
   const key = String(emailKey || "").toLowerCase();
   const acc = accountsDb[key];
   if (!acc) return;
@@ -8988,13 +9670,12 @@ function adminFilterOffersByUser(queryText) {
 }
 function getAccountLinkedOffers(acc) {
   if (!acc) return [];
-  const emailKey = String(acc.email || "").toLowerCase();
-  const firstName = normalizeSearchText(String(acc.name || "").split(" ")[0]);
+  const emailKey = String(acc.email || "").trim().toLowerCase();
+  if (!emailKey) return [];
   return offers.filter(o => {
-    if (o.ownerEmail && isSameUserEmailAlias(o.ownerEmail, emailKey)) return true;
-    if (o.owner && normalizeSearchText(o.owner) === normalizeSearchText(acc.name || "")) return true;
-    if (acc.isTestRegistration && firstName && normalizeSearchText(o.owner || "").includes(firstName)) return true;
-    return false;
+    const oEmail = String(o.ownerEmail || "").trim().toLowerCase();
+    if (oEmail) return isSameUserEmailAlias(oEmail, emailKey);
+    return Boolean(o.owner && normalizeSearchText(o.owner) === normalizeSearchText(acc.name || ""));
   });
 }
 function renderAdminModalContent() {
@@ -9046,14 +9727,14 @@ function renderAdminModalContent() {
               <label for="adminLoginEmailInput" style="display:block;font-size:12px;font-weight:700;color:#d1e7e3;margin-bottom:6px;">Email</label>
               <input type="email" id="adminLoginEmailInput" name="email" autocomplete="username" required placeholder="Email"
                 value="${savedAdminCreds.email.replace(/"/g, '&quot;')}"
-                style="width:100%;height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
+                style="width:100%;height:44px;padding:9px 18px;line-height:1.25;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
             </div>
             <div>
               <label for="adminLoginPassInput" style="display:block;font-size:12px;font-weight:700;color:#d1e7e3;margin-bottom:6px;">Password</label>
               <div style="position:relative;">
                 <input type="password" id="adminLoginPassInput" name="password" autocomplete="current-password" required placeholder="Password"
                   value="${savedAdminCreds.pass.replace(/"/g, '&quot;')}"
-                  style="width:100%;height:44px;padding:0 44px 0 18px;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
+                  style="width:100%;height:44px;padding:9px 44px 9px 18px;line-height:1.25;border-radius:999px;border:1px solid rgba(169,255,202,0.28);background:rgba(5,20,18,0.75);color:#fff;font-size:14px;outline:none;" />
                 <button type="button" onclick="togglePasswordVisibility('adminLoginPassInput', this)"
                   style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#ffffff;cursor:pointer;padding:4px;" aria-label="Show password">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -9416,7 +10097,7 @@ function renderAdminModalContent() {
       return { cat, label: getCategoryLabel(cat), count: items.length, sumEur };
     });
     mainModuleHtml = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:18px;">
         <div class="bo-card bo-table-card">
           <div class="bo-card-toolbar">
             <strong style="font-size:15px;font-weight:700;color:#0f172a;">Recent Users</strong>
@@ -9676,7 +10357,7 @@ function renderAdminModalContent() {
             </label>
           </div>
         </div>
-        <form onsubmit="saveSupabaseClientConfig(event)" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
+        <form onsubmit="saveSupabaseClientConfig(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
           <div>
             <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">Optional Supabase URL (or leave blank for built-in /api/sync)</label>
             <input type="url" id="boSupabaseUrlInput" placeholder="https://your-project.supabase.co" value="${sbCfg.url.replace(/"/g, '&quot;')}" class="input-light" style="font-size:13px;" />
@@ -9945,24 +10626,24 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (document.getElementById("guideModal")?.classList.contains("open")) {
       ev.preventDefault();
       closeGuideModal();
-    } else if (document.getElementById("offerModal")?.classList.contains("open")) {
-      ev.preventDefault();
-      closeOfferModal();
-    } else if (document.getElementById("wizardModal")?.classList.contains("open")) {
-      ev.preventDefault();
-      closeWizardModal();
-    } else if (document.getElementById("dashboardModal")?.classList.contains("open")) {
-      ev.preventDefault();
-      closeDashboardModal();
     } else if (document.getElementById("authModal")?.classList.contains("open")) {
       ev.preventDefault();
       closeAuthModal();
-    } else if (document.getElementById("chatDock")?.classList.contains("is-open")) {
+    } else if (document.getElementById("wizardModal")?.classList.contains("open")) {
       ev.preventDefault();
-      toggleChatDock();
+      closeWizardModal();
+    } else if (document.getElementById("offerModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeOfferModal();
     } else if (document.getElementById("adminModal")?.classList.contains("open")) {
       ev.preventDefault();
       closeAdminModal();
+    } else if (document.getElementById("dashboardModal")?.classList.contains("open")) {
+      ev.preventDefault();
+      closeDashboardModal();
+    } else if (document.getElementById("chatDock")?.classList.contains("is-open")) {
+      ev.preventDefault();
+      toggleChatDock();
     }
   });
 });
@@ -9990,7 +10671,7 @@ function updateMobileBottomTabBarUI() {
       badge.textContent = "";
       badge.style.display = "none";
     } else {
-      const count = Array.isArray(swapProposals) ? swapProposals.length : 0;
+      const count = Array.isArray(swapProposals) ? swapProposals.filter(p => isProposalOwnedByCurrentUser(p)).length : 0;
       if (count > 0) {
         badge.hidden = false;
         badge.textContent = String(count);
@@ -10187,6 +10868,21 @@ function initMobileTabBarScrollBehavior() {
       lastModalY = curY;
     }
   }, { capture: true, passive: true });
+  document.addEventListener("focusin", (e) => {
+    const t = e && e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) {
+      document.getElementById("mobileBottomTabBar")?.classList.add("is-scroll-hidden");
+    }
+  }, { passive: true });
+  document.addEventListener("focusout", () => {
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (!a || (a.tagName !== "INPUT" && a.tagName !== "TEXTAREA" && a.tagName !== "SELECT")) {
+        document.getElementById("mobileBottomTabBar")?.classList.remove("is-scroll-hidden");
+      }
+    }, 120);
+  }, { passive: true });
+
 }
 initMobileTabBarScrollBehavior();
 if (typeof updateMobileBottomTabBarUI === 'function') updateMobileBottomTabBarUI();

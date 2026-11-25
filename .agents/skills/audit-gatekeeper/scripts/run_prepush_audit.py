@@ -737,10 +737,23 @@ def phase_6_ui_ux_and_tahoe_skin():
             if phase_name not in r_text:
                 errors.append(f"ruflo-sparc/SKILL.md missing SPARC phase: {phase_name}")
 
+    for extra_skill_rel in [
+        "web-design-guidelines/SKILL.md",
+        "web-design-guidelines/references/guidelines.md",
+        "webapp-testing/SKILL.md",
+        "webapp-testing/scripts/run_mobile_cdp_audit.js",
+        "frontend-design/SKILL.md",
+        "verification-before-completion/SKILL.md",
+        "systematic-debugging/SKILL.md",
+    ]:
+        if not (WORKSPACE_ROOT / ".agents" / "skills" / extra_skill_rel).exists():
+            errors.append(f"Missing required GitHub skill asset: .agents/skills/{extra_skill_rel}")
+
     html_path = WORKSPACE_ROOT / "index.html"
     if html_path.exists():
         html = html_path.read_text(encoding="utf-8")
-        required_ids = [
+
+        for required_dom_id in [
             "authModal",
             "wizardModal",
             "offerModal",
@@ -753,10 +766,35 @@ def phase_6_ui_ux_and_tahoe_skin():
             "mobileBottomTabBar",
             "toastContainer",
             "pricing",
-        ]
-        for dom_id in required_ids:
-            if f'id="{dom_id}"' not in html:
-                errors.append(f"Missing required DOM element #{dom_id} in index.html")
+        ]:
+            if f'id="{required_dom_id}"' not in html:
+                errors.append(f"Missing required DOM element #{required_dom_id} in index.html")
+
+    # Automated iOS Safari Caret, Multi-Line Card Geometry & Mobile Layout Gatekeeper Checks
+    styles_path = WORKSPACE_ROOT / "styles.css"
+    if styles_path.exists():
+        s_text = styles_path.read_text(encoding="utf-8")
+        if "line-height: 45px" in s_text or "line-height: 46px" in s_text:
+            errors.append("styles.css contains fixed pixel line-height (45px/46px) on input, which misaligns the iOS Safari text caret")
+
+    if tahoe_path.exists():
+        t_text = tahoe_path.read_text(encoding="utf-8")
+        for ios_token in [
+            "line-height: 1.25 !important;",
+            "button:not(.offer-list-item)",
+            "touch-action: pan-y !important;",
+            "backdrop-filter: blur(26px) saturate(150%) !important;",
+        ]:
+            if ios_token not in t_text:
+                errors.append(f"tahoe-skin.css missing iOS Safari / Mobile HIG protection token: {ios_token}")
+
+    app_path = WORKSPACE_ROOT / "app.js"
+    if app_path.exists():
+        a_text = app_path.read_text(encoding="utf-8")
+        for inp_tag in re.findall(r"<input[^>]*>", a_text):
+            if "padding:0 " in inp_tag or "padding: 0 " in inp_tag:
+                errors.append(f"app.js has inline zero vertical padding on <input> (causes iOS caret drop): {inp_tag[:80]}")
+
 
     return len(errors) == 0, errors
 

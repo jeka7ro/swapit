@@ -2077,7 +2077,7 @@ h2 em {
   border-radius: 16px;
   padding: 0 16px;
   font-size: 15px;
-  line-height: 46px;
+  line-height: 1.25;
   outline: none;
   appearance: none;
   -webkit-appearance: none;
@@ -2853,7 +2853,7 @@ footer .logo {
   border-radius: 14px;
   padding: 0 15px;
   font-size: 15px;
-  line-height: 45px;
+  line-height: 1.25;
   outline: none;
   appearance: none;
   -webkit-appearance: none;
@@ -3147,7 +3147,7 @@ select.input-light {
   position: fixed;
   bottom: 24px;
   left: 24px;
-  z-index: 100;
+  z-index: 9999 !important;
   display: grid;
   gap: 10px;
 }

@@ -60,5 +60,20 @@ Orice funcționalitate nouă sau modificare arhitecturală urmează fluxul în 5
 4. **R — Refinement**: Implementare chirurgicală (TDD) cu teste automate în sandbox.
 5. **C — Completion**: Verificare finală prin suita `audit-gatekeeper` în 6 faze (Meta-Harness Readiness Score `100/100`) și jurnalizare în `.agents/CHANGELOG.md`.
 
+## 6. Vercel Web Interface Guidelines (`.agents/skills/web-design-guidelines/SKILL.md`)
+Toate formularele, câmpurile `<input>`, grilele CSS și interacțiunile mobile respectă regulile din `vercel-labs/agent-skills` & `vercel-labs/web-interface-guidelines` (`references/guidelines.md`):
+1. **iOS Safari Input Caret & Auto-Zoom Protection**:
+   - Orice `<input>` text/email/parolă/căutare are `font-size: 16px !important` pe mobil, `line-height: 1.25 !important` și padding vertical simetric (`padding-top >= 8px; padding-bottom >= 8px`), fără `transform` sau dublu `backdrop-filter` pe containerul părinte mobil (`.glass-auth-modal`, `.modal-card`).
+2. **Prevenirea Overflow-ului Orizontal în 7 Limbi (`min-width: 0` & `minmax(0, 1fr)`)**:
+   - Copiii Flex/Grid au `min-width: 0`, grilele mobile folosesc `minmax(0, 1fr)`, iar butoanele multi-linie (`.offer-list-item`, `.wiz-cat-card`, `.smart-dd-item`) sunt excluse de la `border-radius: 999px`.
+3. **Scroll & Touch Ergonomics**:
+   - `touch-action: pan-y` pe hartă (`#worldMap`) și modale pe mobil, `overscroll-behavior: contain` pe ferestrele modale și `font-variant-numeric: tabular-nums` pe toate sumele și contoarele.
 
+## 7. Anthropic Webapp Testing & Frontend Design (`.agents/skills/webapp-testing/SKILL.md` & `.agents/skills/frontend-design/SKILL.md`)
+Orice modificare UI/UX sau CSS este validată automat în browser headless real (`Google Chrome Headless CDP`) prin `.agents/skills/webapp-testing/scripts/run_mobile_cdp_audit.js` pe 5 rezoluții mobile (`320x568` iPhone SE, `360x780` Galaxy S, `375x812` iPhone Mini, `390x844` iPhone 16, `430x932` iPhone 16 Pro Max) și în toate cele 7 limbi (`ro`, `en`, `de`, `fr`, `it`, `es`, `ru`).
 
+## 8. Superpowers Verification Before Completion & Systematic Debugging (`.agents/skills/verification-before-completion/SKILL.md` & `.agents/skills/systematic-debugging/SKILL.md`)
+1. **Verification Before Completion (`obra/superpowers`)**:
+   - Agentul **NU** îi cere niciodată utilizatorului să testeze primul o modificare („testează tu”) înainte ca agentul să fi rulat singur suita `run_prepush_audit.py` și verificarea Headless Chrome CDP (`run_mobile_cdp_audit.js`) cu `0 erori`.
+2. **Systematic Debugging (`obra/superpowers`)**:
+   - Orice bug raportat este reprodus și măsurat matematic în DOM (`getBoundingClientRect()`, `getComputedStyle()`) înainte de aplicarea fixului.
