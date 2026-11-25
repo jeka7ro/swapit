@@ -707,6 +707,9 @@ def phase_6_ui_ux_and_tahoe_skin():
             "prefers-reduced-motion",
             "prefers-contrast",
             "--hig-glass-blur-regular",
+            ".hig-mobile-tabbar",
+            ".hig-sheet-grabber-zone",
+            "minmax(0, 1fr)",
         ]:
             if required_css_token not in css_text:
                 errors.append(f"tahoe-skin.css missing Apple HIG / Liquid Glass token: {required_css_token}")
@@ -747,6 +750,7 @@ def phase_6_ui_ux_and_tahoe_skin():
             "appleSheetModal",
             "chatDock",
             "gdprConsentBanner",
+            "mobileBottomTabBar",
             "toastContainer",
             "pricing",
         ]

@@ -1,4 +1,3 @@
-// ChangeIt4Me — Main Application Logic
 // Default Language: EN ("en") + Automatic European Geo-IP Language Routing + Full Swap Platform
 function escapeHtml(raw) {
   if (raw === null || raw === undefined) return "";
@@ -47,16 +46,16 @@ let selectedMapCountry = null;
 let leafletMap = null;
 let mapMarkers = [];
 let currentDashTab = "mylistings";
-// Saved Favorites (Offer IDs)
 let favoriteIds = (() => {
   try {
-    const saved = localStorage.getItem("ci4m_favs");
-    return saved ? JSON.parse(saved) : [101, 102];
+    localStorage.removeItem("ci4m_favs"); localStorage.removeItem("ci4m_favs_v2");
+    if (!localStorage.getItem("ci4m_user")) return [];
+    const saved = localStorage.getItem("ci4m_favs_v2");
+    return saved ? JSON.parse(saved) : [];
   } catch (e) {
-    return [101, 102];
+    return [];
   }
 })();
-// Sent / Received Swap Proposals
 function normalizeSeedProposals(list) {
   if (!Array.isArray(list)) return [];
   return list.map(p => {
@@ -107,7 +106,6 @@ let swapProposals = (() => {
     { id: 902, direction: "Incoming", offerId: 104, status: "New Match Proposal" }
   ]);
 })();
-// Load offers from localStorage + merge user-created offers with latest INITIAL_OFFERS
 let deletedOfferIds = (() => {
   try {
     const saved = localStorage.getItem("ci4m_deleted_offers_v1");
@@ -150,7 +148,6 @@ function saveOffersToStorage() {
   } catch (e) { }
 }
 let currentDealModeFilter = "all";
-// Persistent Accounts Database (Email -> Account Object)
 let accountsDb = (() => {
   try {
     const saved = localStorage.getItem("ci4m_accounts_db");
@@ -165,7 +162,6 @@ function saveAccountsDb() {
     if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush();
   } catch (e) { }
 }
-// Current logged-in user state
 let currentUser = (() => {
   try {
     const saved = localStorage.getItem("ci4m_user");
@@ -174,7 +170,6 @@ let currentUser = (() => {
     return null;
   }
 })();
-// Watchlist Alerts persisted in localStorage
 let watchlistAlerts = (() => {
   try {
     const saved = localStorage.getItem("ci4m_watchlist_alerts");
@@ -189,7 +184,6 @@ function saveWatchlistAlerts() {
     if (typeof scheduleCloudSyncPush === "function") scheduleCloudSyncPush();
   } catch (e) { }
 }
-// GDPR & ePrivacy Consent State (Reg. EU 2016/679)
 let gdprConsent = (() => {
   try {
     const saved = localStorage.getItem("ci4m_gdpr_consent_v1");
@@ -593,7 +587,7 @@ function deleteUserGdprAccount() {
   favoriteIds = [];
   localStorage.removeItem("ci4m_user");
   localStorage.removeItem("ci4m_saved_google_user_v1");
-  localStorage.removeItem("ci4m_favs");
+  localStorage.removeItem("ci4m_favs"); localStorage.removeItem("ci4m_favs_v2");
   localStorage.removeItem("ci4m_proposals");
   localStorage.removeItem("ci4m_wiz_draft_v1");
   if (typeof scheduleCloudSyncPush === "function" && (emailKey || removedOfferIds.length > 0)) {
@@ -678,11 +672,11 @@ function openReportOfferSheet(offerId) {
     </form>
   `;
   modal.classList.add("open");
+  modal.scrollTop = 0;
+  document.getElementById("mobileBottomTabBar")?.classList.remove("is-scroll-hidden");
+  content.scrollTop = 0;
   document.body.classList.add("modal-open");
 }
-// ============================================================================
-// MONETIZATION: FIRST 10 SWAPS FREE, THEN CREDIT PACKS OR PRO SUBSCRIPTION
-// ============================================================================
 let guestFreeSwaps = (() => {
   try {
     const saved = localStorage.getItem("ci4m_guest_free_swaps");
@@ -976,12 +970,12 @@ function updatePricingCardsUI() {
   if (pPerMonth) pPerMonth.textContent = s.perMonth;
   if (p3List) {
     p3List.innerHTML = `
-      <li>${s.plan3B1}</li>
-      <li>${s.plan3B2}</li>
-      <li>${s.plan3B3}</li>
+      <li style="color:#ffffff !important;border-top-color:rgba(255,255,255,0.16) !important;">${s.plan3B1}</li>
+      <li style="color:#ffffff !important;border-top-color:rgba(255,255,255,0.16) !important;">${s.plan3B2}</li>
+      <li style="color:#ffffff !important;border-top-color:rgba(255,255,255,0.16) !important;">${s.plan3B3}</li>
     `;
   }
-  if (p3Btn) p3Btn.textContent = s.proBtn;
+  if (p3Btn) p3Btn.textContent = String(s.proBtn || "").replace(/\s*→\s*$/, "");
   if (dashUpBtn) dashUpBtn.textContent = s.dashUpgradeBtn;
 }
 function canPerformSwapOrPost() {
@@ -1196,7 +1190,6 @@ function simulateZeroFreeSwaps() {
   }
   showToast(getSubscriptionUiCopy().zeroSimulatedToast);
 }
-// 7-Step Wizard State (Persisted in localStorage so refresh never loses data)
 const DEFAULT_WIZ_DATA = {
   editingOfferId: null,
   image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80",
@@ -1401,9 +1394,6 @@ function getDealTypeLabel(dealType) {
   if (dealType === "sale") return t("dealSaleOnly");
   return t("dealSwapOrSale");
 }
-// ============================================================================
-// PREMIUM VECTOR SVG ICONS (No Emojis — Clean Architectural & Luxury Line Icons)
-// ============================================================================
 const PREMIUM_ICONS = {
   "cars": `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>`,
   "real-estate": `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9.5Z"/><path d="M9 21V13h6v8"/></svg>`,
@@ -1417,9 +1407,6 @@ const PREMIUM_ICONS = {
   "heartFilled": `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`,
   "heartOutline": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
 };
-// ============================================================================
-// MULTI-CURRENCY SYSTEM (Exact Client-Price Parity + Live FX Sync)
-// ============================================================================
 function getCurrencyObj(code = currentCurrency) {
   const list = window.CURRENCIES || [{ code: "EUR", symbol: "€", short: "EUR", label: "Euro (EUR)", rateFromEur: 1.0 }];
   return list.find(c => c.code === code) || list[0];
@@ -1453,7 +1440,6 @@ function sanitizeNumericAmount(rawVal, fallback = 0) {
   const parsed = Number(str);
   return (Number.isFinite(parsed) && parsed >= 0) ? parsed : fallback;
 }
-// Exact unrounded conversion to EUR base (prevents any round-trip drift)
 function convertToEur(valInCurr, code = currentCurrency) {
   const c = getCurrencyObj(code);
   const num = sanitizeNumericAmount(valInCurr, 0);
@@ -1465,7 +1451,6 @@ function convertFromEur(valEur, code = currentCurrency) {
   const num = sanitizeNumericAmount(valEur, 0);
   return Math.round(num * c.rateFromEur);
 }
-// Direct cross-currency conversion respecting exact parity with client-set price
 function convertBetweenCurrencies(amount, fromCode, toCode = currentCurrency) {
   const num = sanitizeNumericAmount(amount, 0);
   if (!num) return 0;
@@ -1555,7 +1540,6 @@ async function syncLiveExchangeRates() {
       renderMapPinsAndPanel();
     }
   } catch (e) {
-    // Keep default reference rates if offline
   }
 }
 function getDefaultCurrencyForLanguage(langCode, isoCountryCode = "") {
@@ -1654,9 +1638,6 @@ function onRegLangSelectChange(newLang, targetCurrencySelectId) {
   const sel = document.getElementById(targetCurrencySelectId);
   if (sel) sel.value = currentCurrency;
 }
-// ============================================================================
-// EUROPEAN GEO-IP AUTO-DETECTION (Default: EN -> European Country Native Lang)
-// ============================================================================
 function resolveLanguageFromCountryCode(isoCode) {
   if (!isoCode) return "en";
   const upper = String(isoCode).trim().toUpperCase();
@@ -1667,7 +1648,6 @@ function updateGeoIpBannerUI() {
   document.querySelectorAll(".lang-geo-footer, [data-tab='geoip']").forEach(el => el.remove());
 }
 async function detectLanguageByGeoIP(forceOverwriteManual = false) {
-  // 1. Check URL ?lang= parameter first
   const urlParams = new URLSearchParams(window.location.search);
   const urlLang = urlParams.get("lang")?.toLowerCase();
   if (urlLang && window.TRANSLATIONS[urlLang] && !forceOverwriteManual) {
@@ -1676,12 +1656,10 @@ async function detectLanguageByGeoIP(forceOverwriteManual = false) {
     updateGeoIpBannerUI();
     return;
   }
-  // 2. Check if user explicitly selected a language manually in this browser
   const manualLang = localStorage.getItem("ci4m_lang_manual");
   if (manualLang && window.TRANSLATIONS[manualLang] && !forceOverwriteManual) {
     setLanguage(manualLang, false);
   } else {
-    // Baseline default before IP resolves is always English ("en")
     setLanguage("en", false);
   }
   // 3. Query Geo-IP APIs to detect visitor's European country (only if functional GDPR consent allows it)
@@ -1732,15 +1710,10 @@ async function detectLanguageByGeoIP(forceOverwriteManual = false) {
         return;
       }
     } catch (err) {
-      // Try next Geo-IP endpoint
     }
   }
-  // Fallback if offline/blocked: keep English ("en") as default
   updateGeoIpBannerUI();
 }
-// ============================================================================
-// LANGUAGE SWITCHER (EN Default + DE, FR, IT, ES, RO, RU)
-// ============================================================================
 function initLanguageDropdown() {
   const listEl = document.getElementById("langList");
   const triggerBtn = document.getElementById("langTriggerBtn");
@@ -1784,23 +1757,19 @@ function setLanguage(langCode, isManualUserAction = false) {
     currentCurrency = autoCurr;
     localStorage.setItem("ci4m_currency", currentCurrency);
   }
-  // Update header flag & short label
   const langObj = window.LANGUAGES.find(l => l.code === langCode) || window.LANGUAGES[0];
   const flagEl = document.getElementById("currentLangFlag");
   const shortEl = document.getElementById("currentLangShort");
   if (flagEl) flagEl.innerHTML = langObj.flagSvg;
   if (shortEl) shortEl.textContent = langObj.short;
-  // Update selected state in dropdown
   document.querySelectorAll("#langList .lang-option").forEach(btn => {
     btn.setAttribute("aria-selected", String(btn.dataset.lang === langCode));
   });
   document.getElementById("langDropdown")?.classList.remove("is-open");
-  // Sync language selects in forms
   const inlineSel = document.getElementById("inlineRegLangSelect");
   if (inlineSel) inlineSel.value = langCode;
   const modalSel = document.getElementById("modalRegLangSelect");
   if (modalSel) modalSel.value = langCode;
-  // Translate all static DOM nodes
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     el.textContent = t(key);
@@ -1848,14 +1817,20 @@ function setLanguage(langCode, isManualUserAction = false) {
     renderDashboardContent();
   }
 }
-// ============================================================================
-// OFFERS CATALOG, FAVORITES & SMART FILTERING
-// ============================================================================
 function updateFavCountUI() {
+  if (!currentUser && Array.isArray(favoriteIds) && favoriteIds.length > 0) {
+    favoriteIds = [];
+  }
+  if (typeof updateMobileBottomTabBarUI === 'function') updateMobileBottomTabBarUI();
+  const activeFavCount = currentUser && Array.isArray(favoriteIds) ? favoriteIds.length : 0;
   const pill = document.getElementById("favCountPill");
-  if (pill) pill.textContent = String(favoriteIds.length);
+  if (pill) pill.textContent = String(activeFavCount);
   const propBadge = document.getElementById("headerProposalsBadge");
-  if (propBadge) propBadge.textContent = String(swapProposals.length);
+  if (propBadge) {
+    const activePropCount = currentUser && Array.isArray(swapProposals) ? swapProposals.length : 0;
+    propBadge.textContent = String(activePropCount);
+    propBadge.style.display = activePropCount > 0 ? "inline-block" : "none";
+  }
   const userPillCount = document.getElementById("userListingsCountPill");
   if (userPillCount) {
     const customCount = offers.filter(o => o.createdByUser || o.id > 100000).length;
@@ -1877,6 +1852,20 @@ function updateFavCountUI() {
 }
 function toggleFavorite(offerId, ev) {
   if (ev) ev.stopPropagation();
+  if (!currentUser) {
+    const needLoginFavMap = {
+      ro: "Autentifică-te în contul tău pentru a salva anunțuri la Favorite.",
+      en: "Please sign in to your account to save listings to Favorites.",
+      de: "Bitte melden Sie sich an, um Inserate als Favoriten zu speichern.",
+      fr: "Veuillez vous connecter pour enregistrer des favoris.",
+      it: "Accedi al tuo account per salvare gli annunci tra i Preferiti.",
+      es: "Inicia sesión para guardar anuncios en tus Favoritos.",
+      ru: "Войдите в аккаунт, чтобы сохранять объявления в Избранное."
+    };
+    showToast(needLoginFavMap[currentLang] || needLoginFavMap.en);
+    openAuthModal("login");
+    return;
+  }
   const favMsgMap = {
     ro: "♥ Salvat la favorite!",
     en: "♥ Saved to your favorites!",
@@ -1893,15 +1882,15 @@ function toggleFavorite(offerId, ev) {
     favoriteIds.push(offerId);
     showToast(favMsgMap[currentLang] || favMsgMap.en);
   }
-  localStorage.setItem("ci4m_favs", JSON.stringify(favoriteIds));
+  localStorage.setItem("ci4m_favs_v2", JSON.stringify(favoriteIds));
   updateFavCountUI();
   renderOffers();
   if (document.getElementById("offerModal")?.classList.contains("open") && currentOpenOfferId === offerId) {
     const modalFavBtn = document.getElementById("offerModalFavBtn");
     if (modalFavBtn) {
       const isFav = favoriteIds.includes(offerId);
-      modalFavBtn.style.background = isFav ? "var(--mint)" : "var(--bg)";
-      modalFavBtn.style.color = isFav ? "var(--forest)" : "var(--ink)";
+      modalFavBtn.style.background = isFav ? "#fff1f2" : "#f1f5f4";
+      modalFavBtn.style.color = isFav ? "#e11d48" : "#0f172a";
       modalFavBtn.textContent = isFav ? "♥" : "♡";
     }
   }
@@ -2510,7 +2499,7 @@ function buildLiveSearchDropdownHtml(val) {
         <strong style="color:#ffffff;">★ Admin & Diagnostics Console (/admin)</strong>
         <span style="color:#c9dfdb;">${adminSubText}</span>
       </div>
-      <span class="smart-dd-price" style="background:#0d8a5e;color:#0c2c28;">${adminOpenWord}</span>
+      <span class="smart-dd-price" style="background:#0d8a5e;color:#ffffff;">${adminOpenWord}</span>
     </button>
   ` : "";
   const qTokens = extractSearchTokens(q);
@@ -2690,7 +2679,6 @@ function renderOffers() {
   };
   sortList(filtered);
   const ui = getSmartUiLabels();
-  // Compute AI Smart Recommendations & Swap Matches when a search query is active
   let alternativesList = [];
   let aiRecs = null;
   if (query) {
@@ -2792,14 +2780,14 @@ function renderOffers() {
   grid.innerHTML = htmlOut;
   initScrollRevealAnimations();
 }
-// ============================================================================
-// INTERACTIVE LEAFLET WORLD MAP & COUNTRY PANEL
-// ============================================================================
 function initWorldMap() {
   const mapEl = document.getElementById("worldMap");
   if (!mapEl || typeof window.L === "undefined") return;
+  const isMobileTouch = typeof window.innerWidth === "number" && window.innerWidth <= 820;
   leafletMap = window.L.map(mapEl, {
     scrollWheelZoom: false,
+    dragging: !isMobileTouch,
+    tap: false,
     zoomSnap: 0.5,
     minZoom: 2
   }).setView([47.0, 12.0], 4);
@@ -2878,13 +2866,17 @@ function renderMapPinsAndPanel() {
   const listEl = document.getElementById("countryOffersList");
   if (activeGroup && listEl) {
     headingEl.innerHTML = `${PREMIUM_ICONS.pin}${getLocalizedCountryName(activeGroup.country)} (${activeGroup.items.length})`;
-    listEl.innerHTML = activeGroup.items.map(item => {
+    const visibleItems = activeGroup.items.slice(0, 5);
+    listEl.innerHTML = visibleItems.map(item => {
       const loc = getOfferLocalized(item);
       return `
         <button type="button" class="offer-list-item" onclick="openOfferModal(${item.id}, 'details')">
-          <strong>${loc.title}</strong>
-          <span>${getCategoryLabel(item.category)} · ${item.city} · ~${formatOfferPrice(item, currentCurrency)}</span>
-          <em>⇄ ${t("wantBadge")}: ${loc.want}</em>
+          <img src="${item.image}" class="offer-list-item-thumb" alt="" />
+          <div class="offer-list-item-body">
+            <strong>${loc.title}</strong>
+            <span>${getCategoryLabel(item.category)} · ${item.city} · ~${formatOfferPrice(item, currentCurrency)}</span>
+            <em>⇄ ${t("wantBadge")}: ${loc.want}</em>
+          </div>
         </button>
       `;
     }).join("");
@@ -2900,10 +2892,8 @@ function selectCountryOnMap(countryName) {
     }
   }
 }
-// ============================================================================
-// USER REGISTRATION, LOGIN & INLINE ENROLLMENT HUB
-// ============================================================================
 function renderUserHeaderState() {
+  if (typeof updateMobileBottomTabBarUI === 'function') updateMobileBottomTabBarUI();
   const guestBtns = document.getElementById("guestAuthButtons");
   const userPill = document.getElementById("userAccountPill");
   const dashHeaderBtn = document.getElementById("headerDashboardBtn");
@@ -2993,6 +2983,8 @@ function renderUserHeaderState() {
 }
 function handleUserLogout() {
   currentUser = null;
+  favoriteIds = [];
+  try { localStorage.removeItem('ci4m_favs'); localStorage.removeItem('ci4m_favs_v2'); } catch (e) {}
   localStorage.removeItem("ci4m_user");
   renderUserHeaderState();
   closeDashboardModal();
@@ -3097,7 +3089,6 @@ let serverConfiguredGateways = {
   twilio: false,
   stripe: false
 };
-// Pure-JS SHA-256 implementation (works synchronously in Browser & Node VM Sandbox)
 function sha256HexSync(asciiInput) {
   let ascii = unescape(encodeURIComponent(String(asciiInput || "")));
   function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
@@ -3593,9 +3584,6 @@ function handleInlineQuickPost(e) {
   document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
   showToast(`✓ ${titleHave} — Live!`);
 }
-// ============================================================================
-// AUTH MODAL (REGISTER / LOGIN)
-// ============================================================================
 let pendingRegistrationUser = null;
 let verifyTimerInterval = null;
 let verifySecondsRemaining = 60;
@@ -4017,7 +4005,6 @@ function handleModalLogin(e) {
     showToast(am.wrongPwd);
     return;
   }
-  // Super-Admin Backoffice Authentication Check (SHA-256 Hash Verifier)
   if ((emailKey === BACKOFFICE_ADMIN_EMAIL || emailKey === "jeka7ro@gmail.com") && verifyAdminPasswordSync(password)) {
     adminAuthenticated = true;
     try { localStorage.setItem("ci4m_admin_session_v1", BACKOFFICE_ADMIN_EMAIL); } catch (err) { }
@@ -4118,7 +4105,7 @@ function renderSocialAccountChooserList(isApple = false) {
       <button type="button" onclick="signInWithSocialAccountInstant('${acc.email.replace(/'/g, "\\'")}', '${acc.name.replace(/'/g, "\\'")}')"
         style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:999px !important;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#ffffff;cursor:pointer;text-align:left;transition:background 0.15s ease;">
         <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <span style="width:34px;height:34px;border-radius:50%;background:#0d8a5e;color:#071d1a;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0;">${escapeHtml(initials)}</span>
+          <span style="width:34px;height:34px;border-radius:50%;background:#0d8a5e;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0;">${escapeHtml(initials)}</span>
           <div style="min-width:0;">
             <strong style="display:block;font-size:13.5px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(acc.name)}</strong>
             <span style="display:block;font-size:11.5px;color:rgba(236,255,245,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(acc.email)}</span>
@@ -4195,7 +4182,6 @@ function handleGoogleAuth() {
       return;
     } catch (err) { }
   }
-  // Open the 1-Click Google Account Chooser inside #authModal
   document.getElementById("authModal")?.classList.add("open");
   document.body.classList.add("modal-open");
   switchAuthTab("google");
@@ -4241,9 +4227,6 @@ function handleAppleAuth() {
   document.body.classList.add("modal-open");
   switchAuthTab("google");
 }
-// ============================================================================
-// 7-STEP SWAP LISTING WIZARD
-// ============================================================================
 function openWizardModal(stepOverride) {
   if (typeof stepOverride === "number" && stepOverride >= 1 && stepOverride <= 7) {
     wizStep = stepOverride;
@@ -4656,9 +4639,6 @@ function onWizPriceInputChange() {
     previewEl.innerHTML = buildParityPreviewHtml(rawVal, chosenCurr);
   }
 }
-// ============================================================================
-// MEGA-SMART CATEGORY ASSISTANT & LIVE LOCATION GEOCODER FOR WIZARD
-// ============================================================================
 const SMART_WIZ_CATALOG = {
   "electronics": {
     templates: [
@@ -4808,7 +4788,6 @@ function onWizTitleHaveInput(val) {
   const catKeyActive = wizData.category || "electronics";
   const catCfg = SMART_WIZ_CATALOG[catKeyActive] || SMART_WIZ_CATALOG.electronics;
   const allTemplates = [];
-  // Prioritize templates from the selected category first
   (catCfg.templates || []).forEach((tObj, i) => {
     allTemplates.push({ ...tObj, catKey: catKeyActive, idx: i, priority: 1 });
   });
@@ -4869,7 +4848,6 @@ async function handleWizGeoSearchInput(val) {
     dd.style.display = "none";
     return;
   }
-  // 1. Instant local match from curated European cities
   const localMatches = SMART_EUROPEAN_CITIES.filter(c =>
     `${c.city} ${c.region} ${c.country}`.toLowerCase().includes(q.toLowerCase())
   ).slice(0, 4);
@@ -4891,7 +4869,6 @@ async function handleWizGeoSearchInput(val) {
     dd.style.display = "block";
   };
   renderGeoList(localMatches);
-  // 2. Live OpenStreetMap Photon Geocoding API (Streets, Cities, Postcodes across Europe)
   if (geoSearchTimer) clearTimeout(geoSearchTimer);
   geoSearchTimer = setTimeout(async () => {
     try {
@@ -4927,7 +4904,6 @@ function selectWizGeoPlace(country, city, lat, lng) {
   const dd = document.getElementById("wizGeoDropdown");
   const badge = document.getElementById("wizGeoVerifiedBadge");
   if (countryEl) {
-    // Add option if country isn't in the static list
     if (!Array.from(countryEl.options).some(o => o.value === country)) {
       const opt = document.createElement("option");
       opt.value = country;
@@ -5547,9 +5523,6 @@ function publishWizardOffer() {
   }
   showToast(isEditing ? getWizValidationCopy().savedToast : `✓ ${offerPayload.title} — Live!`);
 }
-// ============================================================================
-// OFFER DETAIL, 1:1 VALUE CALCULATOR & "PROPOSE A SWAP" MODAL
-// ============================================================================
 let currentGalleryIndex = 0;
 let selectedMySwapOfferId = null;
 let activeProposalThreadId = null;
@@ -5668,25 +5641,30 @@ function buildSwapSideBySideHtml(targetOfferId) {
     ru: { youOffer: "ВЫ ОТДАЁТЕ", youGet: "ВЫ ПОЛУЧАЕТЕ" }
   }[currentLang] || { youOffer: "YOU OFFER", youGet: "YOU RECEIVE" };
   return `
-    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:10px;background:#fff;border:1px solid #e6ebf1;border-radius:16px;margin-top:10px;">
-      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <img src="${myImg}" style="width:42px;height:34px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
-        <div style="min-width:0;">
-          <span style="display:block;font-size:9.5px;font-weight:800;color:#64748b;">${sideLabels.youOffer}</span>
-          <strong style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;line-height:1.25;color:#0f172a;">${escapeHtml(myTitle)}</strong>
-          <span style="font-size:11px;font-weight:700;color:#0d8a5e;font-variant-numeric:tabular-nums;">~${formatAmountInCurrentCurrency(myVal, myCurr)}</span>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:11px 12px;background:#fff;border:1px solid #e6ebf1;border-radius:16px;margin-top:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+          <img src="${myImg}" style="width:48px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #e2e8f0;" alt="" />
+          <div style="min-width:0;flex:1;">
+            <span style="display:block;font-size:9.5px;font-weight:800;color:#64748b;letter-spacing:0.03em;">${sideLabels.youOffer}</span>
+            <strong style="display:block;font-size:12.5px;line-height:1.3;color:#0f172a;white-space:normal;word-break:break-word;overflow:visible;">${escapeHtml(myTitle)}</strong>
+          </div>
         </div>
+        <span style="font-size:12px;font-weight:750;color:#0d8a5e;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;">~${formatAmountInCurrentCurrency(myVal, myCurr)}</span>
       </div>
-      <div style="background:#eaf7f1;color:#0d8a5e;border:1px solid #ccece0;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;">
-        ⇄ ${diffLabel}
+      <div style="display:flex;align-items:center;justify-content:center;position:relative;">
+        <div style="position:absolute;left:0;right:0;height:1px;background:#f1f5f9;"></div>
+        <span style="position:relative;background:#eaf7f1;color:#0d8a5e;border:1px solid #ccece0;padding:2px 11px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums;">⇄ ${diffLabel}</span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <img src="${target.image}" style="width:42px;height:34px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" />
-        <div style="min-width:0;">
-          <span style="display:block;font-size:9.5px;font-weight:800;color:#64748b;">${sideLabels.youGet}</span>
-          <strong style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;line-height:1.25;color:#0f172a;">${escapeHtml(targetLoc.title)}</strong>
-          <span style="font-size:11px;font-weight:700;color:#0d8a5e;font-variant-numeric:tabular-nums;">~${formatOfferPrice(target, currentCurrency)}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+          <img src="${target.image}" style="width:48px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #e2e8f0;" alt="" />
+          <div style="min-width:0;flex:1;">
+            <span style="display:block;font-size:9.5px;font-weight:800;color:#64748b;letter-spacing:0.03em;">${sideLabels.youGet}</span>
+            <strong style="display:block;font-size:12.5px;line-height:1.3;color:#0f172a;white-space:normal;word-break:break-word;overflow:visible;">${escapeHtml(targetLoc.title)}</strong>
+          </div>
         </div>
+        <span style="font-size:12px;font-weight:750;color:#0d8a5e;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;">~${formatOfferPrice(target, currentCurrency)}</span>
       </div>
     </div>
   `;
@@ -6180,34 +6158,38 @@ function openOfferModal(offerId, mode = "details") {
   const isFromBackoffice = Boolean(adminAuthenticated && document.getElementById("adminModal")?.classList.contains("open"));
   content.innerHTML = `
     <div class="hig-offer-header">
-      <div class="hig-offer-meta">
+      <div class="hig-sheet-grabber-zone" onclick="closeOfferModal()" title="Drag down or tap to close">
+        <div class="hig-sheet-grabber"></div>
+      </div>
+      <div class="hig-offer-top-row">
         <span class="hig-offer-loc">${PREMIUM_ICONS.pin}${escapeHtml(item.city)}, ${escapeHtml(item.country)}</span>
-        <span class="hig-offer-dot">·</span>
+        <div class="hig-offer-actions">
+          ${isFromBackoffice ? `<button type="button" class="btn btn-dark" style="height:32px;min-height:32px !important;padding:0 12px;font-size:11.5px;border-radius:999px;" onclick="closeOfferModal()">← Backoffice</button>` : ""}
+          ${(isCustomOwner || isFromBackoffice) ? `
+            <button type="button" class="bo-icon-btn" onclick="openQuickEditListingSheet(${item.id})" title="${escapeHtml(ptc.editBtn)}" aria-label="${escapeHtml(ptc.editBtn)}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </button>
+            <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteListing(${item.id})" title="Delete" aria-label="Delete">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </button>
+          ` : ""}
+          <button type="button" class="bo-icon-btn" onclick="copyOfferShareLink(${item.id})" title="${escapeHtml(ptc.shareBtn)}" aria-label="${escapeHtml(ptc.shareBtn)}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          </button>
+          <button type="button" class="bo-icon-btn" onclick="openReportOfferSheet(${item.id})" title="${escapeHtml(getGdprUiCopy().dsaReportBtn)}" aria-label="${escapeHtml(getGdprUiCopy().dsaReportBtn)}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          </button>
+          <button type="button" id="offerModalFavBtn" class="bo-icon-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite(${item.id})" style="background:${isFav ? '#fff1f2' : '#f1f5f4'};color:${isFav ? '#e11d48' : '#0f172a'};font-size:15px;" title="Favorite" aria-label="Favorite">${isFav ? "♥" : "♡"}</button>
+          <span style="width:1px;height:18px;background:rgba(15,23,42,0.12);margin:0 1px;"></span>
+          <button type="button" class="bo-icon-btn hig-modal-close-btn" onclick="closeOfferModal()" title="Close" aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="hig-offer-sub-row">
         <span class="hig-offer-owner">${mUi.ownerVerified}: <strong>${escapeHtml(item.owner)}</strong> <span class="hig-verified-pill">${mUi.verifiedWord}</span></span>
         <span class="hig-offer-dot">·</span>
         <span class="hig-offer-deal">${escapeHtml(getDealTypeLabel(item.dealType))}</span>
-      </div>
-      <div class="hig-offer-actions">
-        ${isFromBackoffice ? `<button type="button" class="btn btn-dark" style="height:34px;padding:0 14px;font-size:12px;border-radius:999px;" onclick="closeOfferModal()">← Backoffice</button>` : ""}
-        ${(isCustomOwner || isFromBackoffice) ? `
-          <button type="button" class="bo-icon-btn" onclick="openQuickEditListingSheet(${item.id})" title="${escapeHtml(ptc.editBtn)}" aria-label="${escapeHtml(ptc.editBtn)}">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          </button>
-          <button type="button" class="bo-icon-btn is-danger" onclick="requestDeleteListing(${item.id})" title="Delete" aria-label="Delete">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-          </button>
-        ` : ""}
-        <button type="button" class="bo-icon-btn" onclick="copyOfferShareLink(${item.id})" title="${escapeHtml(ptc.shareBtn)}" aria-label="${escapeHtml(ptc.shareBtn)}">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-        </button>
-        <button type="button" class="bo-icon-btn" onclick="openReportOfferSheet(${item.id})" title="${escapeHtml(getGdprUiCopy().dsaReportBtn)}" aria-label="${escapeHtml(getGdprUiCopy().dsaReportBtn)}">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-        </button>
-        <button type="button" id="offerModalFavBtn" class="bo-icon-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite(${item.id})" style="background:${isFav ? '#fff1f2' : '#f1f5f4'};color:${isFav ? '#e11d48' : '#0f172a'};font-size:15px;" title="Favorite" aria-label="Favorite">${isFav ? "♥" : "♡"}</button>
-        <span style="width:1px;height:20px;background:rgba(15,23,42,0.1);margin:0 2px;"></span>
-        <button type="button" class="bo-icon-btn" onclick="closeOfferModal()" title="Close" aria-label="Close">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
       </div>
     </div>
     <div class="offer-modal-grid">
@@ -6222,7 +6204,7 @@ function openOfferModal(offerId, mode = "details") {
             <button type="button" onclick="stepOfferGalleryPhoto(${item.id}, 1, event)" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:36px;height:36px;min-height:36px !important;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(15,23,42,0.65);backdrop-filter:blur(12px);color:#fff;font-size:18px;font-weight:800;cursor:pointer;z-index:2;" title="Next photo">›</button>
             <span id="offerModalGalleryCount" style="position:absolute;top:12px;right:12px;background:rgba(15,23,42,0.62);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.22);color:#fff;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;">1 / ${galleryImgs.length}</span>
           ` : ""}
-          <span style="position:absolute;bottom:14px;left:14px;background:rgba(15,23,42,0.62);color:#ffffff;backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:1px solid rgba(255,255,255,0.24);padding:6px 14px;border-radius:999px;font-weight:600;font-size:13px;">
+          <span style="position:absolute;bottom:12px;left:12px;right:12px;width:fit-content;max-width:calc(100% - 24px);background:rgba(15,23,42,0.68);color:#ffffff;backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:1px solid rgba(255,255,255,0.24);padding:6px 13px;border-radius:14px;font-weight:600;font-size:12.5px;line-height:1.3;white-space:normal;word-break:break-word;">
             ${getCategoryLabel(item.category)} · ${valFormatted}${clientBaseNote}
           </span>
         </div>
@@ -6277,16 +6259,16 @@ function openOfferModal(offerId, mode = "details") {
   }).join("")}
                 </select>
               </div>
-              <div class="hig-swap-input-grid">
+              <div class="hig-swap-input-grid" style="display:grid;grid-template-columns:1fr;gap:10px;">
                 <div>
                   <label class="hig-field-label">${t("quickTitleHave")}</label>
                   <input type="text" id="swapOfferedItemInput" name="offeredItem" class="input-light" placeholder="${escapeHtml(t('quickHavePlaceholder'))}" required oninput="updateSwapValueCalculator(${item.id})" />
                 </div>
                 <div>
                   <label class="hig-field-label">${yourValLabel}</label>
-                  <div style="display:grid;grid-template-columns:1fr 118px;gap:8px;">
-                    <input type="text" inputmode="decimal" id="calcMyValueInput" class="input-light" style="padding:0 12px;font-weight:700;font-variant-numeric:tabular-nums;" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
-                    <select id="calcMyCurrencySelect" class="input-light" style="padding:0 24px 0 10px;font-size:12.5px;font-weight:700;" onchange="updateSwapValueCalculator(${item.id})">
+                  <div style="display:grid;grid-template-columns:minmax(0, 1fr) 88px;gap:8px;align-items:center;">
+                    <input type="text" inputmode="decimal" id="calcMyValueInput" class="input-light" style="padding:0 14px !important;font-weight:700;font-variant-numeric:tabular-nums;min-width:0;width:100%;" value="${theirValConverted}" oninput="updateSwapValueCalculator(${item.id})" />
+                    <select id="calcMyCurrencySelect" class="input-light" style="padding:0 26px 0 10px !important;font-size:13px;font-weight:700;width:88px;" onchange="updateSwapValueCalculator(${item.id})">
                       ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code}</option>`).join("")}
                     </select>
                   </div>
@@ -6301,7 +6283,7 @@ function openOfferModal(offerId, mode = "details") {
             <div class="hig-grouped-section" style="margin-top:10px;">
               <div class="field-group" style="margin-bottom:10px;">
                 <label class="hig-field-label">${ptc.messageLabel}</label>
-                <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
+                <textarea name="proposalNote" rows="2" class="input-light" style="min-height:56px !important;height:auto !important;line-height:1.38 !important;padding:9px 14px !important;border-radius:16px !important;resize:vertical;" placeholder="${ptc.messagePlaceholder}"></textarea>
               </div>
               <div class="form-grid-2">
                 <div class="field-group" style="margin-bottom:0;">
@@ -6339,7 +6321,7 @@ function openOfferModal(offerId, mode = "details") {
                   <button type="button" class="hig-pct-pill" onclick="setBuyOfferQuickPct(${item.id}, 1)">100%</button>
                 </div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 124px;gap:8px;">
+              <div style="display:grid;grid-template-columns:minmax(0, 1fr) 102px;gap:8px;align-items:center;">
                 <input type="text" inputmode="decimal" id="buyOfferAmountInput" name="buyAmount" class="input-light" style="font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;" value="${theirValConverted}" required oninput="onBuyOfferPriceChange(${item.id})" />
                 <select id="buyOfferCurrencySelect" name="buyCurrency" class="input-light" style="font-weight:700;font-size:13px;" onchange="onBuyOfferPriceChange(${item.id})">
                   ${(window.CURRENCIES || []).map(curr => `<option value="${curr.code}" ${curr.code === currentCurrency ? 'selected' : ''}>${curr.code} (${curr.symbol})</option>`).join("")}
@@ -6358,7 +6340,7 @@ function openOfferModal(offerId, mode = "details") {
               </div>
               <div class="field-group" style="margin-bottom:10px;">
                 <label class="hig-field-label">${ptc.messageLabel}</label>
-                <input type="text" name="proposalNote" class="input-light" placeholder="${ptc.messagePlaceholder}" />
+                <textarea name="proposalNote" rows="2" class="input-light" style="min-height:56px !important;height:auto !important;line-height:1.38 !important;padding:9px 14px !important;border-radius:16px !important;resize:vertical;" placeholder="${ptc.messagePlaceholder}"></textarea>
               </div>
               <div class="form-grid-2">
                 <div class="field-group" style="margin-bottom:0;">
@@ -6505,9 +6487,6 @@ function deleteSwapProposal(propId) {
   updateFavCountUI();
   renderDashboardContent();
 }
-// ============================================================================
-// PERSONAL DASHBOARD MODAL (PROPOSALS, MY LISTINGS, FAVORITES, PROFILE)
-// ============================================================================
 function openDashboardModal(tab = "mylistings") {
   if (!currentUser) {
     openAuthModal("login");
@@ -7156,9 +7135,6 @@ function renderDashboardContent() {
     `;
   }
 }
-// ============================================================================
-// GUIDES MODAL, WATCHLIST & CHAT ASSISTANT
-// ============================================================================
 function openGuideModal(guideKey) {
   const g = window.GUIDES_DATA[guideKey];
   if (!g) return;
@@ -7178,7 +7154,7 @@ function openGuideModal(guideKey) {
   const content = document.getElementById("guideModalContent");
   content.innerHTML = `
     <button type="button" class="modal-close" style="color:var(--ink);" onclick="closeGuideModal()">✕</button>
-    <span style="background:var(--mint);color:var(--forest);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${badgeMap[currentLang] || badgeMap.en}</span>
+    <span style="background:#0d8a5e;color:#ffffff;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">${badgeMap[currentLang] || badgeMap.en}</span>
     <h2 style="font-size:26px;margin:12px 0 18px;">${title}</h2>
     <ul class="checks" style="margin-bottom:22px;">
       ${lines.map(line => `
@@ -7296,9 +7272,6 @@ function handleChatSubmit(e) {
     box.scrollTop = box.scrollHeight;
   }, 300);
 }
-// ============================================================================
-// MOBILE MENU, SCROLL & TOAST HELPERS
-// ============================================================================
 function closeMobileMenu() {
   closeAllModalsSilently();
   document.body.classList.add("mobile-started");
@@ -7379,10 +7352,6 @@ function showToast(message, undoOption = null) {
     el.remove();
   }, undoOption ? 6500 : 4200);
 }
-// ============================================================================
-// APPLE HIG UNIVERSAL SHEETS, QUICK-EDIT & DESTRUCTIVE CONFIRMATION SYSTEM
-// (sheets.md, alerts.md, buttons.md, entering-data.md, undo-and-redo.md)
-// ============================================================================
 let pendingAppleConfirmCallback = null;
 function closeAppleSheetModal() {
   const modal = document.getElementById("appleSheetModal");
@@ -7883,10 +7852,6 @@ function handleAdminEditUserSubmit(e, emailKey) {
   }
   showToast(`✓ Saved changes for ${acc.name}`);
 }
-// ============================================================================
-// ENTERPRISE BACKOFFICE & CRM PORTAL (/admin)
-// SHA-256 Digest Verification (Zero Plaintext Admin Password in Client Code)
-// ============================================================================
 const BACKOFFICE_ADMIN_EMAIL = "jeka7ro@mail.com";
 const BACKOFFICE_ADMIN_PASS_HASH = "4106b4f2be492e957124b0687c3cb0781df5505e82f5946794d200201c3b63d4";
 let adminAuthenticated = (() => {
@@ -8402,7 +8367,6 @@ const INITIAL_TEST_REGISTRATIONS_AND_OFFERS = {
 function ensurePlatformAccountsAndTestRegistrations() {
   let dbChanged = false;
   let offersChanged = false;
-  // 1. Ensure Super-Admin Account exists
   const adminKey = BACKOFFICE_ADMIN_EMAIL.toLowerCase();
   if (!accountsDb[adminKey]) {
     accountsDb[adminKey] = {
@@ -8425,7 +8389,6 @@ function ensurePlatformAccountsAndTestRegistrations() {
     delete accountsDb[adminKey].password;
     dbChanged = true;
   }
-  // 2. Ensure the 6 Test Registrations exist in accountsDb
   INITIAL_TEST_REGISTRATIONS_AND_OFFERS.accounts.forEach(acc => {
     const k = acc.email.toLowerCase();
     if (!accountsDb[k]) {
@@ -8508,7 +8471,6 @@ function ensurePlatformAccountsAndTestRegistrations() {
   if (dbChanged) saveAccountsDb();
   if (offersChanged) saveOffersToStorage();
 }
-// Run immediately so accountsDb and test offers are always populated
 ensurePlatformAccountsAndTestRegistrations();
 function updateAdminHeaderButtonsVisibility() {
   const show = Boolean(adminAuthenticated || (currentUser && String(currentUser.email || "").toLowerCase() === BACKOFFICE_ADMIN_EMAIL));
@@ -8519,9 +8481,6 @@ function updateAdminHeaderButtonsVisibility() {
   if (mBtn) mBtn.style.display = show ? "block" : "none";
   if (dBtn) dBtn.style.display = show ? "inline-flex" : "none";
 }
-// ============================================================================
-// CLOUD DATABASE & CROSS-DEVICE REAL-TIME SYNC ENGINE (/api/sync + Supabase)
-// ============================================================================
 let cloudSyncReady = false;
 let cloudSyncPendingTimer = null;
 let cloudSyncInFlight = false;
@@ -9043,9 +9002,6 @@ function renderAdminModalContent() {
   if (!container) return;
   const prevBoScrollTop = container.querySelector(".bo-content-scroll")?.scrollTop || 0;
   ensurePlatformAccountsAndTestRegistrations();
-  // ==========================================================================
-  // 1. CLEAN ENTERPRISE BACKOFFICE LOGIN SCREEN
-  // ==========================================================================
   if (!adminAuthenticated) {
     let savedAdminCreds = { email: "", pass: "", remember: true };
     try {
@@ -9066,12 +9022,12 @@ function renderAdminModalContent() {
         <div class="bo-login-card">
           <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:24px;">
             <div class="logo" style="display:inline-flex;flex-direction:column;align-items:center;gap:10px;color:#ffffff;">
-              <svg width="52" height="52" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="box-shadow:0 0 0 2px rgba(169,255,202,0.35), 0 10px 28px rgba(0,0,0,0.35);border-radius:50%;">
-                <circle cx="16" cy="16" r="16" fill="#0c2c28"></circle>
-                <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
-                <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round"></path>
-                <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#a9ffca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              <svg width="52" height="52" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="box-shadow:0 0 0 2px rgba(255,255,255,0.28), 0 10px 28px rgba(0,0,0,0.35);border-radius:50%;">
+                <circle cx="16" cy="16" r="16" fill="#0d8a5e"></circle>
+                <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
               </svg>
               <div>
                 <strong style="display:block;font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;">ChangeIt4Me</strong>
@@ -9123,9 +9079,6 @@ function renderAdminModalContent() {
     `;
     return;
   }
-  // ==========================================================================
-  // 2. AUTHENTICATED FULL-SCREEN BACKOFFICE WORKSPACE (100% CLEAN ENGLISH)
-  // ==========================================================================
   const allAccountsMap = { ...accountsDb };
   if (currentUser && currentUser.email) {
     const k = currentUser.email.toLowerCase();
@@ -9915,17 +9868,14 @@ document.addEventListener("DOMContentLoaded", () => {
   initCurrencyDropdown();
   initWorldMap();
   initGdprBanner();
-  // Start with English ('en') as default and run European Geo-IP detection
   detectLanguageByGeoIP(false);
   syncLiveExchangeRates();
   initScrollRevealAnimations();
   animateLiveMemberCount();
-  // Restore exact page / screen / wizard step & draft on Refresh
   const initialRoute = getRouteFromUrlOrStorage();
   if (initialRoute && initialRoute !== "/") {
     navigateToPageRoute(initialRoute, true);
   }
-  // Handle browser Back / Forward buttons across all pages & Wizard steps
   window.addEventListener("popstate", (ev) => {
     const route = (ev.state && ev.state.route) ? ev.state.route : getRouteFromUrlOrStorage();
     navigateToPageRoute(route || "/", true);
@@ -9951,12 +9901,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
-  // Header scroll effect
   const header = document.getElementById("header");
-  window.addEventListener("scroll", () => {
+  if (typeof window.addEventListener === "function") window.addEventListener("scroll", () => {
     header.classList.toggle("scrolled", window.scrollY > 8);
   }, { passive: true });
-  // Story slider progress bar
   const slider = document.getElementById("storySlider");
   const progress = document.getElementById("sliderProgress");
   if (slider && progress) {
@@ -9966,7 +9914,6 @@ document.addEventListener("DOMContentLoaded", () => {
       progress.style.width = `${30 + 70 * ratio}%`;
     }, { passive: true });
   }
-  // Mobile menu toggle
   const mobileBtn = document.getElementById("mobileMenuBtn");
   const mobilePanel = document.getElementById("mobilePanel");
   if (mobileBtn && mobilePanel) {
@@ -10019,3 +9966,227 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+function updateMobileBottomTabBarUI() {
+  const labelsMap = {
+    ro: { offers: "Anunțuri", cats: "Categorii", post: "Home", map: "Hartă", account: currentUser ? "Contul Meu" : "Cont" },
+    en: { offers: "Explore", cats: "Categories", post: "Home", map: "Map", account: currentUser ? "My Account" : "Account" },
+    de: { offers: "Angebote", cats: "Kategorien", post: "Home", map: "Karte", account: "Konto" },
+    fr: { offers: "Annonces", cats: "Catégories", post: "Accueil", map: "Carte", account: "Compte" },
+    it: { offers: "Annunci", cats: "Categorie", post: "Home", map: "Mappa", account: "Profilo" },
+    es: { offers: "Anuncios", cats: "Categorías", post: "Inicio", map: "Mapa", account: "Cuenta" },
+    ru: { offers: "Объявления", cats: "Категории", post: "Главная", map: "Карта", account: "Профиль" }
+  };
+  const l = labelsMap[currentLang] || labelsMap.en;
+  const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  setTxt("mobTabOffersLabel", l.offers);
+  setTxt("mobTabCatsLabel", l.cats);
+  setTxt("mobTabPostLabel", l.post);
+  setTxt("mobTabMapLabel", l.map);
+  setTxt("mobTabAccountLabel", l.account);
+  const badge = document.getElementById("mobTabAccountBadge");
+  if (badge) {
+    if (!currentUser) {
+      badge.hidden = true;
+      badge.textContent = "";
+      badge.style.display = "none";
+    } else {
+      const count = Array.isArray(swapProposals) ? swapProposals.length : 0;
+      if (count > 0) {
+        badge.hidden = false;
+        badge.textContent = String(count);
+        badge.style.display = "inline-flex";
+      } else {
+        badge.hidden = true;
+        badge.textContent = "";
+        badge.style.display = "none";
+      }
+    }
+  }
+}
+function navigateMobileTab(tabKey) {
+  document.querySelectorAll("#mobileBottomTabBar .hig-tabbar-item").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-mob-tab") === tabKey);
+  });
+  if (typeof closeAllModalsSilently === "function") {
+    closeAllModalsSilently();
+  }
+  if (typeof closeMobileMenu === "function") {
+    closeMobileMenu();
+  }
+  if (tabKey === "offers") {
+    document.getElementById("offers")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else if (tabKey === "categories") {
+    document.getElementById("categories")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else if (tabKey === "home" || tabKey === "post") {
+    if (typeof exitMobileStartScreen === "function") exitMobileStartScreen();
+    if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    document.getElementById("top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else if (tabKey === "map") {
+    document.getElementById("world")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else if (tabKey === "account") {
+    if (currentUser) {
+      openDashboardModal("mylistings");
+    } else {
+      openAuthModal("login");
+    }
+  }
+}
+function initAppleSheetSwipeToDismiss() {
+  if (typeof document === "undefined" || typeof document.addEventListener !== "function") return;
+  let activeModal = null;
+  let activeCard = null;
+  let closeFn = null;
+  let startY = 0;
+  let startX = 0;
+  let currentDeltaY = 0;
+  let dragging = false;
+  const resolveSheetTarget = (target) => {
+    if (!target || typeof target.closest !== "function") return null;
+    const isGrabberOrHeader = target.closest(".hig-sheet-grabber-zone, .hig-sheet-grabber, .hig-offer-header, .wiz-header, .hig-sheet-toolbar");
+    const modal = target.closest("#offerModal.open, #wizardModal.open, #guideModal.open, #appleSheetModal.open");
+    if (!modal) return null;
+    if (!isGrabberOrHeader && modal.scrollTop > 2) return null;
+    if (target.closest("button, a, input, select, textarea, label")) return null;
+    const card = modal.querySelector(".modal-card, .hig-sheet-card");
+    if (!card) return null;
+    let fn = null;
+    if (modal.id === "offerModal") fn = closeOfferModal;
+    else if (modal.id === "wizardModal") fn = closeWizardModal;
+    else if (modal.id === "guideModal") fn = closeGuideModal;
+    else if (modal.id === "appleSheetModal") fn = closeAppleSheetModal;
+    return fn ? { modal, card, fn } : null;
+  };
+  document.addEventListener("touchstart", (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const info = resolveSheetTarget(e.target);
+    if (!info) return;
+    activeModal = info.modal;
+    activeCard = info.card;
+    closeFn = info.fn;
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    currentDeltaY = 0;
+    dragging = false;
+  }, { passive: true });
+  document.addEventListener("touchmove", (e) => {
+    if (!activeCard || !activeModal || !e.touches || e.touches.length !== 1) return;
+    const dy = e.touches[0].clientY - startY;
+    const dx = e.touches[0].clientX - startX;
+    if (!dragging) {
+      if (dy > 10 && dy > Math.abs(dx) * 1.2 && activeModal.scrollTop <= 2) {
+        dragging = true;
+      } else if (Math.abs(dx) > 12 || dy < -8) {
+        activeCard = null;
+        return;
+      } else {
+        return;
+      }
+    }
+    if (dragging && dy > 0) {
+      currentDeltaY = dy;
+      activeCard.style.transition = "none";
+      activeCard.style.transform = `translateY(${Math.min(dy, 420)}px)`;
+      activeCard.style.opacity = String(Math.max(0.45, 1 - dy / 420));
+    }
+  }, { passive: true });
+  const finishSwipe = () => {
+    if (!activeCard) return;
+    const cardRef = activeCard;
+    const fnRef = closeFn;
+    const dy = currentDeltaY;
+    const wasDragging = dragging;
+    activeCard = null;
+    activeModal = null;
+    closeFn = null;
+    dragging = false;
+    currentDeltaY = 0;
+    if (!wasDragging) return;
+    if (dy > 62 && typeof fnRef === "function") {
+      cardRef.style.transition = "transform 170ms cubic-bezier(0.22, 1, 0.36, 1), opacity 170ms ease";
+      cardRef.style.transform = "translateY(100%)";
+      cardRef.style.opacity = "0";
+      setTimeout(() => {
+        cardRef.style.transition = "";
+        cardRef.style.transform = "";
+        cardRef.style.opacity = "";
+        fnRef();
+      }, 150);
+    } else {
+      cardRef.style.transition = "transform 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease";
+      cardRef.style.transform = "translateY(0)";
+      cardRef.style.opacity = "1";
+      setTimeout(() => {
+        cardRef.style.transition = "";
+        cardRef.style.transform = "";
+        cardRef.style.opacity = "";
+      }, 200);
+    }
+  };
+  document.addEventListener("touchend", finishSwipe, { passive: true });
+  document.addEventListener("touchcancel", finishSwipe, { passive: true });
+}
+initAppleSheetSwipeToDismiss();
+function initMobileTabBarScrollBehavior() {
+  if (typeof window === "undefined" || typeof document === "undefined" || typeof document.addEventListener !== "function") return;
+  let lastWinY = 0;
+  let lastModalY = 0;
+  let lockUntil = 0;
+  const setBarHidden = (hide) => {
+    const now = Date.now();
+    if (now < lockUntil) return;
+    const bar = document.getElementById("mobileBottomTabBar");
+    if (!bar) return;
+    const isHidden = bar.classList.contains("is-scroll-hidden");
+    if (hide && !isHidden) {
+      bar.classList.add("is-scroll-hidden");
+      lockUntil = now + 220;
+    } else if (!hide && isHidden) {
+      bar.classList.remove("is-scroll-hidden");
+      lockUntil = now + 220;
+    }
+  };
+  const getWinScrollY = () => Math.max(
+    0,
+    Number(window.scrollY || window.pageYOffset || document.documentElement?.scrollTop || document.body?.scrollTop || 0)
+  );
+  if (typeof window.addEventListener === "function") {
+    window.addEventListener("scroll", () => {
+      const curY = getWinScrollY();
+      const dy = curY - lastWinY;
+      if (curY <= 30) {
+        setBarHidden(false);
+      } else if (dy > 18 && curY > 60) {
+        setBarHidden(true);
+        lastWinY = curY;
+      } else if (dy < -14) {
+        setBarHidden(false);
+        lastWinY = curY;
+      }
+      if (Math.abs(dy) > 18 || curY <= 30) {
+        lastWinY = curY;
+      }
+    }, { passive: true });
+  }
+  document.addEventListener("scroll", (e) => {
+    const t = e && e.target;
+    if (!t || !t.classList || !t.classList.contains("modal-backdrop")) return;
+    const curY = Math.max(0, Number(t.scrollTop || 0));
+    const dy = curY - lastModalY;
+    if (curY <= 24) {
+      setBarHidden(false);
+    } else if (dy > 18 && curY > 50) {
+      setBarHidden(true);
+      lastModalY = curY;
+    } else if (dy < -14) {
+      setBarHidden(false);
+      lastModalY = curY;
+    }
+    if (Math.abs(dy) > 18 || curY <= 24) {
+      lastModalY = curY;
+    }
+  }, { capture: true, passive: true });
+}
+initMobileTabBarScrollBehavior();
+if (typeof updateMobileBottomTabBarUI === 'function') updateMobileBottomTabBarUI();

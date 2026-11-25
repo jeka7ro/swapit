@@ -16,7 +16,9 @@
     content="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23a9ffca'/%3E%3Cpath d='M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2' stroke='%230c2c28' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Ccircle cx='16' cy='16' r='16' fill='%230d8a5e'/%3E%3Cpath d='M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2M19.2 9.2 20.6 12.4 17.4 12M12.8 22.8 11.4 19.6 14.6 20' stroke='%23ffffff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Ccircle cx='16' cy='16' r='16' fill='%230d8a5e'/%3E%3Cpath d='M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2M19.2 9.2 20.6 12.4 17.4 12M12.8 22.8 11.4 19.6 14.6 20' stroke='%23ffffff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -24,9 +26,9 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <link rel="stylesheet" href="/styles.css?v=81" />
+  <link rel="stylesheet" href="/styles.css?v=103" />
   <style id="core-ui-fixes">
-    button {
+    button:not(.offer-list-item):not(.wiz-cat-card):not(.smart-dd-item):not(.mobile-hub-card):not(.hig-tabbar-item) {
       appearance: none;
       -webkit-appearance: none;
       border-radius: 999px;
@@ -41,9 +43,14 @@
     }
 
     .modal-backdrop {
-      top: 60px !important;
-      height: calc(100dvh - 60px) !important;
-      z-index: 1100 !important;
+      inset: 0 !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100dvh !important;
+      z-index: 2500 !important;
     }
 
     .hero {
@@ -102,28 +109,10 @@
 
     @media (max-width: 768px) {
 
-      body:not(.mobile-started) #mobileQuickHub,
-      body:not(.mobile-started) #categories,
-      body:not(.mobile-started) #offers,
-      body:not(.mobile-started) #world,
-      body:not(.mobile-started) .footer {
+      #mobileQuickHub,
+      .mobile-quick-hub,
+      .mobile-hero-cta-wrap {
         display: none !important;
-      }
-
-      body:not(.mobile-started) .hero {
-        min-height: calc(100dvh - 64px) !important;
-        margin: 0 !important;
-        border-radius: 0 !important;
-      }
-
-      body.mobile-started .hero {
-        display: none !important;
-      }
-
-      body.mobile-started #mobileQuickHub,
-      body.mobile-started #categories,
-      body.mobile-started #offers {
-        animation: mobileScreenFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
       }
 
       .wiz-step-btn:not(.active) b {
@@ -334,7 +323,7 @@
       border-radius: 999px !important;
     }
   </style>
-  <link rel="stylesheet" href="/tahoe-skin.css?v=81" />
+  <link rel="stylesheet" href="/tahoe-skin.css?v=103" />
 </head>
 
 <body>
@@ -400,7 +389,7 @@
         onclick="openDashboardModal('proposals')">
         <span data-i18n="navDashboard">Dashboard</span>
         <span id="headerProposalsBadge"
-          style="background:var(--forest);color:var(--mint);border-radius:999px;padding:1px 7px;font-size:11.5px;">2</span>
+          style="display:none;background:#0d8a5e;color:#ffffff;border-radius:999px;padding:1px 7px;font-size:11.5px;">0</span>
       </button>
 
       <button type="button" class="btn btn-login" id="postWizardHeaderBtn" style="display:none;"
@@ -1116,23 +1105,23 @@
         <article class="plan dark">
           <div>
             <span class="tag" id="plan3Tag"
-              style="background:var(--mint);color:var(--forest);display:inline-block;margin-bottom:8px;">PRO Unlimited
+              style="background:#0d8a5e;color:#ffffff;display:inline-block;margin-bottom:8px;">PRO Unlimited
               ∞</span>
             <h3 data-i18n="plan3Title">PRO Unlimited Subscription</h3>
-            <div class="price" style="color:var(--mint);margin:8px 0 4px;"><span id="planPricePro">€19</span> <small
-                id="planPerMonth" style="color:rgba(255,255,255,0.75);">/ month</small></div>
+            <div class="price" style="color:#ffffff;margin:8px 0 4px;"><span id="planPricePro">€19</span> <small
+                id="planPerMonth" style="color:rgba(255,255,255,0.82);">/ month</small></div>
             <p style="color:rgba(255,255,255,0.84);margin-top:8px;" data-i18n="plan3Desc">
               For active traders, real estate owners & auto dealers. Unlimited swaps and listings across all categories,
               priority map badge, and VIP Watchlist alerts.
             </p>
             <ul id="plan3List"
-              style="margin:12px 0 16px;padding-left:18px;color:rgba(255,255,255,0.9);font-size:13.5px;display:grid;gap:6px;">
-              <li>Unlimited (∞) swap proposals, buy offers & listings</li>
-              <li>PRO Verified badge & top placement in catalog</li>
-              <li>0% commission on all direct 1:1 deals</li>
+              style="margin:12px 0 16px;padding-left:0;color:#ffffff;font-size:14px;display:grid;gap:6px;">
+              <li style="color:#ffffff !important;border-top-color:rgba(255,255,255,0.16) !important;">Unlimited (∞) swap proposals, buy offers & listings</li>
+              <li style="color:#ffffff !important;border-top-color:rgba(255,255,255,0.16) !important;">PRO Verified badge & top placement in catalog</li>
+              <li style="color:#ffffff !important;border-top-color:rgba(255,255,255,0.16) !important;">0% commission on all direct 1:1 deals</li>
             </ul>
           </div>
-          <button type="button" class="btn btn-mint btn-block ani1" onclick="openSubscriptionModal('pro')">
+          <button type="button" class="btn btn-mint btn-block" onclick="openSubscriptionModal('pro')">
             <span id="plan3ActionBtn">Activate PRO Subscription</span>
             <span class="arrow">→</span>
           </button>
@@ -1568,12 +1557,12 @@
       <div>
         <a class="logo" href="#top">
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <circle cx="16" cy="16" r="16" fill="#eaf7f1"></circle>
-            <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#0d8a5e" stroke-width="1.8" stroke-linecap="round"></path>
-            <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#0d8a5e" stroke-width="1.8" stroke-linecap="round"></path>
-            <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#0d8a5e" stroke-width="1.8" stroke-linecap="round"
+            <circle cx="16" cy="16" r="16" fill="#0d8a5e"></circle>
+            <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"></path>
+            <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"></path>
+            <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"
               stroke-linejoin="round"></path>
-            <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#0d8a5e" stroke-width="1.8" stroke-linecap="round"
+            <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"
               stroke-linejoin="round"></path>
           </svg>
           <span>ChangeIt4Me</span>
@@ -1887,9 +1876,9 @@
       <div class="wiz-header">
         <div style="display:flex;align-items:center;gap:10px;">
           <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="16" fill="#eaf7f1"></circle>
-            <path d="M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2" stroke="#0d8a5e" stroke-width="2"
-              stroke-linecap="round"></path>
+            <circle cx="16" cy="16" r="16" fill="#0d8a5e"></circle>
+            <path d="M10 16a6 6 0 0 1 10.2-4.2M22 16a6 6 0 0 1-10.2 4.2M19.2 9.2 20.6 12.4 17.4 12M12.8 22.8 11.4 19.6 14.6 20" stroke="#ffffff" stroke-width="1.9"
+              stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
           <strong style="font-size:18px;" data-i18n="wizTitle">7-Step Swap Listing Wizard</strong>
         </div>
@@ -1969,7 +1958,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
                 <span data-i18n="dashTabMyListings">My Listings</span>
               </span>
-              <span class="hig-tab-count" id="dashCountMyListings">1</span>
+              <span class="hig-tab-count" id="dashCountMyListings">0</span>
             </button>
 
             <button type="button" class="cat-pill hig-ws-nav-item" data-tab="proposals" onclick="switchDashboardTab('proposals')">
@@ -1977,7 +1966,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5-5 5 5"/><path d="M17 14l-5 5-5-5"/></svg>
                 <span data-i18n="dashTabProposals">Swap Proposals</span>
               </span>
-              <span class="hig-tab-count" id="dashCountProposals">2</span>
+              <span class="hig-tab-count" id="dashCountProposals">0</span>
             </button>
 
             <button type="button" class="cat-pill hig-ws-nav-item" data-tab="favorites" onclick="switchDashboardTab('favorites')">
@@ -1985,7 +1974,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                 <span data-i18n="dashTabFavorites">Saved Favorites</span>
               </span>
-              <span class="hig-tab-count" id="dashCountFavorites">2</span>
+              <span class="hig-tab-count" id="dashCountFavorites">0</span>
             </button>
 
             <button type="button" class="cat-pill hig-ws-nav-item" data-tab="profile" onclick="switchDashboardTab('profile')">
@@ -2091,32 +2080,80 @@
     </button>
   </div>
 
-  <!-- GDPR & E-PRIVACY CONSENT BANNER -->
-  <div id="gdprConsentBanner"
-    style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:760px;margin:0 auto;background:#0a2520;color:#fff;border:1px solid rgba(169,255,202,0.32);border-radius:18px;padding:16px 20px;z-index:1180;box-shadow:0 18px 42px rgba(0,0,0,0.42);">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:250px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <span
-            style="background:rgba(169,255,202,0.18);color:#a9ffca;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">GDPR
-            & ePrivacy</span>
-          <strong id="gdprBannerTitle" style="font-size:14px;color:#fff;">Privacy & Local Storage Consent</strong>
+  <!-- =======================================================================
+       APPLE HIG iOS LIQUID GLASS BOTTOM TAB BAR (Mobile Navigation — tab-bars.md)
+       ======================================================================= -->
+  <nav id="mobileBottomTabBar" class="hig-mobile-tabbar" aria-label="Primary Mobile Navigation">
+    <button type="button" class="hig-tabbar-item" data-mob-tab="offers" onclick="navigateMobileTab('offers')">
+      <span class="hig-tabbar-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/>
+        </svg>
+      </span>
+      <span class="hig-tabbar-label" id="mobTabOffersLabel">Explore</span>
+    </button>
+
+    <button type="button" class="hig-tabbar-item" data-mob-tab="categories" onclick="navigateMobileTab('categories')">
+      <span class="hig-tabbar-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      </span>
+      <span class="hig-tabbar-label" id="mobTabCatsLabel">Categories</span>
+    </button>
+
+    <button type="button" class="hig-tabbar-item is-center-post active" data-mob-tab="home" onclick="navigateMobileTab('home')">
+      <span class="hig-tabbar-post-circle" style="padding:0;overflow:hidden;">
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <circle cx="16" cy="16" r="16" fill="#0d8a5e"></circle>
+          <path d="M10 16a6 6 0 0 1 10.2-4.2" stroke="#ffffff" stroke-width="2" stroke-linecap="round"></path>
+          <path d="M22 16a6 6 0 0 1-10.2 4.2" stroke="#ffffff" stroke-width="2" stroke-linecap="round"></path>
+          <path d="M19.2 9.2 20.6 12.4 17.4 12" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M12.8 22.8 11.4 19.6 14.6 20" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </span>
+      <span class="hig-tabbar-label" id="mobTabPostLabel">Home</span>
+    </button>
+
+    <button type="button" class="hig-tabbar-item" data-mob-tab="map" onclick="navigateMobileTab('map')">
+      <span class="hig-tabbar-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+        </svg>
+      </span>
+      <span class="hig-tabbar-label" id="mobTabMapLabel">Map</span>
+    </button>
+
+    <button type="button" class="hig-tabbar-item" data-mob-tab="account" onclick="navigateMobileTab('account')">
+      <span class="hig-tabbar-icon" style="position:relative;">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>
+        </svg>
+        <span id="mobTabAccountBadge" class="hig-tabbar-badge" hidden style="display:none !important;"></span>
+      </span>
+      <span class="hig-tabbar-label" id="mobTabAccountLabel">Account</span>
+    </button>
+  </nav>
+
+  <!-- GDPR & E-PRIVACY CONSENT BANNER (COMPACT APPLE SLIM BAR) -->
+  <div id="gdprConsentBanner" class="hig-gdpr-compact-bar" style="display:none;">
+    <div class="hig-gdpr-compact-inner">
+      <div class="hig-gdpr-compact-copy">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="hig-gdpr-badge">GDPR</span>
+          <strong id="gdprBannerTitle" style="font-size:12.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Privacy & Local Storage</strong>
         </div>
-        <p id="gdprBannerDesc" style="margin:0;font-size:12.5px;color:#c9dfdb;line-height:1.45;">
-          We use strictly necessary local storage for your session and optional functional preferences (language,
-          currency, Geo-IP region). Zero third-party ad trackers.
+        <p id="gdprBannerDesc" class="hig-gdpr-desc">
+          We use strictly necessary local storage for session & preferences. Zero third-party trackers.
         </p>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;align-self:center;">
-        <button type="button" id="gdprBtnSettings" class="btn btn-login"
-          style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:8px 13px;font-size:12px;"
-          onclick="openGdprPreferencesModal()">GDPR Settings</button>
-        <button type="button" id="gdprBtnEssential" class="btn btn-login"
-          style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.24);padding:8px 13px;font-size:12px;"
-          onclick="acceptGdprConsent('essential')">Essential Only</button>
-        <button type="button" id="gdprBtnAcceptAll" class="btn btn-mint"
-          style="padding:8px 16px;font-size:12.5px;font-weight:800;" onclick="acceptGdprConsent('all')">Accept
-          All</button>
+      <div class="hig-gdpr-compact-actions">
+        <button type="button" id="gdprBtnSettings" class="hig-gdpr-btn is-ghost"
+          onclick="openGdprPreferencesModal()">Settings</button>
+        <button type="button" id="gdprBtnEssential" class="hig-gdpr-btn is-outline"
+          onclick="acceptGdprConsent('essential')">Essential</button>
+        <button type="button" id="gdprBtnAcceptAll" class="hig-gdpr-btn is-accept"
+          onclick="acceptGdprConsent('all')">Accept All</button>
       </div>
     </div>
   </div>
@@ -2137,9 +2174,9 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/i18n.js?v=81"></script>
-  <script src="/data.js?v=81"></script>
-  <script src="/app.js?v=81"></script>
+  <script src="/i18n.js?v=103"></script>
+  <script src="/data.js?v=103"></script>
+  <script src="/app.js?v=103"></script>
 </body>
 
 </html>

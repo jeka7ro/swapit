@@ -151,7 +151,8 @@ em {
 }
 
 .logo svg,
-.wiz-header svg {
+.wiz-header svg,
+.hig-tabbar-post-circle svg {
   display: block;
   flex-shrink: 0;
   transform-origin: 50% 50%;
@@ -424,7 +425,7 @@ em {
 
 .btn-dark .arrow {
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
 }
 
 .btn-block {
@@ -838,7 +839,7 @@ em {
   display: grid;
   place-items: center;
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
   font-weight: 700;
   font-size: 16px;
   cursor: pointer;
@@ -905,7 +906,7 @@ em {
   height: 38px;
   border-radius: 50%;
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
   display: grid;
   place-items: center;
   font-weight: 700;
@@ -960,7 +961,7 @@ em {
 }
 
 .marquee button:hover {
-  color: var(--forest);
+  color: #ffffff;
   background: var(--mint);
 }
 
@@ -1105,7 +1106,7 @@ h2 em {
   height: 44px;
   border-radius: 14px;
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -1498,7 +1499,7 @@ h2 em {
 
 .swap-pill-deal {
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
   padding: 5px 11px;
   border-radius: 999px;
   font-size: 11.5px;
@@ -1624,7 +1625,7 @@ h2 em {
 
 .swap-tag.want {
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
 }
 
 .swap-card-footer {
@@ -1847,7 +1848,7 @@ h2 em {
   height: 36px;
   border-radius: 50%;
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
   font-size: 13px;
   font-weight: 800;
 }
@@ -1895,7 +1896,7 @@ h2 em {
 .plan .tag {
   align-self: flex-start;
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
   border-radius: 999px;
   padding: 4px 12px;
   font-size: 12px;
@@ -1954,6 +1955,27 @@ h2 em {
   top: 17px;
 }
 
+.plan.dark h3,
+.plan.dark .price,
+.plan.dark #planPricePro,
+.plan.dark li {
+  color: #ffffff !important;
+}
+
+.plan.dark p,
+.plan.dark .sub,
+.plan.dark .price small {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.plan.dark li {
+  border-top-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.plan.dark li::before {
+  background: #34d399 !important;
+}
+
 /* EMBEDDED LP REGISTRATION & SWAP ENROLLMENT HUB */
 .enroll-hub {
   background: linear-gradient(135deg, #0c2c28 0%, #123d37 100%);
@@ -1987,7 +2009,7 @@ h2 em {
 
 .enroll-tab.active {
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
 }
 
 .enroll-grid {
@@ -2568,7 +2590,7 @@ footer .logo {
   border-radius: 999px;
   border: 0;
   background: var(--mint);
-  color: var(--ink);
+  color: #ffffff;
   font-size: 15.5px;
   font-weight: 700;
   cursor: pointer;
@@ -2713,7 +2735,7 @@ footer .logo {
 
 .wiz-header .modal-close:hover {
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
   border-color: var(--mint);
 }
 
@@ -2784,8 +2806,8 @@ footer .logo {
 }
 
 .wiz-step-btn.active span {
-  background: var(--mint);
-  color: var(--forest);
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
 }
 
 .wiz-step-btn.done {
@@ -3748,7 +3770,7 @@ select.input-light {
 
 .hero-qtag:hover {
   background: var(--mint);
-  color: var(--forest);
+  color: #ffffff;
   border-color: var(--mint);
 }
 
