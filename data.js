@@ -1646,6 +1646,11 @@ window.GUIDES_DATA = {
       fr: "Que mettre dans une offre d'échange auto",
       it: "Cosa inserire in un'offerta di scambio auto",
       es: "Qué incluir en una oferta de intercambio de coche",
+      cs: "Co uvést v nabídce výměny auta",
+      sk: "Čo uviesť v ponuke výmeny auta",
+      sl: "Kaj vključiti v ponudbo za menjavo avtomobila",
+      hr: "Što navesti u ponudi za zamjenu automobila",
+      pl: "Co zawrzeć w ofercie zamiany samochodu",
       ru: "Что указать в предложении обмена автомобиля"
     },
     items: {
@@ -1697,6 +1702,41 @@ window.GUIDES_DATA = {
         "3. Чёткие дневные фотографии: кузов со всех сторон, салон, приборная панель и шины.",
         "4. Честное описание состояния (окрашенные элементы, ближайшее ТО или следы эксплуатации).",
         "5. Чёткие условия обмена: какие модели, годы выпуска, тип двигателя или доплату (± EUR) вы рассматриваете."
+      ],
+      cs: [
+        "1. Přesný rok výroby, značka, model, motorizace, převodovka a aktuální nájezd (km).",
+        "2. Dostupnost VIN kódu pro ověření a kompletní servisní historie (faktury nebo elektronická servisní knížka).",
+        "3. Jasné fotografie za denního světla: exteriér ze všech úhlů, interiér, palubní deska a pneumatiky.",
+        "4. Pravdivý popis stavu (lakované díly, nadcházející servis nebo běžné opotřebení).",
+        "5. Jasná kritéria CHCI VÝMĚNOU: jaké modely, ročníky, palivo nebo doplatek (± EUR/CZK) akceptujete."
+      ],
+      sk: [
+        "1. Presný rok výroby, značka, model, motorizácia, prevodovka a aktuálny nájazd (km).",
+        "2. Dostupnosť VIN čísla na overenie a kompletná servisná história (faktúry alebo digitálna servisná knižka).",
+        "3. Jasné fotografie pri dennom svetle: exteriér zo všetkých uhlov, interiér, palubná doska a pneumatiky.",
+        "4. Pravdivý opis stavu (lakované diely, nadchádzajúci servis alebo bežné opotrebenie).",
+        "5. Jasné kritériá CHCEM VÝMENOU: aké modely, ročníky, palivo alebo doplatok (± EUR) akceptujete."
+      ],
+      sl: [
+        "1. Natančen letnik, znamka, model, motor, menjalnik in trenutni prevoženi kilometri (km).",
+        "2. Razpoložljivost številke šasije (VIN) in celotna servisna zgodovina (računi ali digitalna servisna knjiga).",
+        "3. Jasne dnevne fotografije: zunanjost iz vseh kotov, notranjost, armaturna plošča in pnevmatike.",
+        "4. Iskren opis stanja (morebitni barvani deli, prihajajoči servisi ali znaki obrabe).",
+        "5. Jasni pogoji menjave (ŽELIM): katere modele, letnike ali doplačilo (± EUR) sprejmete."
+      ],
+      hr: [
+        "1. Točno godište, marka, model, motor, mjenjač i trenutna kilometraža (km).",
+        "2. Dostupnost broja šasije (VIN) i potpuna servisna povijest (računi ili digitalna servisna knjiga).",
+        "3. Jasne dnevne fotografije: vanjski izgled iz svih kutova, unutrašnjost, kokpit i gume.",
+        "4. Iskrene napomene o stanju (lakirani dijelovi, nadolazeći servis ili tragovi korištenja).",
+        "5. Jasni uvjeti zamjene (TRAŽIM): koje modele, godišta, vrstu goriva ili nadoplatu (± EUR) prihvaćate."
+      ],
+      pl: [
+        "1. Dokładny rok produkcji, marka, model, silnik, skrzynia biegów oraz aktualny przebieg (km).",
+        "2. Dostępność numeru VIN do weryfikacji oraz pełna historia serwisowa (faktury lub książka cyfrowa).",
+        "3. Wyraźne zdjęcia w świetle dziennym: nadwozie z każdej strony, wnętrze, deska rozdzielcza i opony.",
+        "4. Uczciwy opis stanu (elementy lakierowane, zbliżający się serwis lub ślady użytkowania).",
+        "5. Jasne kryteria SZUKAM W ZAMIAN: jakie modele, roczniki, silnik lub dopłatę (± EUR/PLN) akceptujesz."
       ]
     }
   },
@@ -1708,6 +1748,11 @@ window.GUIDES_DATA = {
       fr: "Échanger un bien immobilier — Clé contre Clé",
       it: "Scambiare casa o immobile — Chiavi in mano",
       es: "Permutar una vivienda — Llave por Llave",
+      cs: "Výměna nemovitosti — Klíč za klíč",
+      sk: "Výmena nehnuteľnosti — Kľúč za kľúč",
+      sl: "Menjava nepremičnine — Ključ za ključ",
+      hr: "Zamjena nekretnine — Ključ za ključ",
+      pl: "Zamiana nieruchomości — Klucz za klucz",
       ru: "Обмен недвижимости — Ключ на ключ"
     },
     items: {
@@ -1759,6 +1804,41 @@ window.GUIDES_DATA = {
         "3. Чётко перечислите города, районы и минимальную площадь, которые вы ищете взамен.",
         "4. Подтвердите отсутствие обременений/ипотеки и готовность документов к нотариальной проверке.",
         "5. Важно: ChangeIt4Me берёт 0% риелторской комиссии — оплачиваются только стандартные услуги нотариуса."
+      ],
+      cs: [
+        "1. Uveďte, zda hledáte trvalou výměnu vlastnictví (směnná smlouva u notáře) nebo dlouhodobou výměnu bydlení.",
+        "2. Specifikujte přesnou užitnou plochu (m²), podlaží, vytápění, parkování a měsíční náklady.",
+        "3. Jasně vyjmenujte cílová města, čtvrti a minimální výměru, kterou požadujete výměnou.",
+        "4. Uveďte, zda je nemovitost bez hypotéky/věcných břemen a připravena k ověření v katastru.",
+        "5. Pamatujte: ChangeIt4Me si účtuje 0% realitní provizi — hradíte pouze standardní notářské a katastrální poplatky."
+      ],
+      sk: [
+        "1. Uveďte, či hľadáte trvalú výmenu vlastníctva (výmenná zmluva u notára) alebo dlhodobú výmenu bývania.",
+        "2. Špecifikujte presnú úžitkovú plochu (m²), poschodie, kúrenie, parkovanie a mesačné náklady.",
+        "3. Jasne vymenujte cieľové mestá, štvrte a minimálnu výmeru, ktorú požadujete výmenou.",
+        "4. Uveďte, či je nehnuteľnosť bez tiarch/hypotéky a pripravená na notárske overenie.",
+        "5. Pamätajte: ChangeIt4Me si účtuje 0% realitnú províziu — hradíte iba štandardné notárske a katastrálne poplatky."
+      ],
+      sl: [
+        "1. Navedite, ali želite trajno menjavo lastništva (notarska menjalna pogodba) ali dolgoročno menjavo bivanja.",
+        "2. Določite natančno uporabno površino (m²), nadstropje, ogrevanje, parkirišče in mesečne stroške.",
+        "3. Jasno navedite ciljna mesta, soseske in minimalno kvadraturo, ki jo iščete v zameno.",
+        "4. Potrdite, da je nepremičnina prosta bremen/hipotek in urejena v zemljiški knjigi.",
+        "5. Pomembno: ChangeIt4Me zaračuna 0 % nepremičninske provizije — plačate le standardne notarske stroške."
+      ],
+      hr: [
+        "1. Navedite tražite li trajnu zamjenu vlasništva (javnobilježnički ugovor o zamjeni) ili dugoročnu stambenu zamjenu.",
+        "2. Navedite točnu stambenu površinu (m²), kat, grijanje, parking i mjesečne režije.",
+        "3. Jasno navedite ciljane gradove, kvartove i minimalnu kvadraturu koju tražite zauzvrat.",
+        "4. Potvrdite je li nekretnina bez tereta/hipoteke i urednog vlasničkog lista (1/1).",
+        "5. Važno: ChangeIt4Me naplaćuje 0 % agencijske provizije — plaćate samo standardne javnobilježničke troškove."
+      ],
+      pl: [
+        "1. Określ, czy interesuje Cię trwała zamiana własności (akt notarialny zamiany) czy długoterminowa wymiana mieszkaniowa.",
+        "2. Podaj dokładną powierzchnię użytkową (m²), piętro, ogrzewanie, miejsce parkingowe oraz czynsz.",
+        "3. Wskaż dokładnie miasta, dzielnice i minimalny metraż, jakiego oczekujesz w zamian.",
+        "4. Potwierdź, że nieruchomość posiada czystą księgę wieczystą bez obciążeń hipotecznych.",
+        "5. Pamiętaj: ChangeIt4Me pobiera 0% prowizji agencyjnej — ponosisz jedynie standardowe koszty notarialne."
       ]
     }
   },
@@ -1770,6 +1850,11 @@ window.GUIDES_DATA = {
       fr: "Rencontrer, vérifier et échanger en sécurité",
       it: "Incontrarsi, verificare e scambiare in sicurezza",
       es: "Quedar, revisar e intercambiar con seguridad",
+      cs: "Setkání, technická kontrola a bezpečná výměna",
+      sk: "Stretnutie, technická kontrola a bezpečná výmena",
+      sl: "Varno srečanje, pregled in menjava",
+      hr: "Siguran susret, provjera i zamjena",
+      pl: "Spotkanie, weryfikacja i bezpieczna wymiana",
       ru: "Безопасная встреча, проверка и обмен"
     },
     items: {
@@ -1821,6 +1906,41 @@ window.GUIDES_DATA = {
         "3. Для Недвижимости: Проведите взаимные просмотры и оформляйте договор мены у лицензированного нотариуса.",
         "4. Для Электроники и Люкса: Проверяйте серийные номера (IMEI), чеки и работоспособность при встрече.",
         "5. Подпишите Договор обмена 1:1 из личного кабинета с указанием согласованной доплаты."
+      ],
+      cs: [
+        "1. Prvotní komunikaci a výměnu fotografií veďte přes platformu před osobním setkáním.",
+        "2. U aut: Setkejte se v autorizovaném servisu nebo na STK, aby oba majitelé mohli vozy zkontrolovat současně.",
+        "3. U nemovitostí: Naplánujte vzájemné prohlídky a využijte notáře pro souběžný převod vlastnických práv.",
+        "4. U elektroniky a luxusního zboží: Na místě ověřte sériová čísla (IMEI), originální doklady a plnou funkčnost.",
+        "5. Vytiskněte a podepište Dohodu o výměně 1:1 z vašeho účtu včetně případného doplatku."
+      ],
+      sk: [
+        "1. Prvotnú komunikáciu a výmenu fotografií veďte cez platformu pred osobným stretnutím.",
+        "2. Pri autách: Stretnite sa v autorizovanom servise alebo na STK, aby obaja majitelia mohli vozidlá skontrolovať súčasne.",
+        "3. Pri nehnuteľnostiach: Naplánujte vzájomné obhliadky a využite notára pre súbežný prevod vlastníctva.",
+        "4. Pri elektronike a luxusnom tovare: Na mieste overte sériové čísla (IMEI), originálne doklady a plnú funkčnosť.",
+        "5. Vytlačte a podpíšte Dohodu o výmene 1:1 z vášho účtu vrátane prípadného doplatku."
+      ],
+      sl: [
+        "1. Prvotno komunikacijo in izmenjavo fotografij opravite na platformi pred srečanjem v živo.",
+        "2. Za avtomobile: Srečajte se na pooblaščenem servisu ali tehničnih pregledih za sočasni pregled obeh vozil.",
+        "3. Za nepremičnine: Organizirajte vzajemne oglede in uporabite notarja za sočasni prenos lastništva.",
+        "4. Za elektroniko in luksuzno blago: Na kraju samem preverite serijske številke (IMEI), račune in delovanje.",
+        "5. Podpišite Pogodbo o menjavi 1:1 iz nadzorne plošče z navedbo morebitnega doplačila."
+      ],
+      hr: [
+        "1. Početnu komunikaciju i razmjenu fotografija vodite unutar platforme prije susreta.",
+        "2. Za automobile: Nađite se u ovlaštenom servisu ili stanici za tehnički pregled radi istovremene provjere oba vozila.",
+        "3. Za nekretnine: Organizirajte međusobne razglede i angažirajte javnog bilježnika za istovremeni prijenos vlasništva.",
+        "4. Za elektroniku i luksuznu robu: Na licu mjesta provjerite serijske brojeve (IMEI), originalne račune i ispravnost.",
+        "5. Potpišite Ugovor o zamjeni 1:1 iz nadzorne ploče uz navođenje dogovorene nadoplate."
+      ],
+      pl: [
+        "1. Prowadź wstępną rozmowę i wymianę zdjęć na platformie przed spotkaniem osobistym.",
+        "2. Dla samochodów: Spotkajcie się w autoryzowanym serwisie (ASO) lub na stacji kontroli pojazdów, aby jednocześnie sprawdzić oba auta.",
+        "3. Dla nieruchomości: Umówcie wzajemne oględziny i skorzystajcie z notariusza przy jednoczesnym przeniesieniu własności.",
+        "4. Dla elektroniki i dóbr luksusowych: Na miejscu sprawdźcie numery seryjne (IMEI), dowody zakupu i pełną sprawność.",
+        "5. Wydrukujcie i podpiszcie Umowę Zamiany 1:1 z panelu użytkownika wraz z ustaloną kwotą dopłaty."
       ]
     }
   },
@@ -1832,6 +1952,11 @@ window.GUIDES_DATA = {
       fr: "Conditions d'Utilisation & Règles d'Échange Direct (0% Commission)",
       it: "Termini di Utilizzo & Regole di Scambio Diretto (0% Commissioni)",
       es: "Términos de Uso y Reglas de Intercambio Directo (0% Comisión)",
+      cs: "Podmínky použití a pravidla přímé výměny (0% provize)",
+      sk: "Podmienky používania a pravidlá priamej výmeny (0% provízia)",
+      sl: "Pogoji uporabe in pravila neposredne menjave (0 % provizije)",
+      hr: "Uvjeti korištenja i pravila izravne zamjene (0 % provizije)",
+      pl: "Regulamin i zasady bezpośredniej wymiany (0% prowizji)",
       ru: "Условия использования и правила прямого обмена (0% комиссии)"
     },
     items: {
@@ -1883,6 +2008,41 @@ window.GUIDES_DATA = {
         "3. Достоверность объявлений: Участники обязуются указывать реальные фото, точные характеристики и честное состояние.",
         "4. Взаимная проверка: Обе стороны проверяют имущество лично перед передачей ключ на ключ.",
         "5. Никаких скрытых наценок: Стоимость и условия доплаты согласовываются напрямую между владельцами."
+      ],
+      cs: [
+        "1. Přímá platforma mezi majiteli: ChangeIt4Me spojuje ověřené majitele pro výměny 1:1, výměny s doplatkem nebo přímý prodej s 0% provizí.",
+        "2. Prvních 10 výměn zdarma, poté balíček nebo PRO předplatné: Každý nový účet získá 10 výměn zdarma. Poté lze aktivovat balíček +15 výměn nebo neomezené předplatné PRO (s 14denním právem na odstoupení dle směrnice EU 2011/83/EU).",
+        "3. Pravdivé inzeráty: Členové se zavazují uvádět reálné fotografie, přesné parametry a skutečný stav.",
+        "4. Vzájemná kontrola před předáním: Obě strany si předměty osobně zkontrolují před výměnou klíč za klíč.",
+        "5. Žádné marže zprostředkovatelů: Ceny a měnovou paritu si určují přímo majitelé."
+      ],
+      sk: [
+        "1. Priama platforma medzi majiteľmi: ChangeIt4Me spája overených majiteľov pre výmeny 1:1, výmeny s doplatkom alebo priamy predaj s 0% províziou.",
+        "2. Prvých 10 výmen zadarmo, potom balíček alebo PRO predplatné: Každý nový účet získa 10 výmen zadarmo. Následne je možné aktivovať balíček +15 výmen alebo neobmedzené predplatné PRO (so 14-dňovým právom na odstúpenie podľa smernice EÚ 2011/83/EÚ).",
+        "3. Pravdivé inzeráty: Členovia sa zaväzujú uvádzať reálne fotografie, presné parametre a skutočný stav.",
+        "4. Vzájomná kontrola pred odovzdaním: Obe strany si predmety osobne skontrolujú pred výmenou kľúč za kľúč.",
+        "5. Žiadne marže sprostredkovateľov: Ceny a menovú paritu si určujú priamo majitelia."
+      ],
+      sl: [
+        "1. Neposredna platforma med lastniki: ChangeIt4Me povezuje preverjene lastnike za menjave 1:1, menjave z doplačilom ali neposredno prodajo z 0 % provizije.",
+        "2. Prvih 10 menjav brezplačno, nato paket ali PRO naročnina: Vsak nov račun prejme 10 brezplačnih menjav ob registraciji. Nato lahko izberete paket +15 menjav ali neomejeno naročnino PRO.",
+        "3. Resnični oglasi: Člani morajo objaviti resnične fotografije, točne tehnične podatke in pošten opis stanja.",
+        "4. Vzajemni pregled pred predajo: Obe strani osebno pregledata predmete pred menjavo ključ za ključ.",
+        "5. Brez posredniških marž: Cene in valutno pariteto določajo neposredno lastniki."
+      ],
+      hr: [
+        "1. Izravna platforma između vlasnika: ChangeIt4Me povezuje provjerene vlasnike za zamjene 1:1, zamjene uz nadoplatu ili izravnu prodaju uz 0 % provizije.",
+        "2. Prvih 10 zamjena besplatno, zatim paket ili PRO pretplata: Svaki novi račun dobiva 10 besplatnih zamjena pri registraciji. Nakon toga možete aktivirati paket +15 zamjena ili neograničenu PRO pretplatu.",
+        "3. Točni oglasi: Članovi su dužni objaviti stvarne fotografije, točne specifikacije i iskren opis stanja.",
+        "4. Međusobni pregled prije primopredaje: Obje strane osobno pregledavaju imovinu prije zamjene ključ za ključ.",
+        "5. Bez posredničkih naknada: Cijene i valutni paritet određuju izravno vlasnici."
+      ],
+      pl: [
+        "1. Bezpośrednia platforma właściciel-właściciel: ChangeIt4Me łączy zweryfikowanych właścicieli w celu zamiany 1:1, zamiany z dopłatą lub sprzedaży bezpośredniej z 0% prowizji.",
+        "2. Pierwsze 10 zamian za darmo, potem pakiet lub subskrypcja PRO: Każde nowe konto otrzymuje 10 darmowych zamian. Następnie można aktywować Pakiet +15 Zamian lub Nielimitowaną Subskrypcję PRO (z 14-dniowym prawem odstąpienia wg dyrektywy UE 2011/83/UE).",
+        "3. Rzetelne ogłoszenia: Użytkownicy zobowiązują się do publikowania prawdziwych zdjęć i dokładnych parametrów.",
+        "4. Wzajemna weryfikacja przed przekazaniem: Obie strony osobiście sprawdzają przedmioty przed wymianą klucz za klucz.",
+        "5. Zero prowizji pośredników: Ceny oraz dopłaty ustalane są bezpośrednio pomiędzy właścicielami."
       ]
     }
   },
@@ -1894,6 +2054,11 @@ window.GUIDES_DATA = {
       fr: "Politique de Confidentialité & Protection RGPD",
       it: "Informativa sulla Privacy & Protezione Dati GDPR",
       es: "Política de Privacidad y Protección de Datos RGPD",
+      cs: "Zásady ochrany osobních údajů (GDPR)",
+      sk: "Zásady ochrany osobných údajov (GDPR)",
+      sl: "Politika zasebnosti in varstvo podatkov (GDPR)",
+      hr: "Politika privatnosti i zaštita podataka (GDPR)",
+      pl: "Polityka Prywatności i Ochrona Danych (RODO / GDPR)",
       ru: "Политика конфиденциальности и защита данных (GDPR)"
     },
     items: {
@@ -1945,6 +2110,41 @@ window.GUIDES_DATA = {
         "3. Полный контроль в личном кабинете: Вы можете изменить профиль или удалить любое объявление, предложение и уведомление в один клик.",
         "4. Никакой передачи третьим лицам: ChangeIt4Me никогда не передаёт данные участников посредникам или рекламным сетям.",
         "5. Соответствие европейским стандартам GDPR: Полная прозрачность и безопасность данных."
+      ],
+      cs: [
+        "1. Minimální sběr dat: Ukládáme pouze vaše jméno, kontaktní e-mail/telefon, preferovaný jazyk/měnu a publikované inzeráty.",
+        "2. Kontrola nad kontakty: Váš telefon a e-mail jsou sdíleny pouze s partnery, kterým odešlete nebo přijmete návrh výměny.",
+        "3. Plná správa v přehledu účtu: Své inzeráty, návrhy, hlídací psy i celý účet můžete kdykoli upravit, exportovat (čl. 20 GDPR) nebo smazat (čl. 17 GDPR).",
+        "4. Žádný prodej dat třetím stranám: ChangeIt4Me nikdy neprodává kontaktní údaje makléřům ani reklamním sítím.",
+        "5. Evropský standard GDPR: Plná transparentnost a ochrana soukromí."
+      ],
+      sk: [
+        "1. Minimálny zber dát: Ukladáme iba vaše meno, kontaktný e-mail/telefón, preferovaný jazyk/menu a publikované inzeráty.",
+        "2. Kontrola nad kontaktmi: Váš telefón a e-mail sú zdieľané iba s partnermi, ktorým odošlete alebo prijmete návrh výmeny.",
+        "3. Plná správa v prehľade účtu: Svoje inzeráty, návrhy aj celý účet môžete kedykoľvek upraviť, exportovať (čl. 20 GDPR) alebo vymazať (čl. 17 GDPR).",
+        "4. Žiadny predaj dát tretím stranám: ChangeIt4Me nikdy nepredáva kontaktné údaje maklérom ani reklamným sieťam.",
+        "5. Európsky štandard GDPR: Plná transparentnosť a ochrana súkromia."
+      ],
+      sl: [
+        "1. Minimalno zbiranje podatkov: Hranimo le vaše ime, kontaktni e-poštni naslov/telefon, izbrani jezik/valuto in objavljene oglase.",
+        "2. Nadzor nad kontakti: Vaša telefonska številka in e-pošta se delita samo s partnerji, s katerimi izmenjate predlog menjave.",
+        "3. Popoln nadzor v nadzorni plošči: Svoj profil, oglase in račun lahko kadar koli izvozite (člen 20 GDPR) ali izbrišete (člen 17 GDPR).",
+        "4. Brez prodaje podatkov tretjim osebam: ChangeIt4Me nikoli ne prodaja podatkov posrednikom ali oglaševalskim mrežam.",
+        "5. Evropska skladnost z GDPR: Popolna preglednost in varnost podatkov."
+      ],
+      hr: [
+        "1. Minimalno prikupljanje podataka: Pohranjujemo samo vaše ime, kontakt e-mail/telefon, željeni jezik/valutu i objavljene oglase.",
+        "2. Kontrola kontakata: Vaš telefon i e-mail dijele se samo s partnerima kojima pošaljete ili prihvatite prijedlog zamjene.",
+        "3. Potpuna kontrola u nadzornoj ploči: Svoje oglase, podatke i račun možete u svakom trenutku izvesti (čl. 20 GDPR) ili izbrisati (čl. 17 GDPR).",
+        "4. Bez prodaje podataka trećim stranama: ChangeIt4Me nikada ne prodaje podatke posrednicima ili oglašivačima.",
+        "5. Europski GDPR standard: Maksimalna zaštita privatnosti članova."
+      ],
+      pl: [
+        "1. Minimalny zakres danych: Przechowujemy wyłącznie Twoje imię, e-mail/telefon kontaktowy, wybrany język/walutę oraz opublikowane ogłoszenia.",
+        "2. Kontrola danych kontaktowych: Twój telefon i e-mail są udostępniane wyłącznie partnerom, którym wysyłasz lub akceptujesz propozycję wymiany.",
+        "3. Pełne zarządzanie z Panelu: W każdej chwili możesz wyeksportować swoje dane (art. 20 RODO) lub trwale usunąć konto (art. 17 RODO).",
+        "4. Zero sprzedaży danych: ChangeIt4Me nigdy nie sprzedaje danych użytkowników pośrednikom ani sieciom reklamowym.",
+        "5. Zgodność z europejskim RODO (GDPR): Pełna przejrzystość i bezpieczeństwo danych."
       ]
     }
   },
@@ -1956,6 +2156,11 @@ window.GUIDES_DATA = {
       fr: "Politique relative aux Cookies & Stockage Local",
       it: "Politica su Cookie & Archiviazione Locale",
       es: "Política de Cookies y Almacenamiento Local",
+      cs: "Zásady používání souborů Cookie a lokálního úložiště",
+      sk: "Zásady používania súborov Cookie a lokálneho úložiska",
+      sl: "Politika piškotkov in lokalne shrambe",
+      hr: "Politika kolačića i lokalne pohrane",
+      pl: "Polityka plików Cookies i pamięci lokalnej",
       ru: "Политика использования файлов Cookie и локального хранилища"
     },
     items: {
@@ -2000,6 +2205,36 @@ window.GUIDES_DATA = {
         "2. Сохранение избранного и предложений: Ваши избранные объявления, предложения обмена и созданные анкеты сохраняются при обновлении страницы.",
         "3. Автоопределение языка и валюты: Мы подбираем язык и валюту по вашей стране с возможностью ручного переключения в любой момент.",
         "4. Никаких рекламных трекеров: Мы не используем сторонние рекламные cookie для отслеживания."
+      ],
+      cs: [
+        "1. Výhradně funkční úložiště: ChangeIt4Me využívá localStorage prohlížeče pouze pro udržení relace, jazyka, měny a rozpracovaného inzerátu.",
+        "2. Uložené oblíbené a návrhy: Vaše oblíbené inzeráty, návrhy výměn a vlastní nabídky zůstávají uloženy i po obnovení stránky.",
+        "3. Automatická detekce jazyka a měny: Jazyk a měnu přizpůsobíme vaší evropské zemi s možností kdykoli je ručně změnit.",
+        "4. Žádné reklamní sledovací cookies: Nepoužíváme invazivní reklamní trackery třetích stran."
+      ],
+      sk: [
+        "1. Výhradne funkčné úložisko: ChangeIt4Me využíva localStorage prehliadača iba na udržanie relácie, jazyka, meny a rozpracovaného inzerátu.",
+        "2. Uložené obľúbené a návrhy: Vaše obľúbené inzeráty, návrhy výmen a vlastné ponuky zostávajú uložené aj po obnovení stránky.",
+        "3. Automatická detekcia jazyka a meny: Jazyk a menu prispôsobíme vašej európskej krajine s možnosťou kedykoľvek ich ručne zmeniť.",
+        "4. Žiadne reklamné sledovacie cookies: Nepoužívame invazívne reklamné trackery tretích strán."
+      ],
+      sl: [
+        "1. Izključno funkcionalna shramba: ChangeIt4Me uporablja localStorage brskalnika samo za ohranjanje seje, jezika, valute in osnutkov.",
+        "2. Shranjeni priljubljeni in predlogi: Vaši priljubljeni oglasi in predlogi menjav ostanejo shranjeni ob osvežitvi strani.",
+        "3. Samodejno zaznavanje jezika in valute: Jezik in valuto prilagodimo vaši državi, vedno pa ju lahko spremenite ročno.",
+        "4. Brez oglaševalskih piškotkov: Ne uporabljamo vsiljivih sledilnikov tretjih oseb."
+      ],
+      hr: [
+        "1. Isključivo funkcionalna pohrana: ChangeIt4Me koristi localStorage preglednika samo za održavanje sesije, jezika, valute i nacrta oglasa.",
+        "2. Spremljeni favoriti i prijedlozi: Vaši spremljeni oglasi i prijedlozi zamjene ostaju sačuvani nakon osvježavanja stranice.",
+        "3. Automatski odabir jezika i valute: Prilagođavamo jezik i valutu vašoj državi, uz mogućnost ručne promjene u bilo kojem trenutku.",
+        "4. Bez oglašivačkih kolačića: Ne koristimo invazivne kolačiće za praćenje trećih strana."
+      ],
+      pl: [
+        "1. Wyłącznie pamięć funkcjonalna: ChangeIt4Me wykorzystuje localStorage przeglądarki wyłącznie do utrzymania sesji, języka, waluty i szkiców ogłoszeń.",
+        "2. Zapisane ulubione i propozycje: Twoje ulubione oferty i propozycje zamiany pozostają zapisane po odświeżeniu strony.",
+        "3. Automatyczny dobór języka i waluty: Dopasowujemy język i walutę do Twojego kraju z możliwością ręcznej zmiany w każdej chwili.",
+        "4. Zero śledzących plików cookies: Nie stosujemy inwazyjnych trackerów reklamowych podmiotów trzecich."
       ]
     }
   }

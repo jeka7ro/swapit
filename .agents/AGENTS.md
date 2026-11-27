@@ -77,3 +77,13 @@ Orice modificare UI/UX sau CSS este validată automat în browser headless real 
    - Agentul **NU** îi cere niciodată utilizatorului să testeze primul o modificare („testează tu”) înainte ca agentul să fi rulat singur suita `run_prepush_audit.py` și verificarea Headless Chrome CDP (`run_mobile_cdp_audit.js`) cu `0 erori`.
 2. **Systematic Debugging (`obra/superpowers`)**:
    - Orice bug raportat este reprodus și măsurat matematic în DOM (`getBoundingClientRect()`, `getComputedStyle()`) înainte de aplicarea fixului.
+
+## 9. Matt Pocock Engineering Skills (`mattpocock/skills` — `tdd`, `diagnosing-bugs`, `code-review`, `codebase-design`)
+1. **Test-Driven Development at Public Seams (`.agents/skills/tdd/SKILL.md`, `tests.md`, `mocking.md`)**:
+   - Testele verifică comportamentul observabil la interfețele publice (seams: DOM real în Headless Chrome CDP, `document.elementFromPoint(x, y)`, rutele HTTP `/api/sync`), nu detalii interne de implementare.
+2. **Diagnosing Bugs Feedback Loop (`.agents/skills/diagnosing-bugs/SKILL.md`)**:
+   - Orice bug raportat începe cu Faza 1: construirea unui semnal automat `RED -> GREEN` reproductibil (test E2E sau CDP) care pică pe bug-ul respectiv înainte de modificarea codului, cu redactarea oricăror secrete (`<REDACTED>`).
+3. **Two-Axis Code Review (`.agents/skills/code-review/SKILL.md`)**:
+   - Orice modificare este verificată pe 2 axe înainte de livrare: **Axis 1 (Standards)** — conformitatea cu toate regulile din `.agents/AGENTS.md`; **Axis 2 (Spec & Seam Edge Cases)** — verificarea interacțiunilor Vizitator Nelogat vs. Utilizator Logat vs. Proprietar Anunț vs. Admin și a ferestrelor modale suprapuse.
+4. **Deep Modules & Clean Interfaces (`.agents/skills/codebase-design/SKILL.md`, `DEEPENING.md`)**:
+   - Logica complexă (permisiuni multi-tenant `canCurrentUserManageListing`, gate-ul de autentificare `requireAuthForPostingOrProposal`, alertele de preț la favorite `recordListingPriceChangeAndNotifyFavorites`, sanitizarea numerică `sanitizeNumericAmount`) este încapsulată în module adânci (deep modules) cu interfețe simple și invariante stricte.

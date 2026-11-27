@@ -28,7 +28,12 @@ const COUNTRY_COORDS = {
   "Austria": { lat: 47.5162, lng: 14.5501 },
   "Switzerland": { lat: 46.8182, lng: 8.2275 },
   "United Kingdom": { lat: 54.0, lng: -2.0 },
-  "Moldova": { lat: 47.0105, lng: 28.8638 }
+  "Moldova": { lat: 47.0105, lng: 28.8638 },
+  "Czechia": { lat: 49.8175, lng: 15.4730 },
+  "Slovakia": { lat: 48.6690, lng: 19.6990 },
+  "Slovenia": { lat: 46.1512, lng: 14.9955 },
+  "Croatia": { lat: 45.1000, lng: 15.2000 },
+  "Poland": { lat: 51.9194, lng: 19.1451 }
 };
 // Default language is strictly English ("en") unless overridden by Geo-IP or explicit user selection
 let currentLang = "en";
@@ -1554,7 +1559,7 @@ function setBuyOfferQuickPct(offerId, factor) {
 }
 async function syncLiveExchangeRates() {
   try {
-    const res = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD,RON,GBP,CHF");
+    const res = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD,RON,GBP,CHF,CZK,PLN");
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.rates && Array.isArray(window.CURRENCIES)) {
@@ -1633,7 +1638,7 @@ function updateCurrencyDependentLabels() {
   if (maxInput) maxInput.setAttribute("placeholder", `Max ${c.symbol}`);
   const quickValLabel = document.getElementById("quickValueLabel");
   if (quickValLabel) {
-    quickValLabel.textContent = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(MDL\)|\(RUB\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${c.short || c.code})`);
+    quickValLabel.textContent = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(MDL\)|\(RUB\)|\(USD\)|\(GBP\)|\(CHF\)|\(CZK\)|\(PLN\)|\(Kč\)|\(zł\)|\(€\)|\(\$\)|\(£\)/gi, `(${c.short || c.code})`);
   }
   onQuickPostPriceChange();
   updatePricingCardsUI();
@@ -3071,15 +3076,20 @@ function initWorldMap() {
 }
 function getLocalizedCountryName(country) {
   const map = {
-    "Germany": { en: "Germany", ro: "Germania", de: "Deutschland", fr: "Allemagne", it: "Germania", es: "Alemania", ru: "Германия" },
-    "Romania": { en: "Romania", ro: "România", de: "Rumänien", fr: "Roumanie", it: "Romania", es: "Rumanía", ru: "Румыния" },
-    "Spain": { en: "Spain", ro: "Spania", de: "Spanien", fr: "Espagne", it: "Spagna", es: "España", ru: "Испания" },
-    "Italy": { en: "Italy", ro: "Italia", de: "Italien", fr: "Italie", it: "Italia", es: "Italia", ru: "Италия" },
-    "France": { en: "France", ro: "Franța", de: "Frankreich", fr: "France", it: "Francia", es: "Francia", ru: "Франция" },
-    "Austria": { en: "Austria", ro: "Austria", de: "Österreich", fr: "Autriche", it: "Austria", es: "Austria", ru: "Австрия" },
-    "Switzerland": { en: "Switzerland", ro: "Elveția", de: "Schweiz", fr: "Suisse", it: "Svizzera", es: "Suiza", ru: "Швейцария" },
-    "United Kingdom": { en: "United Kingdom", ro: "Marea Britanie", de: "Großbritannien", fr: "Royaume-Uni", it: "Regno Unito", es: "Reino Unido", ru: "Великобритания" },
-    "Moldova": { en: "Moldova", ro: "Moldova", de: "Moldau", fr: "Moldavie", it: "Moldavia", es: "Moldavia", ru: "Молдова" }
+    "Germany": { en: "Germany", ro: "Germania", de: "Deutschland", fr: "Allemagne", it: "Germania", es: "Alemania", cs: "Německo", sk: "Nemecko", sl: "Nemčija", hr: "Njemačka", pl: "Niemcy", ru: "Германия" },
+    "Romania": { en: "Romania", ro: "România", de: "Rumänien", fr: "Roumanie", it: "Romania", es: "Rumanía", cs: "Rumunsko", sk: "Rumunsko", sl: "Romunija", hr: "Rumunjska", pl: "Rumunia", ru: "Румыния" },
+    "Spain": { en: "Spain", ro: "Spania", de: "Spanien", fr: "Espagne", it: "Spagna", es: "España", cs: "Španělsko", sk: "Španielsko", sl: "Španija", hr: "Španjolska", pl: "Hiszpania", ru: "Испания" },
+    "Italy": { en: "Italy", ro: "Italia", de: "Italien", fr: "Italie", it: "Italia", es: "Italia", cs: "Itálie", sk: "Taliansko", sl: "Italija", hr: "Italija", pl: "Włochy", ru: "Италия" },
+    "France": { en: "France", ro: "Franța", de: "Frankreich", fr: "France", it: "Francia", es: "Francia", cs: "Francie", sk: "Francúzsko", sl: "Francija", hr: "Francuska", pl: "Francja", ru: "Франция" },
+    "Austria": { en: "Austria", ro: "Austria", de: "Österreich", fr: "Autriche", it: "Austria", es: "Austria", cs: "Rakousko", sk: "Rakúsko", sl: "Avstrija", hr: "Austrija", pl: "Austria", ru: "Австрия" },
+    "Switzerland": { en: "Switzerland", ro: "Elveția", de: "Schweiz", fr: "Suisse", it: "Svizzera", es: "Suiza", cs: "Švýcarsko", sk: "Švajčiarsko", sl: "Švica", hr: "Švicarska", pl: "Szwajcaria", ru: "Швейцария" },
+    "United Kingdom": { en: "United Kingdom", ro: "Marea Britanie", de: "Großbritannien", fr: "Royaume-Uni", it: "Regno Unito", es: "Reino Unido", cs: "Velká Británie", sk: "Veľká Británia", sl: "Združeno kraljestvo", hr: "Ujedinjeno Kraljevstvo", pl: "Wielka Brytania", ru: "Великобритания" },
+    "Moldova": { en: "Moldova", ro: "Moldova", de: "Moldau", fr: "Moldavie", it: "Moldavia", es: "Moldavia", cs: "Moldavsko", sk: "Moldavsko", sl: "Moldavija", hr: "Moldavija", pl: "Mołdawia", ru: "Молдова" },
+    "Czechia": { en: "Czechia", ro: "Cehia", de: "Tschechien", fr: "Tchéquie", it: "Cechia", es: "Chequia", cs: "Česko", sk: "Česko", sl: "Češka", hr: "Češka", pl: "Czechy", ru: "Чехия" },
+    "Slovakia": { en: "Slovakia", ro: "Slovacia", de: "Slowakei", fr: "Slovaquie", it: "Slovacchia", es: "Eslovaquia", cs: "Slovensko", sk: "Slovensko", sl: "Slovaška", hr: "Slovačka", pl: "Słowacja", ru: "Словакия" },
+    "Slovenia": { en: "Slovenia", ro: "Slovenia", de: "Slowenien", fr: "Slovénie", it: "Slovenia", es: "Eslovenia", cs: "Slovinsko", sk: "Slovinsko", sl: "Slovenija", hr: "Slovenija", pl: "Słowenia", ru: "Словения" },
+    "Croatia": { en: "Croatia", ro: "Croația", de: "Kroatien", fr: "Croatie", it: "Croazia", es: "Croacia", cs: "Chorvatsko", sk: "Chorvátsko", sl: "Hrvaška", hr: "Hrvatska", pl: "Chorwacja", ru: "Хорватия" },
+    "Poland": { en: "Poland", ro: "Polonia", de: "Polen", fr: "Pologne", it: "Polonia", es: "Polonia", cs: "Polsko", sk: "Poľsko", sl: "Poljska", hr: "Poljska", pl: "Polska", ru: "Польша" }
   };
   return (map[country] && map[country][currentLang]) || country;
 }
@@ -3350,6 +3360,8 @@ function activateUserAccount(userData) {
     const prevOffered = document.getElementById("swapOfferedItemInput")?.value || "";
     const prevCalcVal = document.getElementById("calcMyValueInput")?.value || "";
     const prevBuyVal = document.getElementById("buyOfferAmountInput")?.value || "";
+    const prevSwapNote = document.querySelector("#offerActionSwapPanel textarea[name='proposalNote']")?.value || "";
+    const prevBuyNote = document.querySelector("#offerActionBuyPanel textarea[name='proposalNote']")?.value || "";
     const isBuyActive = document.getElementById("offerActionBuyPanel")?.style.display === "block";
     openOfferModal(currentOpenOfferId, isBuyActive ? "buy" : "details");
     if (prevOffered && document.getElementById("swapOfferedItemInput")) {
@@ -3363,6 +3375,10 @@ function activateUserAccount(userData) {
       document.getElementById("buyOfferAmountInput").value = prevBuyVal;
       onBuyOfferPriceChange(currentOpenOfferId);
     }
+    const nextSwapNoteEl = document.querySelector("#offerActionSwapPanel textarea[name='proposalNote']");
+    if (prevSwapNote && nextSwapNoteEl) nextSwapNoteEl.value = prevSwapNote;
+    const nextBuyNoteEl = document.querySelector("#offerActionBuyPanel textarea[name='proposalNote']");
+    if (prevBuyNote && nextBuyNoteEl) nextBuyNoteEl.value = prevBuyNote;
   }
   if (document.getElementById("wizardModal")?.classList.contains("open")) {
     wizData.owner = currentUser.name || wizData.owner;
@@ -3692,6 +3708,81 @@ function getAuthMsg() {
       alreadyRegistered: "! Există deja un cont înregistrat cu acest email. Autentifică-te.",
       invalidGmail: "! Introdu o adresă Google (@gmail.com) reală și validă."
     },
+    cs: {
+      pwdMismatch: "! Hesla se neshodují!",
+      pwdTooShort: "! Heslo musí mít alespoň 6 znaků.",
+      wrongPwd: "! Nesprávné heslo pro tento e-mail.",
+      codeAutoFill: "Ověřovací kód e-mailu:",
+      clickToFill: "Klikněte pro vyplnění",
+      resetSent: "✓ Pokyny pro obnovení hesla byly odeslány!",
+      invalidEmail: "! Zadejte platnou, skutečnou e-mailovou adresu.",
+      invalidPhone: "! Zadejte platné telefonní číslo (např. +420 777 123 456).",
+      invalidName: "! Zadejte své celé skutečné jméno (min. 3 znaky).",
+      wrongOtpCode: "! Nesprávný 6místný ověřovací kód! Zkontrolujte svůj e-mail.",
+      unregisteredLogin: "! Tento e-mail ještě není registrován. Nejprve si vytvořte účet.",
+      alreadyRegistered: "! Účet s tímto e-mailem již existuje. Přihlaste se.",
+      invalidGmail: "! Zadejte platnou adresu @gmail.com."
+    },
+    sk: {
+      pwdMismatch: "! Heslá sa nezhodujú!",
+      pwdTooShort: "! Heslo musí mať aspoň 6 znakov.",
+      wrongPwd: "! Nesprávne heslo pre tento e-mail.",
+      codeAutoFill: "Overovací kód e-mailu:",
+      clickToFill: "Kliknite pre vyplnenie",
+      resetSent: "✓ Pokyny na obnovenie hesla boli odoslané!",
+      invalidEmail: "! Zadajte platnú, skutočnú e-mailovú adresu.",
+      invalidPhone: "! Zadajte platné telefónne číslo (napr. +421 905 123 456).",
+      invalidName: "! Zadajte svoje celé skutočné meno (min. 3 znaky).",
+      wrongOtpCode: "! Nesprávny 6-miestny overovací kód! Skontrolujte svoj e-mail.",
+      unregisteredLogin: "! Tento e-mail ešte nie je registrovaný. Najprv si vytvorte účet.",
+      alreadyRegistered: "! Účet s týmto e-mailom už existuje. Prihláste sa.",
+      invalidGmail: "! Zadajte platnú adresu @gmail.com."
+    },
+    sl: {
+      pwdMismatch: "! Gesli se ne ujemata!",
+      pwdTooShort: "! Geslo mora vsebovati vsaj 6 znakov.",
+      wrongPwd: "! Napačno geslo za ta e-poštni naslov.",
+      codeAutoFill: "Potrditvena koda e-pošte:",
+      clickToFill: "Kliknite za izpolnitev",
+      resetSent: "✓ Navodila za ponastavitev gesla so bila poslana!",
+      invalidEmail: "! Vnesite veljaven, resničen e-poštni naslov.",
+      invalidPhone: "! Vnesite veljavno telefonsko številko (npr. +386 40 123 456).",
+      invalidName: "! Vnesite svoje polno ime (najmanj 3 znake).",
+      wrongOtpCode: "! Napačna 6-mestna potrditvena koda! Preverite e-pošto.",
+      unregisteredLogin: "! Ta e-poštni naslov še ni registriran. Najprej ustvarite račun.",
+      alreadyRegistered: "! Račun s tem e-poštnim naslovom že obstaja. Prijavite se.",
+      invalidGmail: "! Vnesite veljaven @gmail.com naslov."
+    },
+    hr: {
+      pwdMismatch: "! Lozinke se ne podudaraju!",
+      pwdTooShort: "! Lozinka mora imati najmanje 6 znakova.",
+      wrongPwd: "! Netočna lozinka za ovaj e-mail.",
+      codeAutoFill: "Kod za potvrdu e-maila:",
+      clickToFill: "Kliknite za popunjavanje",
+      resetSent: "✓ Upute za promjenu lozinke su poslane!",
+      invalidEmail: "! Unesite valjanu, stvarnu e-mail adresu.",
+      invalidPhone: "! Unesite valjani broj telefona (npr. +385 91 123 4567).",
+      invalidName: "! Unesite svoje puno ime i prezime (min. 3 znaka).",
+      wrongOtpCode: "! Netočan 6-znamenkasti kod! Provjerite svoj e-mail.",
+      unregisteredLogin: "! Ovaj e-mail još nije registriran. Najprije izradite račun.",
+      alreadyRegistered: "! Račun s ovim e-mailom već postoji. Prijavite se.",
+      invalidGmail: "! Unesite valjanu @gmail.com adresu."
+    },
+    pl: {
+      pwdMismatch: "! Hasła nie są identyczne!",
+      pwdTooShort: "! Hasło musi mieć co najmniej 6 znaków.",
+      wrongPwd: "! Nieprawidłowe hasło dla tego adresu e-mail.",
+      codeAutoFill: "Kod weryfikacyjny e-mail:",
+      clickToFill: "Kliknij, aby uzupełnić",
+      resetSent: "✓ Instrukcje resetowania hasła zostały wysłane!",
+      invalidEmail: "! Podaj prawidłowy, prawdziwy adres e-mail.",
+      invalidPhone: "! Podaj prawidłowy numer telefonu (np. +48 600 123 456).",
+      invalidName: "! Podaj swoje pełne imię i nazwisko (min. 3 znaki).",
+      wrongOtpCode: "! Nieprawidłowy 6-cyfrowy kod! Sprawdź swoją skrzynkę e-mail.",
+      unregisteredLogin: "! Ten e-mail nie jest jeszcze zarejestrowany. Załóż najpierw konto.",
+      alreadyRegistered: "! Konto z tym adresem e-mail już istnieje. Zaloguj się.",
+      invalidGmail: "! Podaj prawidłowy adres @gmail.com."
+    },
     ru: {
       pwdMismatch: "! Пароли не совпадают!",
       pwdTooShort: "! Пароль должен содержать минимум 6 символов.",
@@ -3816,7 +3907,12 @@ function parseSmartLocationString(rawLoc) {
     "italy": "Italy", "italia": "Italy", "it": "Italy",
     "spain": "Spain", "españa": "Spain", "spania": "Spain", "es": "Spain",
     "united kingdom": "United Kingdom", "uk": "United Kingdom", "marea britanie": "United Kingdom",
-    "moldova": "Moldova", "republica moldova": "Moldova", "md": "Moldova"
+    "moldova": "Moldova", "republica moldova": "Moldova", "md": "Moldova",
+    "czechia": "Czechia", "czech republic": "Czechia", "česko": "Czechia", "cehia": "Czechia", "cz": "Czechia",
+    "slovakia": "Slovakia", "slovensko": "Slovakia", "slovacia": "Slovakia", "sk": "Slovakia",
+    "slovenia": "Slovenia", "slovenija": "Slovenia", "si": "Slovenia",
+    "croatia": "Croatia", "hrvatska": "Croatia", "croația": "Croatia", "hr": "Croatia",
+    "poland": "Poland", "polska": "Poland", "polonia": "Poland", "pl": "Poland" 
   };
   let detectedCountry = null;
   let detectedCity = null;
@@ -5242,7 +5338,17 @@ const SMART_EUROPEAN_CITIES = [
   { city: "Madrid", region: "Comunidad de Madrid", country: "Spain", lat: 40.4168, lng: -3.7038 },
   { city: "Barcelona", region: "Catalunya", country: "Spain", lat: 41.3874, lng: 2.1686 },
   { city: "Marbella", region: "Costa del Sol", country: "Spain", lat: 36.5101, lng: -4.8824 },
-  { city: "London", region: "Greater London", country: "United Kingdom", lat: 51.5072, lng: -0.1276 }
+  { city: "London", region: "Greater London", country: "United Kingdom", lat: 51.5072, lng: -0.1276 },
+  { city: "Prague", region: "Praha 1 / Vinohrady", country: "Czechia", lat: 50.0755, lng: 14.4378 },
+  { city: "Brno", region: "Jihomoravský kraj", country: "Czechia", lat: 49.1951, lng: 16.6068 },
+  { city: "Bratislava", region: "Staré Mesto / Ružinov", country: "Slovakia", lat: 48.1486, lng: 17.1077 },
+  { city: "Košice", region: "Staré Mesto", country: "Slovakia", lat: 48.7164, lng: 21.2611 },
+  { city: "Ljubljana", region: "Center / Bežigrad", country: "Slovenia", lat: 46.0569, lng: 14.5058 },
+  { city: "Maribor", region: "Štajerska", country: "Slovenia", lat: 46.5547, lng: 15.6459 },
+  { city: "Zagreb", region: "Centar / Novi Zagreb", country: "Croatia", lat: 45.8150, lng: 15.9819 },
+  { city: "Split", region: "Dalmacija", country: "Croatia", lat: 43.5081, lng: 16.4402 },
+  { city: "Warsaw", region: "Śródmieście / Mokotów", country: "Poland", lat: 52.2297, lng: 21.0122 },
+  { city: "Kraków", region: "Stare Miasto", country: "Poland", lat: 50.0647, lng: 19.9450 }
 ];
 function applyWizSmartTemplate(idx) {
   const cfg = SMART_WIZ_CATALOG[wizData.category] || SMART_WIZ_CATALOG.electronics;
@@ -5732,7 +5838,7 @@ function renderWizStep() {
   } else if (wizStep === 2) {
     const activeWizCurr = wizData.originalCurrency || currentCurrency || "EUR";
     const cObj = getCurrencyObj(activeWizCurr);
-    const valLabel = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(MDL\)|\(RUB\)|\(USD\)|\(GBP\)|\(CHF\)|\(€\)|\(\$\)|\(£\)/gi, `(${cObj.short || cObj.code})`);
+    const valLabel = t("quickValueEur").replace(/\(EUR\)|\(LEI\)|\(RON\)|\(MDL\)|\(RUB\)|\(USD\)|\(GBP\)|\(CHF\)|\(CZK\)|\(PLN\)|\(Kč\)|\(zł\)|\(€\)|\(\$\)|\(£\)/gi, `(${cObj.short || cObj.code})`);
     const displayVal = wizData.originalAmount !== "" && wizData.originalAmount !== undefined
       ? wizData.originalAmount
       : (wizData.valueEur ? convertFromEur(wizData.valueEur, activeWizCurr) : "");
@@ -7809,9 +7915,13 @@ function openGuideModal(guideKey) {
         </li>
       `).join("")}
     </ul>
-    <button type="button" class="btn btn-mint btn-block" onclick="closeGuideModal(); openWizardModal();">
-      ${t("postFreeAdBtn")} →
-    </button>
+    ${(["terms-of-use", "privacy-policy", "cookies-policy"].includes(guideKey) || document.getElementById("authModal")?.classList.contains("open") || document.getElementById("offerModal")?.classList.contains("open"))
+      ? `<button type="button" id="guideModalPrimaryActionBtn" class="btn btn-mint btn-block" onclick="closeGuideModal()">
+          ✓ ${{ro:"Am înțeles · Închide",en:"Understood · Close",de:"Verstanden · Schließen",fr:"Compris · Fermer",it:"Ho capito · Chiudi",es:"Entendido · Cerrar",ru:"Понятно · Закрыть"}[currentLang] || "Understood · Close"}
+        </button>`
+      : `<button type="button" id="guideModalPrimaryActionBtn" class="btn btn-mint btn-block" onclick="closeGuideModal(); openWizardModal();">
+          ${t("postFreeAdBtn")} →
+        </button>`}
   `;
   document.getElementById("guideModal").classList.add("open");
   document.body.classList.add("modal-open");

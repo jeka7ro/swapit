@@ -1,3 +1,38 @@
+## [2026-04-17] — Adăugare 5 Limbi Slave din Jurul Austriei (`cs`, `sk`, `sl`, `hr`, `pl`) + Monedele `CZK` & `PLN` (`?v=124`)
+- **Autor**: Agent Paperclip
+- **Descriere modificare**:
+  1. **5 Limbi Noi în `i18n.js` (`window.LANGUAGES`, `window.COUNTRY_TO_LANG`, `window.TRANSLATIONS`) — Total 12 Limbi Europene**:
+     - **Cehă (`cs` — *Čeština*)** pentru Cehia (`CZ`), cu steag SVG oficial și dicționar complet (236 chei).
+     - **Slovacă (`sk` — *Slovenčina*)** pentru Slovacia (`SK`), cu steag SVG oficial și dicționar complet (236 chei).
+     - **Slovenă (`sl` — *Slovenščina*)** pentru Slovenia (`SI`), cu steag SVG oficial și dicționar complet (236 chei).
+     - **Croată (`hr` — *Hrvatski*)** pentru Croația (`HR`), cu steag SVG oficial și dicționar complet (236 chei).
+     - **Poloneză (`pl` — *Polski*)** pentru Polonia (`PL`), cu steag SVG oficial și dicționar complet (236 chei).
+  2. **2 Monede Noi în `i18n.js` & `app.js` (`CZK` — Coroană Cehă `Kč`, `PLN` — Zlot Polonez `zł`) — Total 9 Monede**:
+     - Configurat `LANG_TO_CURRENCY` (`cs -> CZK`, `sk -> EUR`, `sl -> EUR`, `hr -> EUR`, `pl -> PLN`) și `COUNTRY_TO_CURRENCY` (`CZ -> CZK`, `PL -> PLN`, `SK/SI/HR -> EUR`).
+     - Conectat sincronizarea live a cursurilor Băncii Centrale Europene (`syncLiveExchangeRates` via Frankfurter API) pentru `CZK` și `PLN`.
+  3. **Ghiduri Oficiale & Documente Legale (`data.js` — `window.GUIDES_DATA`) + Orașe & Țări pe Hartă (`app.js`, `index.html`)**:
+     - Tradus integral în `cs`, `sk`, `sl`, `hr`, `pl` toate cele 6 ghiduri și documente legale (`car-offer`, `home-swap`, `meet-and-check`, `terms-of-use`, `privacy-policy`, `cookies-policy`).
+     - Adăugat `Czechia`, `Slovakia`, `Slovenia`, `Croatia`, `Poland` în `COUNTRY_COORDS`, `getLocalizedCountryName` și `SMART_EUROPEAN_CITIES` (`Prague`, `Brno`, `Bratislava`, `Košice`, `Ljubljana`, `Maribor`, `Zagreb`, `Split`, `Warsaw`, `Kraków`).
+- **Fișiere atinse**: `i18n.js`, `data.js`, `app.js`, `index.html`, `.agents/skills/audit-gatekeeper/scripts/run_prepush_audit.py`, `.agents/skills/webapp-testing/scripts/run_mobile_cdp_audit.js`, `.agents/CHANGELOG.md`
+- **Rezultat `audit-gatekeeper`**: `6/6 FAZE VERDE` + `10/10 Viewports Mobile/Tablet/PC Desktop PASS across all 12 languages & 9 currencies (0 issues)`
+
+## [2026-04-17] — Integrare `mattpocock/skills` (`tdd`, `diagnosing-bugs`, `code-review`, `codebase-design`) + Audit Seam-Based Cap-Coadă (`?v=123`)
+- **Autor**: Agent Paperclip
+- **Descriere modificare**:
+  1. **Instalare și Integrare `mattpocock/skills` în `.agents/skills/` și `.agents/AGENTS.md` (Secțiunea 9)**:
+     - Adăugate cele 4 skill-uri de inginerie din `mattpocock/skills`:
+       - `.agents/skills/tdd/` (`SKILL.md`, `tests.md`, `mocking.md`) — Testare la interfețele publice observabile (seams: DOM real în Headless Chrome CDP, `document.elementFromPoint`, rute HTTP `/api/sync`).
+       - `.agents/skills/diagnosing-bugs/` (`SKILL.md`, `scripts/`, `agents/`) — Buclă de diagnoză Red->Green reproductibilă și redactare secrete.
+       - `.agents/skills/code-review/` (`SKILL.md`, `agents/`) — Two-Axis Review (Axis 1: Standards vs. Axis 2: Spec & Seam Edge Cases).
+       - `.agents/skills/codebase-design/` (`SKILL.md`, `DEEPENING.md`, `DESIGN-IT-TWICE.md`) — Arhitectură bazată pe Deep Modules.
+     - Actualizat `run_prepush_audit.py` (Faza 6) pentru a valida prezența tuturor celor 13 skill-uri din `.agents/skills/`.
+  2. **Fix Seam `#authModal` -> `openGuideModal("terms-of-use" / "privacy-policy")` (`?v=123`)**:
+     - Identificat și rezolvat prin analiza de seam (`tdd` + `code-review`) cazul în care un utilizator aflat în `#authModal` deschidea *Termenii de Utilizare* sau *Politica de Confidențialitate* (`#guideModal`, `z-index: 4650`), iar butonul principal din subsolul documentului legal apela `openWizardModal()` (deschizând `#wizardModal` în spatele `#authModal`). Acum, pentru documentele legale (`terms-of-use`, `privacy-policy`, `cookies-policy`) sau când `#authModal` / `#offerModal` este deschis dedesubt, butonul afișează *„✓ Am înțeles · Închide”* (tradus în 7 limbi) și readuce utilizatorul direct la fereastra din care a deschis documentul.
+  3. **Păstrarea Mesajului Scris (`proposalNote`) în `#offerModal` după Autentificare (`activateUserAccount`)**:
+     - La autentificarea din `#authModal` deschis peste `#offerModal`, pe lângă valoarea din calculator și titlul obiectului oferit, se păstrează intact și textul scris în `<textarea name="proposalNote">`.
+- **Fișiere atinse**: `.agents/skills/tdd/`, `.agents/skills/diagnosing-bugs/`, `.agents/skills/code-review/`, `.agents/skills/codebase-design/`, `.agents/AGENTS.md`, `.agents/skills/audit-gatekeeper/scripts/run_prepush_audit.py`, `.agents/skills/webapp-testing/scripts/run_mobile_cdp_audit.js`, `app.js`, `index.html`, `.agents/CHANGELOG.md`
+- **Rezultat `audit-gatekeeper`**: `6/6 FAZE VERDE` + `10/10 Viewports Mobile/Tablet/PC Desktop PASS (0 issues)`
+
 ## [2026-04-17] — Audit Fluxuri Utilizator Nelogat vs. Logat: Propuneri, Publicare, Filtru Favorite, Banner Proprietar & Schimbare Parolă din Profil (`?v=121`–`?v=122`)
 - **Autor**: Agent Paperclip
 - **Descriere modificare**:

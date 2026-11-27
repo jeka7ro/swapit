@@ -365,7 +365,7 @@ try {
 // ============================================================================
 try {
   const st = api.getState();
-  const requiredCurrencies = ['EUR', 'USD', 'RON', 'MDL', 'RUB', 'GBP', 'CHF'];
+  const requiredCurrencies = ['EUR', 'USD', 'RON', 'MDL', 'RUB', 'GBP', 'CHF', 'CZK', 'PLN'];
   const currMap = new Map((st.CURRENCIES || []).map(c => [c.code, c]));
   for (const cur of requiredCurrencies) {
     const cObj = currMap.get(cur);
@@ -468,7 +468,7 @@ try {
 
   // Verify GUIDES_DATA across all required guides and all 7 languages
   const requiredGuides = ['car-offer', 'home-swap', 'meet-and-check', 'terms-of-use', 'privacy-policy', 'cookies-policy'];
-  const requiredLangs = ['en', 'ro', 'de', 'fr', 'it', 'es', 'ru'];
+  const requiredLangs = ['en', 'ro', 'de', 'fr', 'it', 'es', 'cs', 'sk', 'sl', 'hr', 'pl', 'ru'];
   for (const gKey of requiredGuides) {
     const gObj = st.GUIDES_DATA && st.GUIDES_DATA[gKey];
     if (!gObj) {
@@ -745,6 +745,13 @@ def phase_6_ui_ux_and_tahoe_skin():
         "frontend-design/SKILL.md",
         "verification-before-completion/SKILL.md",
         "systematic-debugging/SKILL.md",
+        "tdd/SKILL.md",
+        "tdd/tests.md",
+        "tdd/mocking.md",
+        "diagnosing-bugs/SKILL.md",
+        "code-review/SKILL.md",
+        "codebase-design/SKILL.md",
+        "codebase-design/DEEPENING.md",
     ]:
         if not (WORKSPACE_ROOT / ".agents" / "skills" / extra_skill_rel).exists():
             errors.append(f"Missing required GitHub skill asset: .agents/skills/{extra_skill_rel}")

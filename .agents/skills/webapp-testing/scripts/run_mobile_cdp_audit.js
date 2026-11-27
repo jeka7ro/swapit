@@ -426,6 +426,18 @@ function fetchJson(url) {
         if (!authIsOnTop) {
           errors.push("UI[ModalStacking]: #authModal opened behind #offerModal! (offerZ=" + offerZ + ", authZ=" + authZ + ", toastZ=" + toastZ + ", centerHit=" + (centerHit ? (centerHit.tagName + "#" + centerHit.id + "." + centerHit.className) : "null") + ")");
         }
+        // While #authModal (4500) is open over #offerModal (3500), clicking "Terms of Use" opens #guideModal (4650) ON TOP of #authModal!
+        openGuideModal("terms-of-use");
+        const guideModalEl = document.getElementById("guideModal");
+        const guideZ = Number(window.getComputedStyle(guideModalEl).zIndex) || 0;
+        const centerHitGuide = document.elementFromPoint(Math.floor(window.innerWidth / 2), Math.floor(window.innerHeight / 2));
+        if (!guideModalEl.classList.contains("open") || guideZ <= authZ || !centerHitGuide || !guideModalEl.contains(centerHitGuide)) {
+          errors.push("UI[ModalStacking]: #guideModal (Terms) did not open above #authModal! (guideZ=" + guideZ + ", authZ=" + authZ + ")");
+        }
+        document.getElementById("guideModalPrimaryActionBtn")?.click();
+        if (guideModalEl.classList.contains("open") || !authModalEl.classList.contains("open") || document.getElementById("wizardModal")?.classList.contains("open")) {
+          errors.push("UI[GuideModalClose]: Closing Terms of Use inside #authModal failed to return cleanly to #authModal!");
+        }
         // When user logs in from that #authModal prompt, #offerModal stays open and heart turns active (♥) automatically!
         activateUserAccount({ name: "Tudor Munteanu", email: "tudor.munteanu@test.ro", freeSwaps: 10, plan: "starter" });
         closeAuthModal();
